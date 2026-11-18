@@ -49,7 +49,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.runtime == '10.0'
         run: dotnet pack --no-build -c Release -o artifacts
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: matrix.os == 'ubuntu-latest' && matrix.runtime == '10.0'
         with:
           name: packages
