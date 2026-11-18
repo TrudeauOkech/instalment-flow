@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Airtel Money adapter for InstalmentFlow: USSD push collection, callbacks and transaction enquiry.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\InstalmentFlow.Payments\InstalmentFlow.Payments.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Multi-tenant payment allocation and flexible instalment engine: obligations, schedules, identification, allocation strategies and an append-only double-entry journal. Zero third-party dependencies.</Description>
+  </PropertyGroup>
+
+</Project>

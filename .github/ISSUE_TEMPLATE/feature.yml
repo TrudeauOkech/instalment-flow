@@ -1,0 +1,20 @@
+name: Feature request
+description: Propose a capability. Please read the scope (ADR-001) first.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: usecase
+    attributes:
+      label: Use case
+      description: Who needs this, and what problem does it solve for a lender, financier or payment processor?
+    validations: { required: true }
+  - type: textarea
+    id: proposal
+    attributes: { label: Proposed behaviour or API }
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: I have checked this fits ADR-001 (not an LMS, gateway, accounting platform or interest engine), or I am proposing an ADR change.
+          required: true

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Safaricom M-Pesa (Daraja) adapter for InstalmentFlow: C2B, STK push, transaction status and reconciliation.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\InstalmentFlow.Payments\InstalmentFlow.Payments.csproj" />
+  </ItemGroup>
+</Project>
