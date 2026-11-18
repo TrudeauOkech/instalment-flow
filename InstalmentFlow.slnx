@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/InstalmentFlow.AspNetCore/InstalmentFlow.AspNetCore.csproj" />
+    <Project Path="src/InstalmentFlow.EntityFrameworkCore/InstalmentFlow.EntityFrameworkCore.csproj" />
+    <Project Path="src/InstalmentFlow.Payments.AirtelMoney/InstalmentFlow.Payments.AirtelMoney.csproj" />
+    <Project Path="src/InstalmentFlow.Payments.Mpesa/InstalmentFlow.Payments.Mpesa.csproj" />
+    <Project Path="src/InstalmentFlow.Payments/InstalmentFlow.Payments.csproj" />
+    <Project Path="src/InstalmentFlow.Testing/InstalmentFlow.Testing.csproj" />
+    <Project Path="src/InstalmentFlow/InstalmentFlow.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/InstalmentFlow.ArchitectureTests/InstalmentFlow.ArchitectureTests.csproj" />
+  </Folder>
+</Solution>

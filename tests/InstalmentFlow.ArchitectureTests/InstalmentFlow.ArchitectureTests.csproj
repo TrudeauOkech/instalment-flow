@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Enforces ADR-013 by inspecting project files and restore output. It deliberately has no
+       ProjectReference to src/: it checks the repository's structure, not the assemblies' behaviour. -->
+
+</Project>

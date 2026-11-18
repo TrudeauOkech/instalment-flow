@@ -1,0 +1,9 @@
+T:System.Double;Financial code must not use floating point. Use decimal or InstalmentFlow.Money (NFR-3).
+T:System.Single;Financial code must not use floating point. Use decimal or InstalmentFlow.Money (NFR-3).
+T:System.DateTime;Use DateOnly for business dates and DateTimeOffset for instants.
+P:System.DateTimeOffset.Now;Use TimeProvider (via TenantClock) so time is testable and tenant time zones are explicit.
+P:System.DateTimeOffset.UtcNow;Use TimeProvider (via TenantClock) so time is testable and tenant time zones are explicit.
+M:System.Math.Round(System.Decimal);Use Money rounding with an explicit MidpointRounding mode.
+M:System.Math.Round(System.Decimal,System.Int32);Use Money rounding with an explicit MidpointRounding mode.
+M:System.Decimal.Round(System.Decimal);Use Money rounding with an explicit MidpointRounding mode.
+M:System.Decimal.Round(System.Decimal,System.Int32);Use Money rounding with an explicit MidpointRounding mode.

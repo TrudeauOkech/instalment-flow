@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Payment provider integration for InstalmentFlow: adapter SPI, idempotent inbox, payment intents, tenant routing, reconciliation and a simulated provider.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\InstalmentFlow\InstalmentFlow.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>PostgreSQL persistence for InstalmentFlow via EF Core: optimistic concurrency, row-level security, append-only enforcement and a transactional outbox.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\InstalmentFlow\InstalmentFlow.csproj" />
+    <ProjectReference Include="..\InstalmentFlow.Payments\InstalmentFlow.Payments.csproj" />
+  </ItemGroup>
+</Project>

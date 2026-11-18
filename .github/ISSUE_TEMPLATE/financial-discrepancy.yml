@@ -1,0 +1,30 @@
+name: Financial discrepancy
+description: A balance, allocation, reversal or journal entry looks wrong, or VerifyAsync reports a violation.
+labels: [bug, invariant]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Financial discrepancies are treated as top priority. **Redact all personal data** (names, phone numbers, account numbers).
+        If the issue could let someone gain money or see another tenant's data, report it privately instead (see SECURITY.md).
+  - type: input
+    id: version
+    attributes: { label: Package and version }
+    validations: { required: true }
+  - type: textarea
+    id: trace
+    attributes:
+      label: Redacted payment trace
+      description: Output of Queries.TracePaymentAsync and/or the VerifyAsync report for the affected account.
+      render: json
+    validations: { required: true }
+  - type: textarea
+    id: sequence
+    attributes:
+      label: Sequence of commands and provider events
+      description: In order, with amounts and timestamps (relative times are fine).
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes: { label: Expected financial state vs actual }
+    validations: { required: true }

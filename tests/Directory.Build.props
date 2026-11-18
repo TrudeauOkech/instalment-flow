@@ -1,0 +1,18 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+    <!-- Needed for IDE0005 (unused usings) to run on build; tests are not documented. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Test method names use underscores for readability; test types need not be sealed or internal. -->
+    <NoWarn>$(NoWarn);CS1591;CA1707;CA1515</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

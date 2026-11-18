@@ -1,0 +1,5 @@
+# Owners are automatically requested for review on pull requests touching these paths.
+# Core financial code requires two maintainer approvals once there is more than one maintainer (GOVERNANCE.md).
+*                       @TrudeauOkech
+/src/InstalmentFlow/    @TrudeauOkech
+/docs/decisions/        @TrudeauOkech

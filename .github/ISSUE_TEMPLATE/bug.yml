@@ -1,0 +1,23 @@
+name: Bug report
+description: Something behaves incorrectly (non-financial). For wrong balances or allocations, use "Financial discrepancy".
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes: { label: Package and version, placeholder: "InstalmentFlow 0.1.0" }
+    validations: { required: true }
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Payment provider involved
+      options: [None, M-Pesa, Airtel Money, Simulator, Custom adapter]
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: Ideally an InstalmentFlow.Testing scenario snippet. Never include real customer data or credentials.
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes: { label: Expected vs actual behaviour }
+    validations: { required: true }
