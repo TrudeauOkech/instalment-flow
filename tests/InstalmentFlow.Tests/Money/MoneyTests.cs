@@ -2,10 +2,32 @@ namespace InstalmentFlow.Tests;
 
 public sealed class MoneyTests
 {
+    // Decimal test data must be written as decimal literals. Attribute arguments such as [InlineData(10.01)]
+    // are doubles, and the runtime's double-to-decimal conversion is not exact: .NET 11 turns 10.01 into
+    // 10.009999999999999786837179272. TestConventionsTests enforces this.
+    public static TheoryData<decimal, string> Formats => new()
+    {
+        { 1500m, "KES 1500.00" },
+        { 0.5m, "KES 0.50" },
+        { -20.25m, "KES -20.25" },
+    };
+
+    public static TheoryData<decimal, string> TooPrecise => new()
+    {
+        { 1.005m, "KES" },
+        { 0.001m, "KES" },
+        { 1.5m, "UGX" },
+    };
+
+    public static TheoryData<decimal, decimal, MidpointRounding, decimal> Products => new()
+    {
+        { 10.01m, 0.5m, MidpointRounding.ToEven, 5.00m },        // 5.005 -> banker's rounding
+        { 10.01m, 0.5m, MidpointRounding.AwayFromZero, 5.01m },
+        { 10.01m, 0.5m, MidpointRounding.ToZero, 5.00m },
+    };
+
     [Theory]
-    [InlineData(1500, "KES 1500.00")]
-    [InlineData(0.5, "KES 0.50")]
-    [InlineData(-20.25, "KES -20.25")]
+    [MemberData(nameof(Formats))]
     public void ToString_is_invariant_and_shows_minor_units(decimal amount, string expected)
     {
         Assert.Equal(expected, Money.Kes(amount).ToString());
@@ -18,9 +40,7 @@ public sealed class MoneyTests
     }
 
     [Theory]
-    [InlineData(1.005, "KES")]
-    [InlineData(0.001, "KES")]
-    [InlineData(1.5, "UGX")]
+    [MemberData(nameof(TooPrecise))]
     public void Rejects_amounts_finer_than_the_currency_allows(decimal amount, string code)
     {
         var ex = Assert.Throws<InvalidAmountException>(() => Money.Of(amount, code));
@@ -84,9 +104,7 @@ public sealed class MoneyTests
     }
 
     [Theory]
-    [InlineData(10.01, 0.5, MidpointRounding.ToEven, 5.00)]          // 5.005 -> banker's rounding
-    [InlineData(10.01, 0.5, MidpointRounding.AwayFromZero, 5.01)]
-    [InlineData(10.01, 0.5, MidpointRounding.ToZero, 5.00)]
+    [MemberData(nameof(Products))]
     public void Multiply_rounds_with_the_explicit_mode(decimal amount, decimal factor, MidpointRounding mode, decimal expected)
     {
         Assert.Equal(Money.Kes(expected), Money.Kes(amount).Multiply(factor, mode));

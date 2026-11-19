@@ -19,6 +19,7 @@ The build treats warnings as errors. These rules are enforced mechanically:
 | No floating point (`double`, `float`) in shipped code | `src/BannedSymbols.txt` + `SourceRuleTests` |
 | No `DateTime`, and no system clock (`DateTimeOffset.UtcNow`); use `TimeProvider` | `src/BannedSymbols.txt` |
 | No implicit `Math.Round(decimal)`; use explicit rounding modes | `src/BannedSymbols.txt` |
+| Decimal test data uses `TheoryData` with `m` literals, never `[InlineData(10.01)]` (a double whose conversion to decimal differs between .NET 10 and 11) | `TestConventionsTests` |
 | Every public API change is recorded in `PublicAPI.Unshipped.txt` | `Microsoft.CodeAnalysis.PublicApiAnalyzers` |
 | Package boundaries ([ADR-013](docs/decisions/ADR-013-packages-and-dependencies.md)); zero third-party dependencies in core | `tests/InstalmentFlow.ArchitectureTests` |
 | Package versions are pinned centrally | `Directory.Packages.props` |
