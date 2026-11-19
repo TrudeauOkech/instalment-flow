@@ -23,3 +23,10 @@ All notable changes to this project are documented here. The format follows
   - CI, CodeQL and Dependabot;
   - licence and community files.
 - Planning documents (`docs/planning/`) and ADR-001 to ADR-016 (`docs/decisions/`).
+
+### Changed
+- GitHub Actions: checkout v7, setup-dotnet v6, upload-artifact v7.
+- Removed `InvariantGlobalization` from the shared build settings, so IANA time-zone IDs resolve on Windows.
+
+### Fixed
+- Tests failed on the .NET 11 runtime. `[InlineData]` decimal values are doubles, and .NET 11 converts 10.01 to 10.009999999999999786837179272. Decimal test data now uses `TheoryData`, and a convention test forbids the pattern.
