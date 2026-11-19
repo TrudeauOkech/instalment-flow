@@ -52,7 +52,19 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
 - **Acceptance:** `dotnet build` and `dotnet test` pass. An architecture test fails if core references a forbidden assembly.
 - **Tests:** architecture tests (NetArchTest or reflection-based).
 
-### M1 — Money, Currency, Time (S)
+### M1 — Money, Currency, Time (S) — ✅ done 2026-11-18
+
+> **Delivered:**
+> - `Money` is a sealed, immutable class rather than a struct, so `default(Money)` can never be an amount with no currency.
+> - `Currency` has a curated ISO 4217 registry.
+> - `TenantClock`:
+>   - in a daylight-saving gap, it moves to the first valid local time;
+>   - an ambiguous time resolves to the earlier instant;
+>   - `ToInstant` is the sanctioned conversion for provider local timestamps such as Daraja `TransTime`.
+> - `ExternalReference` and `IdempotencyKey`.
+> - `InstalmentFlowException` with stable error codes.
+>
+> **Tests:** 62 (including 5 CsCheck properties). Allocation tests were mutation-checked: inverting the remainder order, or the tie-break, is caught by a dedicated largest-remainder property.
 - **Features:**
   - the `Money` and `Currency` value objects (ISO 4217 table with minor units);
   - arithmetic;

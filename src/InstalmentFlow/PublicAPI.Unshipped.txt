@@ -1,1 +1,121 @@
 #nullable enable
+const InstalmentFlow.ErrorCodes.CurrencyMismatch = "IF1001" -> string!
+const InstalmentFlow.ErrorCodes.IdempotencyKeyReused = "IF1002" -> string!
+const InstalmentFlow.ErrorCodes.InvalidAmount = "IF1003" -> string!
+const InstalmentFlow.ErrorCodes.UnknownCurrency = "IF1004" -> string!
+const InstalmentFlow.ExternalReference.MaxSourceLength = 64 -> int
+const InstalmentFlow.ExternalReference.MaxValueLength = 128 -> int
+const InstalmentFlow.IdempotencyKey.MaxLength = 128 -> int
+InstalmentFlow.Currency
+InstalmentFlow.Currency.Code.get -> string!
+InstalmentFlow.Currency.Equals(InstalmentFlow.Currency? other) -> bool
+InstalmentFlow.Currency.MinorUnits.get -> int
+InstalmentFlow.CurrencyMismatchException
+InstalmentFlow.CurrencyMismatchException.Actual.get -> InstalmentFlow.Currency!
+InstalmentFlow.CurrencyMismatchException.CurrencyMismatchException(InstalmentFlow.Currency! expected, InstalmentFlow.Currency! actual) -> void
+InstalmentFlow.CurrencyMismatchException.Expected.get -> InstalmentFlow.Currency!
+InstalmentFlow.ErrorCodes
+InstalmentFlow.ExternalReference
+InstalmentFlow.ExternalReference.<Clone>$() -> InstalmentFlow.ExternalReference!
+InstalmentFlow.ExternalReference.Equals(InstalmentFlow.ExternalReference? other) -> bool
+InstalmentFlow.ExternalReference.ExternalReference(string! source, string! value) -> void
+InstalmentFlow.ExternalReference.Source.get -> string!
+InstalmentFlow.ExternalReference.Value.get -> string!
+InstalmentFlow.IdempotencyKey
+InstalmentFlow.IdempotencyKey.<Clone>$() -> InstalmentFlow.IdempotencyKey!
+InstalmentFlow.IdempotencyKey.Equals(InstalmentFlow.IdempotencyKey? other) -> bool
+InstalmentFlow.IdempotencyKey.IdempotencyKey(string! value) -> void
+InstalmentFlow.IdempotencyKey.Value.get -> string!
+InstalmentFlow.InstalmentFlowException
+InstalmentFlow.InstalmentFlowException.ErrorCode.get -> string!
+InstalmentFlow.InstalmentFlowException.InstalmentFlowException(string! errorCode, string! message) -> void
+InstalmentFlow.InstalmentFlowException.InstalmentFlowException(string! errorCode, string! message, System.Exception? innerException) -> void
+InstalmentFlow.InvalidAmountException
+InstalmentFlow.InvalidAmountException.InvalidAmountException(string! message) -> void
+InstalmentFlow.Money
+InstalmentFlow.Money.Abs() -> InstalmentFlow.Money!
+InstalmentFlow.Money.Add(InstalmentFlow.Money! other) -> InstalmentFlow.Money!
+InstalmentFlow.Money.Allocate(System.Collections.Generic.IReadOnlyList<decimal>! ratios) -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.Money!>!
+InstalmentFlow.Money.Amount.get -> decimal
+InstalmentFlow.Money.CompareTo(InstalmentFlow.Money? other) -> int
+InstalmentFlow.Money.Currency.get -> InstalmentFlow.Currency!
+InstalmentFlow.Money.Equals(InstalmentFlow.Money? other) -> bool
+InstalmentFlow.Money.IsNegative.get -> bool
+InstalmentFlow.Money.IsPositive.get -> bool
+InstalmentFlow.Money.IsZero.get -> bool
+InstalmentFlow.Money.MinorUnitAmount.get -> decimal
+InstalmentFlow.Money.Money(decimal amount, InstalmentFlow.Currency! currency) -> void
+InstalmentFlow.Money.Multiply(decimal factor, System.MidpointRounding mode) -> InstalmentFlow.Money!
+InstalmentFlow.Money.Negate() -> InstalmentFlow.Money!
+InstalmentFlow.Money.Split(int parts) -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.Money!>!
+InstalmentFlow.Money.Subtract(InstalmentFlow.Money! other) -> InstalmentFlow.Money!
+InstalmentFlow.TenantClock
+InstalmentFlow.TenantClock.EndOfDayExclusive(System.DateOnly date) -> System.DateTimeOffset
+InstalmentFlow.TenantClock.StartOfDay(System.DateOnly date) -> System.DateTimeOffset
+InstalmentFlow.TenantClock.TenantClock(System.TimeZoneInfo! timeZone, System.TimeProvider! timeProvider) -> void
+InstalmentFlow.TenantClock.TimeProvider.get -> System.TimeProvider!
+InstalmentFlow.TenantClock.TimeZone.get -> System.TimeZoneInfo!
+InstalmentFlow.TenantClock.ToBusinessDate(System.DateTimeOffset instant) -> System.DateOnly
+InstalmentFlow.TenantClock.Today.get -> System.DateOnly
+InstalmentFlow.TenantClock.ToInstant(System.DateOnly date, System.TimeOnly time) -> System.DateTimeOffset
+InstalmentFlow.TenantClock.UtcNow.get -> System.DateTimeOffset
+InstalmentFlow.UnknownCurrencyException
+InstalmentFlow.UnknownCurrencyException.Code.get -> string!
+InstalmentFlow.UnknownCurrencyException.UnknownCurrencyException(string! code) -> void
+override InstalmentFlow.Currency.Equals(object? obj) -> bool
+override InstalmentFlow.Currency.GetHashCode() -> int
+override InstalmentFlow.Currency.ToString() -> string!
+override InstalmentFlow.ExternalReference.Equals(object? obj) -> bool
+override InstalmentFlow.ExternalReference.GetHashCode() -> int
+override InstalmentFlow.ExternalReference.ToString() -> string!
+override InstalmentFlow.IdempotencyKey.Equals(object? obj) -> bool
+override InstalmentFlow.IdempotencyKey.GetHashCode() -> int
+override InstalmentFlow.IdempotencyKey.ToString() -> string!
+override InstalmentFlow.Money.Equals(object? obj) -> bool
+override InstalmentFlow.Money.GetHashCode() -> int
+override InstalmentFlow.Money.ToString() -> string!
+static InstalmentFlow.Currency.All.get -> System.Collections.Generic.IReadOnlyCollection<InstalmentFlow.Currency!>!
+static InstalmentFlow.Currency.BIF.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.CDF.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.EGP.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.ETB.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.EUR.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.FromCode(string! code) -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.GBP.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.GHS.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.KES.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.MWK.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.MZN.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.NGN.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.operator !=(InstalmentFlow.Currency? left, InstalmentFlow.Currency? right) -> bool
+static InstalmentFlow.Currency.operator ==(InstalmentFlow.Currency? left, InstalmentFlow.Currency? right) -> bool
+static InstalmentFlow.Currency.RWF.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.TryFromCode(string? code, out InstalmentFlow.Currency? currency) -> bool
+static InstalmentFlow.Currency.TZS.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.UGX.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.USD.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.XAF.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.XOF.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.ZAR.get -> InstalmentFlow.Currency!
+static InstalmentFlow.Currency.ZMW.get -> InstalmentFlow.Currency!
+static InstalmentFlow.ExternalReference.operator !=(InstalmentFlow.ExternalReference? left, InstalmentFlow.ExternalReference? right) -> bool
+static InstalmentFlow.ExternalReference.operator ==(InstalmentFlow.ExternalReference? left, InstalmentFlow.ExternalReference? right) -> bool
+static InstalmentFlow.IdempotencyKey.operator !=(InstalmentFlow.IdempotencyKey? left, InstalmentFlow.IdempotencyKey? right) -> bool
+static InstalmentFlow.IdempotencyKey.operator ==(InstalmentFlow.IdempotencyKey? left, InstalmentFlow.IdempotencyKey? right) -> bool
+static InstalmentFlow.Money.Kes(decimal amount) -> InstalmentFlow.Money!
+static InstalmentFlow.Money.Max(InstalmentFlow.Money! left, InstalmentFlow.Money! right) -> InstalmentFlow.Money!
+static InstalmentFlow.Money.Min(InstalmentFlow.Money! left, InstalmentFlow.Money! right) -> InstalmentFlow.Money!
+static InstalmentFlow.Money.Of(decimal amount, string! currencyCode) -> InstalmentFlow.Money!
+static InstalmentFlow.Money.operator !=(InstalmentFlow.Money? left, InstalmentFlow.Money? right) -> bool
+static InstalmentFlow.Money.operator +(InstalmentFlow.Money! left, InstalmentFlow.Money! right) -> InstalmentFlow.Money!
+static InstalmentFlow.Money.operator -(InstalmentFlow.Money! left, InstalmentFlow.Money! right) -> InstalmentFlow.Money!
+static InstalmentFlow.Money.operator -(InstalmentFlow.Money! value) -> InstalmentFlow.Money!
+static InstalmentFlow.Money.operator <(InstalmentFlow.Money! left, InstalmentFlow.Money! right) -> bool
+static InstalmentFlow.Money.operator <=(InstalmentFlow.Money! left, InstalmentFlow.Money! right) -> bool
+static InstalmentFlow.Money.operator ==(InstalmentFlow.Money? left, InstalmentFlow.Money? right) -> bool
+static InstalmentFlow.Money.operator >(InstalmentFlow.Money! left, InstalmentFlow.Money! right) -> bool
+static InstalmentFlow.Money.operator >=(InstalmentFlow.Money! left, InstalmentFlow.Money! right) -> bool
+static InstalmentFlow.Money.Round(decimal amount, InstalmentFlow.Currency! currency, System.MidpointRounding mode) -> InstalmentFlow.Money!
+static InstalmentFlow.Money.Sum(InstalmentFlow.Currency! currency, System.Collections.Generic.IEnumerable<InstalmentFlow.Money!>! amounts) -> InstalmentFlow.Money!
+static InstalmentFlow.Money.Zero(InstalmentFlow.Currency! currency) -> InstalmentFlow.Money!
+static InstalmentFlow.TenantClock.ForTimeZone(string! timeZoneId, System.TimeProvider? timeProvider = null) -> InstalmentFlow.TenantClock!
