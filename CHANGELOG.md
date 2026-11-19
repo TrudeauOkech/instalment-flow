@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- M2 tenants, obligations and schedules:
+  - Tenants and versioned tenant policies (default grace, payment-reference format).
+  - A tenant-scoped API: `InstalmentFlowFactory.CreateInMemory(...).ForTenant(id)` with Accounts, Obligations, Plans and Queries.
+  - Obligations with principal, interest, fee and penalty components.
+  - Repayment plans: equal instalments with an optional deposit, custom schedules, custom generators and business calendars. Schedules are validated so their totals equal the obligation (I-13).
+  - Plan supersession without financial history (ADR-011), with every version kept.
+  - Derived instalment status (payment state and timing), days past due, arrears and paid-through date.
+  - Per-tenant uniqueness of external IDs and payment references; cross-tenant isolation.
+  - `eng/update-public-api.sh` to record new public API.
 - M1 money, currency and time:
   - `Money`: exact `decimal` amounts validated against the currency's minor units; same-currency arithmetic only (`IF1001`); explicit rounding modes; largest-remainder `Allocate` and `Split`.
   - `Currency`: a canonical ISO 4217 registry of 19 currencies (East and West African currencies plus USD, EUR and GBP).

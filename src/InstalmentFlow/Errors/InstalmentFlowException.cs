@@ -39,4 +39,37 @@ public static class ErrorCodes
 
     /// <summary>A currency code is not recognised.</summary>
     public const string UnknownCurrency = "IF1004";
+
+    /// <summary>A payment reference does not match the tenant's reference format.</summary>
+    public const string InvalidPaymentReference = "IF1005";
+
+    /// <summary>A payment reference is already used by another obligation in the tenant.</summary>
+    public const string DuplicatePaymentReference = "IF1006";
+
+    /// <summary>An external ID is already used by another account or obligation in the tenant.</summary>
+    public const string DuplicateExternalId = "IF1007";
+
+    /// <summary>A repayment schedule is invalid, for example its totals do not equal the obligation's amounts.</summary>
+    public const string InvalidSchedule = "IF1008";
+
+    /// <summary>A request is invalid in a way not covered by a more specific code.</summary>
+    public const string InvalidRequest = "IF1009";
+
+    /// <summary>The referenced account, obligation or other entity does not exist in the tenant.</summary>
+    public const string NotFound = "IF1010";
+
+    /// <summary>The account changed concurrently and the command could not be applied.</summary>
+    public const string ConcurrencyConflict = "IF3001";
+
+    /// <summary>A plan cannot be superseded because payments or waivers have been applied to it.</summary>
+    public const string PlanHasFinancialHistory = "IF4001";
+
+    /// <summary>The operation would touch another tenant's data.</summary>
+    public const string TenantMismatch = "IF5001";
+
+    /// <summary>The tenant does not exist.</summary>
+    public const string UnknownTenant = "IF5002";
+
+    /// <summary>A tenant with this ID already exists.</summary>
+    public const string DuplicateTenant = "IF5003";
 }

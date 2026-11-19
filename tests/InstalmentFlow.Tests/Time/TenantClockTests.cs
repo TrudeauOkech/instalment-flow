@@ -71,11 +71,4 @@ public sealed class TenantClockTests
     {
         Assert.ThrowsAny<TimeZoneNotFoundException>(() => TenantClock.ForTimeZone("Mars/Olympus_Mons"));
     }
-
-    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
-    {
-        public DateTimeOffset Now { get; } = now;
-
-        public override DateTimeOffset GetUtcNow() => Now;
-    }
 }

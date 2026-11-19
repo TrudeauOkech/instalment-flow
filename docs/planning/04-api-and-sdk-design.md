@@ -3,7 +3,7 @@
 Design goals:
 1. **Five-minute first success.** The quick start runs in-memory with no configuration beyond one tenant.
 2. **A grouped, tenant-scoped facade.** `flow.Payments`, `flow.Charges`, `flow.Exceptions`… are easy to discover, and there is no tenant-less entry point (ADR-007).
-3. **Requests are classes with `required` init properties** (readable at the call site, enforced by the compiler). Results are typed, and expected business outcomes (duplicate, held, unidentified) are values, not exceptions.
+3. **Requests are records with `required` init properties** (readable at the call site, enforced by the compiler). Results are typed, and expected business outcomes (duplicate, held, unidentified) are values, not exceptions.
 4. **Every money-moving request requires an `IdempotencyKey`.** It is `required` on the base request type, so it cannot be forgotten.
 5. **Wrong code is hard to write.** `Money` cannot be built from `double`, currencies cannot be mixed, and dates are `DateOnly` or `DateTimeOffset`, never `DateTime`.
 
@@ -24,10 +24,12 @@ dotnet add package InstalmentFlow.Testing                  # test helpers (test 
 using InstalmentFlow;
 
 var factory = InstalmentFlowFactory.CreateInMemory(t => t
-    .AddTenant("acme-ke", Currency.KES, "Africa/Nairobi", policy => policy
-        .PaymentReferenceFormat(@"^LN-\d{6}$")));
+    .AddTenant("acme-ke", Currency.KES, "Africa/Nairobi", policy => policy with
+    {
+        PaymentReference = new ReferenceFormat(@"^LN-\d{6}$"),
+    }));
 
-IInstalmentFlow flow = factory.For("acme-ke");
+IInstalmentFlow flow = factory.ForTenant("acme-ke");
 
 var customer = await flow.Accounts.OpenAsync(new OpenAccountRequest
 {
@@ -38,13 +40,13 @@ var customer = await flow.Accounts.OpenAsync(new OpenAccountRequest
 await flow.Obligations.OpenAsync(new OpenObligationRequest
 {
     IdempotencyKey = "open-LN-100001",
-    AccountId = customer.AccountId,
+    Account = customer.AccountId,
     ExternalId = "loan-2041",                // the host LMS's id
     PaymentReference = "LN-100001",          // what the customer types at the paybill
     Components = [Component.Principal(Money.Kes(15_000))],
     Plan = PlanSpec.Equal(
-        frequency: Frequency.Daily, count: 270, deposit: Money.Kes(1_500),
-        firstDue: new DateOnly(2026, 12, 1), grace: GracePeriod.Days(2)),   // 13,500 / 270 = 50 per day
+        Frequency.Daily, count: 270, firstDue: new DateOnly(2026, 12, 1), grace: GracePeriod.OfDays(2),
+        deposit: new Deposit(Money.Kes(1_500), DueDate: new DateOnly(2026, 11, 18))),   // 13,500 / 270 = 50 per day
 });
 
 foreach (var (i, amount) in new[] { 100m, 150m, 50m, 200m }.Index())
@@ -119,7 +121,7 @@ await tenantAdmin.CreateAsync(new CreateTenantRequest
     },
     ProviderAccounts = [new ProviderAccount("mpesa", "600123")],    // unique across tenants
 });
-await tenantAdmin.UpdatePolicyAsync("acme-ke", p => p with { DefaultGrace = GracePeriod.Days(3) }); // creates policy v2
+await tenantAdmin.UpdatePolicyAsync("acme-ke", p => p with { DefaultGrace = GracePeriod.OfDays(3) }); // creates policy v2
 ```
 
 ## 4. Public surface
@@ -127,7 +129,7 @@ await tenantAdmin.UpdatePolicyAsync("acme-ke", p => p with { DefaultGrace = Grac
 ```csharp
 namespace InstalmentFlow;
 
-public interface IInstalmentFlowFactory { IInstalmentFlow For(TenantId tenant); }
+public interface IInstalmentFlowFactory { ITenantAdmin Tenants { get; } IInstalmentFlow ForTenant(TenantId tenant); }
 
 public interface IInstalmentFlow                 // always tenant-scoped
 {

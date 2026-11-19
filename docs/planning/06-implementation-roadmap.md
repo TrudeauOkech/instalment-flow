@@ -85,7 +85,24 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
   - unit tests for every operator;
   - time-zone boundary cases (23:59:59 EAT = 20:59:59 UTC).
 
-### M2 — Tenants, obligations and schedules (M)
+### M2 — Tenants, obligations and schedules (M) — ✅ done 2026-11-19
+
+> **Delivered:**
+> - **Tenancy:** `TenantId`; versioned `TenantPolicy` (default grace period, `ReferenceFormat` with normalisation and a regex match timeout); `ITenantAdmin`; `InstalmentFlowFactory.CreateInMemory(...)`; the tenant-scoped `IInstalmentFlow` with Accounts, Obligations, Plans and Queries.
+> - **Obligations:** principal, interest, fee and penalty components, with charge codes for fees and penalties.
+> - **Plans:** the `Equal` generator (with deposit; remainder on the last instalment), `Custom`, and `Using(IScheduleGenerator)`; `IBusinessCalendar`. Every schedule is validated against I-13. `Plans.SupersedeAsync` is allowed only without financial history (`IF4001`).
+> - **Status:** derived as payment state × timing, with days past due counted from the due date, arrears, and paid-through date.
+> - **Store:** an immutable in-memory store with an account version check and atomic per-tenant uniqueness for external IDs and payment references.
+>
+> **Decisions:**
+> - Domain types and storage ports are `internal`. The ports become public in M7.
+> - `IInstalmentFlowFactory.For` was renamed `ForTenant`, because analyzer CA1716 flags `For` as a VB keyword.
+> - `GracePeriod.OfDays(n)` replaces `GracePeriod.Days(n)` from the doc 04 sketch.
+> - `Deposit` carries its own due date.
+>
+> **Deferred to M3:** idempotent replay of a request with the same key. Until then, duplicate external IDs are rejected (`IF1007`).
+>
+> **Tests:** 133 in total (107 in `InstalmentFlow.Tests`). Mutation checks covered the grace boundary, removing I-13, gaps in the paid-through date, and the store's reference uniqueness.
 - **Features:**
   - `TenantId`, `TenantPolicy` (versioned), `IInstalmentFlowFactory.For(tenant)`, and the tenant-scoped facade skeleton (ADR-007);
   - `CustomerAccount` and `Obligation` entities with component balances (principal, interest, fee, penalty), external ID, and a payment reference validated against the tenant format;
