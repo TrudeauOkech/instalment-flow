@@ -52,13 +52,24 @@ internal sealed record CustomerAccount(
     string ExternalId,
     long Version,
     DateTimeOffset OpenedAt,
-    ImmutableArray<Obligation> Obligations)
+    ImmutableArray<Obligation> Obligations,
+    ImmutableArray<FundsLot> Lots)
 {
     /// <summary>Version of an account that has not been saved yet.</summary>
     public const long NewVersion = 0;
 
     public static CustomerAccount Open(TenantId tenantId, AccountId id, string externalId, DateTimeOffset now) =>
-        new(tenantId, id, externalId, NewVersion, now, []);
+        new(tenantId, id, externalId, NewVersion, now, [], []);
+
+    /// <summary>The customer's unapplied funds in one currency: the sum of their lots' remaining amounts.</summary>
+    public Money Unapplied(Currency currency) =>
+        Money.Sum(currency, Lots.Where(l => l.Remaining.Currency == currency).Select(l => l.Remaining));
+
+    /// <summary>Unapplied funds per currency held, ordered by currency code.</summary>
+    public IReadOnlyList<Money> UnappliedByCurrency() =>
+        [.. Lots.Select(l => l.Remaining.Currency).Distinct().OrderBy(c => c.Code, StringComparer.Ordinal).Select(Unapplied)];
+
+    public CustomerAccount AddLot(FundsLot lot) => this with { Lots = Lots.Add(lot) };
 
     public Obligation GetObligation(ObligationId id) =>
         Obligations.SingleOrDefault(o => o.Id == id) ?? throw new NotFoundException("Obligation", id.ToString());

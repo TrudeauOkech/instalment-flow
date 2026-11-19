@@ -16,13 +16,45 @@ public sealed record TenantPolicy
     /// <summary>The format of payment references for this tenant's obligations.</summary>
     public ReferenceFormat PaymentReference { get; init; } = ReferenceFormat.Default;
 
+    /// <summary>
+    /// What to do with a payment from a known customer who did not say which loan it is for and has exactly one
+    /// payable obligation (ADR-009, case 2). The default holds the funds and raises an exception.
+    /// </summary>
+    public SoleObligationPolicy SoleObligation { get; init; } = SoleObligationPolicy.Hold;
+
+    /// <summary>
+    /// What to do with such a payment when the customer has several payable obligations (ADR-009, case 3). The
+    /// default holds the funds and raises an exception; allocating across loans requires an explicit opt-in.
+    /// </summary>
+    public MultipleObligationsPolicy MultipleObligations { get; init; } = MultipleObligationsPolicy.Hold;
+
     internal void Validate()
     {
-        if (DefaultGrace is null || PaymentReference is null)
+        if (DefaultGrace is null || PaymentReference is null || !Enum.IsDefined(SoleObligation) || !Enum.IsDefined(MultipleObligations))
         {
             throw new RuleViolationException(ErrorCodes.InvalidRequest, "Tenant policy settings must not be null.");
         }
     }
+}
+
+/// <summary>Handling of an unreferenced payment from a customer with one payable obligation.</summary>
+public enum SoleObligationPolicy
+{
+    /// <summary>Hold the funds as unapplied and raise <see cref="PaymentExceptionReason.AllocationInstructionRequired"/>.</summary>
+    Hold = 0,
+
+    /// <summary>Direct the funds to that obligation.</summary>
+    AutoAllocate = 1,
+}
+
+/// <summary>Handling of an unreferenced payment from a customer with several payable obligations.</summary>
+public enum MultipleObligationsPolicy
+{
+    /// <summary>Hold the funds as unapplied and raise <see cref="PaymentExceptionReason.AllocationInstructionRequired"/>.</summary>
+    Hold = 0,
+
+    /// <summary>Allocate across the customer's payable obligations using the tenant's strategy (only where contracts allow it).</summary>
+    AllocateByStrategy = 1,
 }
 
 /// <summary>One version of a tenant's policy.</summary>

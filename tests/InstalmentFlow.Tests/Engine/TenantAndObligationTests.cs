@@ -97,9 +97,10 @@ public sealed class TenantAndObligationTests
         var account = await OpenAccount(Acme, "C-1");
         await Acme.Obligations.OpenAsync(PhoneFinancing(account, "loan-1", "LN100001"), TestContext.Current.CancellationToken);
 
-        Assert.Equal(ErrorCodes.DuplicateExternalId, (await Assert.ThrowsAsync<RuleViolationException>(() => OpenAccount(Acme, "C-1"))).ErrorCode);
         Assert.Equal(ErrorCodes.DuplicateExternalId, (await Assert.ThrowsAsync<RuleViolationException>(() =>
-            Acme.Obligations.OpenAsync(PhoneFinancing(account, "loan-1", "LN100002"), TestContext.Current.CancellationToken))).ErrorCode);
+            Acme.Accounts.OpenAsync(new OpenAccountRequest { IdempotencyKey = "another-key", ExternalId = "C-1" }, TestContext.Current.CancellationToken))).ErrorCode);
+        Assert.Equal(ErrorCodes.DuplicateExternalId, (await Assert.ThrowsAsync<RuleViolationException>(() =>
+            Acme.Obligations.OpenAsync(PhoneFinancing(account, "loan-1", "LN100002") with { IdempotencyKey = "another-key" }, TestContext.Current.CancellationToken))).ErrorCode);
     }
 
     [Fact]

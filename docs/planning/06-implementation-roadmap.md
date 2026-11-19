@@ -121,7 +121,18 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
   - status as a function over generated `(date, payments)` inputs;
   - snapshot tests of generated schedules (Verify).
 
-### M3 — Journal, payment recording, identification and exceptions (L)
+### M3 — Journal, payment recording, identification and exceptions (L) — ✅ done 2026-11-19
+
+> **Delivered:**
+> - **Journal:** a double-entry journal, built with a balance check (I-1), and the chart of accounts (clearing, unidentified, unapplied, receivable, origination). Opening an obligation now posts its receivables.
+> - **Recording:** `Payments.RecordAsync` always records (ADR-002): a payment fact, one funds lot, and a journal transaction. Funds go to the customer's unapplied funds or to the tenant's unidentified funds, with one aggregate per source.
+> - **Identification:** a pure `PaymentIdentifier` covering ADR-009 cases 1–7, plus `NoPayableObligation`. `PaymentTarget.ForReference/ForObligation/ForCustomer/Unknown`; `IPaymentReferenceResolver`, which cannot bypass ambiguity. A directed obligation is recorded on the lot for M4 to allocate.
+> - **Exception queue:** `ListOpenAsync`, `GetAsync`, `AssignToCustomerAsync` (journal-backed, with an optional obligation directive) and `DismissAsync`, which is blocked while funds are unidentified (I-22). `AllocateToObligationAsync` comes in M4 and `MarkForRefundAsync` in M5.
+> - **Commands:** an atomic `Commit` (aggregates with expected versions, journal, facts, exceptions, idempotency, events) and a `CommandRunner`. The runner replays on the same key and payload, rejects the same key with a different payload (`IF1002`), reports the same provider reference as `Duplicate` (or `IF1011` if the amount differs), and retries conflicts with jittered backoff (default 10 attempts, configurable with `UseConcurrencyRetries`).
+> - **Events:** domain events are collected per commit. They stay internal until the outbox arrives in M7.
+> - **Verification:** an internal `LedgerVerifier` checks I-1, I-3, I-5, I-10 (funds, receivables, clearing), I-11, I-18, I-19 and I-22 by folding the journal. Tests assert it after scenarios; it becomes public in M6.
+>
+> **Tests:** 164 in total (138 core), stable over 10 repeated runs and on .NET 11. Mutation checks: the store duplicate check (which needed a new cross-aggregate test to catch), the idempotency hash, the ambiguity rule, the ledger account choice, and the I-22 dismissal guard.
 - **Features:**
   - journal builder with the balance check;
   - chart-of-accounts conventions;
@@ -139,7 +150,7 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
   - I-1, I-3, I-4, I-5, I-11, I-19, I-20 and I-22 hold;
   - every row of the ADR-009 decision table has a passing executable spec;
   - **Scenario 1** (five identical callbacks → one payment) passes;
-  - the same key with a different amount raises `IF1002`.
+  - the same key with a different amount raises `IF1002`, and the same provider reference with a different amount raises `IF1011`.
 - **Tests:**
   - unit;
   - a CsCheck model-based test of the command sequence against a simple reference model;

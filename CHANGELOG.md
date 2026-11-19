@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- M3 payment recording, identification and exceptions:
+  - `Payments.RecordAsync` always records a confirmed payment: a funds lot plus a balanced journal entry, held as customer unapplied funds or tenant unidentified funds.
+  - Identification by payment reference, known obligation or known customer, following ADR-009. Ambiguous payments are never directed. Tenant policies `SoleObligation` and `MultipleObligations` default to `Hold`. `IPaymentReferenceResolver` handles legacy references.
+  - The payment exception queue: list, get, assign unidentified funds to a customer, and dismiss (blocked while funds are unidentified).
+  - Idempotent commands: replay on the same key; `IF1002` for the same key with a different request; `Duplicate` or `IF1011` for a repeated provider reference.
+  - Atomic commits with optimistic concurrency and jittered retries (`UseConcurrencyRetries`).
+  - Double-entry journal for obligations, payments and assignments; internal invariant verifier.
+  - `AccountSummary.Unapplied`, `Queries.GetPaymentAsync`.
 - M2 tenants, obligations and schedules:
   - Tenants and versioned tenant policies (default grace, payment-reference format).
   - A tenant-scoped API: `InstalmentFlowFactory.CreateInMemory(...).ForTenant(id)` with Accounts, Obligations, Plans and Queries.

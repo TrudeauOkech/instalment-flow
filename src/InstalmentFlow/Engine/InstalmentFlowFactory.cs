@@ -12,14 +12,18 @@ public sealed class InstalmentFlowFactory : IInstalmentFlowFactory
 {
     private readonly EngineServices _services;
 
-    private InstalmentFlowFactory(EngineServices services)
+    private InstalmentFlowFactory(EngineServices services, InMemoryStore? inMemoryStore)
     {
         _services = services;
+        InMemoryStore = inMemoryStore;
         Tenants = new TenantAdmin(services);
     }
 
     /// <inheritdoc />
     public ITenantAdmin Tenants { get; }
+
+    /// <summary>The in-memory store, for invariant verification in tests.</summary>
+    internal InMemoryStore? InMemoryStore { get; }
 
     /// <summary>Creates an engine backed by an in-memory store.</summary>
     /// <example>
@@ -34,7 +38,7 @@ public sealed class InstalmentFlowFactory : IInstalmentFlowFactory
         configure?.Invoke(builder);
 
         var store = new InMemoryStore();
-        var services = new EngineServices(store, store, builder.TimeProvider, builder.Calendars);
+        var services = new EngineServices(store, store, builder.TimeProvider, builder.Calendars, builder.ReferenceResolver, builder.MaxAttempts);
         foreach (var tenant in builder.Tenants)
         {
             TenantAdmin.ValidateTimeZone(tenant.TimeZone);
@@ -47,7 +51,7 @@ public sealed class InstalmentFlowFactory : IInstalmentFlowFactory
             store.Create(record);
         }
 
-        return new InstalmentFlowFactory(services);
+        return new InstalmentFlowFactory(services, store);
     }
 
     /// <inheritdoc />
@@ -73,6 +77,22 @@ public sealed class InstalmentFlowBuilder
 
     internal IReadOnlyList<CreateTenantRequest> Tenants => _tenants;
 
+    internal IPaymentReferenceResolver? ReferenceResolver { get; private set; }
+
+    internal int MaxAttempts { get; private set; } = CommandRunner.DefaultMaxAttempts;
+
+    /// <summary>
+    /// How many times a command is attempted when another command for the same customer commits first
+    /// (default 10, with jittered backoff). Raise it only for unusually hot accounts.
+    /// </summary>
+    public InstalmentFlowBuilder UseConcurrencyRetries(int maxAttempts)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxAttempts);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(maxAttempts, 100);
+        MaxAttempts = maxAttempts;
+        return this;
+    }
+
     /// <summary>Uses <paramref name="timeProvider"/> for all clocks, for example a fake one in tests.</summary>
     public InstalmentFlowBuilder UseTimeProvider(TimeProvider timeProvider)
     {
@@ -95,6 +115,17 @@ public sealed class InstalmentFlowBuilder
             Policy = policy?.Invoke(TenantPolicy.Default) ?? TenantPolicy.Default,
             CreatedBy = "configuration",
         });
+        return this;
+    }
+
+    /// <summary>
+    /// Adds candidate obligations or customers for payment references, for example legacy account numbers
+    /// (ADR-009). It is consulted for every payment that quotes a reference.
+    /// </summary>
+    public InstalmentFlowBuilder UsePaymentReferenceResolver(IPaymentReferenceResolver resolver)
+    {
+        ArgumentNullException.ThrowIfNull(resolver);
+        ReferenceResolver = resolver;
         return this;
     }
 

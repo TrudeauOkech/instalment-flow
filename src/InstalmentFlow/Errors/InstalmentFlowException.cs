@@ -58,6 +58,15 @@ public static class ErrorCodes
     /// <summary>The referenced account, obligation or other entity does not exist in the tenant.</summary>
     public const string NotFound = "IF1010";
 
+    /// <summary>
+    /// A payment with the same source and external reference was already recorded with different details,
+    /// for example a different amount (failure scenario 1).
+    /// </summary>
+    public const string PaymentConflict = "IF1011";
+
+    /// <summary>A payment exception is already resolved or cannot be resolved this way.</summary>
+    public const string ExceptionNotResolvable = "IF1012";
+
     /// <summary>The account changed concurrently and the command could not be applied.</summary>
     public const string ConcurrencyConflict = "IF3001";
 

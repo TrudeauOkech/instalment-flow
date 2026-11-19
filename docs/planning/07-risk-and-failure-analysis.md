@@ -71,7 +71,7 @@ Likelihood (L) and impact (I) are rated H, M or L.
 
 Each scenario becomes an executable spec in `tests/` and a page in `docs/failure-scenarios/`.
 
-1. **Duplicate with different amount:** the same `TransID` arrives with 500 and then 5000. The second is rejected with `IF1002` and an alert. The first stands.
+1. **Duplicate with different amount:** the same `TransID` arrives with 500 and then 5000. The second is rejected with `IF1011` and an alert. The first stands.
 2. **Concurrent duplicate callbacks:** two identical confirmations arrive in parallel. Both miss the idempotency cache, one wins the unique index, and the other returns `Duplicate`.
 3. **Retry after commit, before response:** the host times out and resubmits. The same result is returned.
 4. **STK timeout, then success, then the customer pays again manually:** one intent is confirmed and one C2B receipt lands. Both are recorded, and the second becomes credit.

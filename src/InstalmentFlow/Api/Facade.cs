@@ -28,6 +28,12 @@ public interface IInstalmentFlow
     /// <summary>Repayment plans.</summary>
     IPlans Plans { get; }
 
+    /// <summary>Incoming payments.</summary>
+    IPayments Payments { get; }
+
+    /// <summary>The payment exception queue.</summary>
+    IPaymentExceptions Exceptions { get; }
+
     /// <summary>Read-only queries.</summary>
     IInstalmentQueries Queries { get; }
 }
@@ -69,6 +75,9 @@ public interface IInstalmentQueries
 
     /// <summary>An obligation with its balances and active schedule.</summary>
     Task<ObligationView> GetObligationAsync(ObligationRef obligation, DateOnly? asOfDate = null, CancellationToken cancellationToken = default);
+
+    /// <summary>A recorded payment.</summary>
+    Task<PaymentView> GetPaymentAsync(PaymentRef payment, CancellationToken cancellationToken = default);
 
     /// <summary>Every plan version of an obligation, including superseded and cancelled ones.</summary>
     Task<ScheduleView> GetScheduleAsync(ObligationRef obligation, DateOnly? asOfDate = null, CancellationToken cancellationToken = default);

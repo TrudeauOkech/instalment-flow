@@ -57,7 +57,7 @@ foreach (var (i, amount) in new[] { 100m, 150m, 50m, 200m }.Index())
         Source = new ExternalReference("manual", $"R{i}"),
         Amount = Money.Kes(amount),
         ValueAt = DateTimeOffset.UtcNow,
-        Target = PaymentTarget.Reference("LN-100001"),   // or .Obligation(id), .Customer(id), .Unknown
+        Target = PaymentTarget.ForReference("LN-100001"),   // or .ForObligation(id), .ForCustomer(id), .Unknown
     });
     Console.WriteLine($"{r.Outcome}: allocated {r.Allocated}, unapplied {r.UnappliedAfter}");
 }
@@ -252,6 +252,8 @@ public sealed record PostChargeRequest : InstalmentFlowRequest
 - *Rule violations* throw `InstalmentFlowException` subclasses, each with a stable `ErrorCode`:
   - `IF1001` CurrencyMismatch;
   - `IF1002` IdempotencyKeyReused (same key, different payload);
+  - `IF1011` PaymentConflict (same provider reference, different amount);
+  - `IF1012` ExceptionNotResolvable;
   - `IF2001` ReversalExceedsPayment;
   - `IF3001` ConcurrencyRetriesExhausted;
   - `IF4001` PlanHasFinancialHistory;

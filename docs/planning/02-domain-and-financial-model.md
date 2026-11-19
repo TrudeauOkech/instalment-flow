@@ -127,6 +127,7 @@ flowchart TD
 
 Rules:
 - **A directed allocation never spills onto another loan.** Funds beyond what the target obligation can absorb (after the future-instalment policy has been applied) stay as customer unapplied funds.
+- A known customer with **no payable obligation** in the payment's currency (a case the ADR-009 table does not list) gets the funds held as unapplied, with the exception reason `NoPayableObligation`, so the money is never silently parked.
 - `IPaymentReferenceResolver` (host extension) may add matches, for example legacy references or customer-level references. It cannot bypass the ambiguity rule: more than one candidate always means an exception.
 - An exception is resolved through `AssignToCustomer`, `AllocateToObligation`, `MarkForRefund` or `Dismiss` (Dismiss needs a reason and is only valid once the funds have been handled by another command). Each resolution is a journal command and is idempotent.
 

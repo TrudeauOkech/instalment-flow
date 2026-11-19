@@ -16,6 +16,14 @@ grep -E "(error|warning) RS0016:" "$log" \
       printf '%s\n' "$symbol" >>"$(dirname "$project")/PublicAPI.Unshipped.txt"
     done
 
+# Drop unshipped entries that no longer exist (RS0017). Shipped entries are never removed by this script.
+grep -E "PublicAPI\.Unshipped\.txt\([0-9]+,[0-9]+\): (error|warning) RS0017:" "$log" \
+  | sed -E "s/^(.*PublicAPI\.Unshipped\.txt)\(([0-9]+),[0-9]+\): .*/\1\t\2/" \
+  | sort -u -t$'\t' -k1,1 -k2,2nr \
+  | while IFS=$'\t' read -r file line; do
+      sed -i.bak "${line}d" "$file" && rm -f "$file.bak"
+    done
+
 for file in src/*/PublicAPI.Unshipped.txt; do
   { head -n1 "$file"; tail -n +2 "$file" | sort -u; } >"$file.tmp" && mv "$file.tmp" "$file"
 done

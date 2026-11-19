@@ -1,77 +1,138 @@
 using System.Collections.Immutable;
 using InstalmentFlow.Domain;
+using InstalmentFlow.Ledger;
 using InstalmentFlow.Storage;
 
 namespace InstalmentFlow.Engine;
 
 internal sealed class AccountsService(TenantContext context) : IAccounts
 {
-    public async Task<AccountOpened> OpenAsync(OpenAccountRequest request, CancellationToken cancellationToken = default)
+    private readonly CommandRunner _runner = new(context);
+
+    public Task<AccountOpened> OpenAsync(OpenAccountRequest request, CancellationToken cancellationToken = default)
     {
         Validate.Request(request);
         var externalId = Validate.ExternalId(request.ExternalId, nameof(request.ExternalId));
-        var tenant = await context.LoadAsync(cancellationToken).ConfigureAwait(false);
 
-        if (await context.Accounts.FindAccountAsync(context.TenantId, externalId, cancellationToken).ConfigureAwait(false) is not null)
-        {
-            throw new RuleViolationException(ErrorCodes.DuplicateExternalId, $"Account external ID '{externalId}' is already in use in this tenant.");
-        }
+        return _runner.RunAsync(
+            request,
+            "OpenAccount",
+            (_, _) => Task.FromResult(new Fingerprint("OpenAccount").Add("externalId", externalId)),
+            async (tenant, ct) =>
+            {
+                if (await context.Store.FindAccountAsync(context.TenantId, externalId, ct).ConfigureAwait(false) is not null)
+                {
+                    throw new RuleViolationException(ErrorCodes.DuplicateExternalId, $"Account external ID '{externalId}' is already in use in this tenant.");
+                }
 
-        var account = CustomerAccount.Open(context.TenantId, AccountId.New(context.Services.TimeProvider), externalId, tenant.Clock.UtcNow);
-        var saved = await context.Accounts.SaveAsync(account, cancellationToken).ConfigureAwait(false);
-        return new AccountOpened(saved.Id, saved.ExternalId);
+                var account = CustomerAccount.Open(context.TenantId, AccountId.New(context.Time), externalId, tenant.Clock.UtcNow);
+                var commit = new Commit
+                {
+                    Tenant = context.TenantId,
+                    Accounts = [account],
+                    Events = [DomainEvent.Create(context.Time, "AccountOpened", context.TenantId, account.Id, ("externalId", externalId))],
+                };
+                return new Planned<AccountOpened>(commit, new AccountOpened(account.Id, externalId));
+            },
+            result => result,
+            cancellationToken);
     }
 }
 
 internal sealed class ObligationsService(TenantContext context) : IObligations
 {
-    public async Task<ObligationOpened> OpenAsync(OpenObligationRequest request, CancellationToken cancellationToken = default)
+    private readonly CommandRunner _runner = new(context);
+
+    public Task<ObligationOpened> OpenAsync(OpenObligationRequest request, CancellationToken cancellationToken = default)
     {
         Validate.Request(request);
         var externalId = Validate.ExternalId(request.ExternalId, nameof(request.ExternalId));
         var plan = Validate.Required(request.Plan, nameof(request.Plan));
-        var components = Validate.Required(request.Components, nameof(request.Components));
-        var tenant = await context.LoadAsync(cancellationToken).ConfigureAwait(false);
-
-        if (!tenant.Policy.PaymentReference.TryNormalise(request.PaymentReference, out var reference))
-        {
-            throw new RuleViolationException(
-                ErrorCodes.InvalidPaymentReference,
-                $"Payment reference '{request.PaymentReference}' does not match the tenant's format {tenant.Policy.PaymentReference}.");
-        }
-
-        var originated = ValidateComponents(components);
+        var accountRef = Validate.Required(request.Account, nameof(request.Account));
+        var originated = ValidateComponents(Validate.Required(request.Components, nameof(request.Components)));
         var currency = originated[0].Amount.Currency;
-        var accountId = await context.ResolveAsync(Validate.Required(request.Account, nameof(request.Account)), cancellationToken).ConfigureAwait(false);
-        var account = await context.LoadAccountAsync(accountId, cancellationToken).ConfigureAwait(false);
 
-        // Friendly early checks; the store re-checks uniqueness atomically on save.
-        if (await context.Accounts.FindObligationAsync(context.TenantId, new ObligationLookup(null, externalId, null), cancellationToken).ConfigureAwait(false) is not null)
+        return _runner.RunAsync(
+            request,
+            "OpenObligation",
+            (tenant, _) =>
+            {
+                var schedule = ScheduleBuilder.Build(1, plan, originated, currency, tenant.Policy.DefaultGrace, tenant.Calendar, DateTimeOffset.UnixEpoch);
+                var fingerprint = new Fingerprint("OpenObligation")
+                    .Add("account", accountRef.ToString())
+                    .Add("externalId", externalId)
+                    .Add("reference", request.PaymentReference)
+                    .Add("description", request.Description);
+                foreach (var component in originated)
+                {
+                    fingerprint.Add($"component:{component.Key}", component.Amount);
+                }
+
+                return Task.FromResult(AddSchedule(fingerprint, schedule));
+            },
+            async (tenant, ct) =>
+            {
+                if (!tenant.Policy.PaymentReference.TryNormalise(request.PaymentReference, out var reference))
+                {
+                    throw new RuleViolationException(
+                        ErrorCodes.InvalidPaymentReference,
+                        $"Payment reference '{request.PaymentReference}' does not match the tenant's format {tenant.Policy.PaymentReference}.");
+                }
+
+                var accountId = await context.ResolveAsync(accountRef, ct).ConfigureAwait(false);
+                var account = await context.LoadAccountAsync(accountId, ct).ConfigureAwait(false);
+
+                // Friendly early checks; the store re-checks uniqueness atomically on commit.
+                if (await context.Store.FindObligationAsync(context.TenantId, new ObligationLookup(null, externalId, null), ct).ConfigureAwait(false) is not null)
+                {
+                    throw new RuleViolationException(ErrorCodes.DuplicateExternalId, $"Obligation external ID '{externalId}' is already in use in this tenant.");
+                }
+
+                if (await context.Store.FindObligationAsync(context.TenantId, new ObligationLookup(null, null, reference), ct).ConfigureAwait(false) is not null)
+                {
+                    throw new RuleViolationException(ErrorCodes.DuplicatePaymentReference, $"Payment reference '{reference}' is already in use in this tenant.");
+                }
+
+                var now = tenant.Clock.UtcNow;
+                var planVersion = ScheduleBuilder.Build(1, plan, originated, currency, tenant.Policy.DefaultGrace, tenant.Calendar, now);
+                var obligation = new Obligation(
+                    ObligationId.New(context.Time), account.Id, externalId, reference, currency, ObligationStatus.Active,
+                    [.. originated], [planVersion], request.Description, now);
+
+                var journal = new JournalBuilder(JournalKind.ObligationOpened);
+                foreach (var component in originated)
+                {
+                    journal.Debit(LedgerAccounts.Receivable(obligation.Id, component.Key), component.Amount, LedgerSourceType.Obligation, obligation.Id.Value);
+                    journal.Credit(LedgerAccounts.Origination(component.Key), component.Amount, LedgerSourceType.Obligation, obligation.Id.Value);
+                }
+
+                var commit = new Commit
+                {
+                    Tenant = context.TenantId,
+                    Accounts = [account.AddObligation(obligation)],
+                    Journal = journal.Build(context.TenantId, account.Id, request.IdempotencyKey, tenant.Clock.Today, now, context.Time),
+                    Events = [DomainEvent.Create(context.Time, "ObligationOpened", context.TenantId, account.Id,
+                        ("obligationId", obligation.Id.ToString()), ("paymentReference", reference))],
+                };
+                return new Planned<ObligationOpened>(commit, new ObligationOpened(ViewMapper.ToView(obligation, tenant.Clock.Today)));
+            },
+            result => result,
+            cancellationToken);
+    }
+
+    internal static Fingerprint AddSchedule(Fingerprint fingerprint, PlanVersion schedule)
+    {
+        fingerprint.Add("grace", schedule.Grace.Days).Add("generator", schedule.Generator);
+        foreach (var instalment in schedule.Instalments)
         {
-            throw new RuleViolationException(ErrorCodes.DuplicateExternalId, $"Obligation external ID '{externalId}' is already in use in this tenant.");
+            fingerprint.Add($"due:{instalment.Sequence}", instalment.DueDate);
+            foreach (var component in instalment.Components)
+            {
+                fingerprint.Add($"amount:{instalment.Sequence}:{component.Key}", component.Due);
+            }
         }
 
-        if (await context.Accounts.FindObligationAsync(context.TenantId, new ObligationLookup(null, null, reference), cancellationToken).ConfigureAwait(false) is not null)
-        {
-            throw new RuleViolationException(ErrorCodes.DuplicatePaymentReference, $"Payment reference '{reference}' is already in use in this tenant.");
-        }
-
-        var now = tenant.Clock.UtcNow;
-        var planVersion = ScheduleBuilder.Build(1, plan, originated, currency, tenant.Policy.DefaultGrace, tenant.Calendar, now);
-        var obligation = new Obligation(
-            ObligationId.New(context.Services.TimeProvider),
-            account.Id,
-            externalId,
-            reference,
-            currency,
-            ObligationStatus.Active,
-            [.. originated],
-            [planVersion],
-            request.Description,
-            now);
-
-        await context.Accounts.SaveAsync(account.AddObligation(obligation), cancellationToken).ConfigureAwait(false);
-        return new ObligationOpened(ViewMapper.ToView(obligation, tenant.Clock.Today));
+        return fingerprint;
     }
 
     private static List<Component> ValidateComponents(IReadOnlyList<Component> components)
@@ -101,35 +162,56 @@ internal sealed class ObligationsService(TenantContext context) : IObligations
 
 internal sealed class PlansService(TenantContext context) : IPlans
 {
-    public async Task<PlanSuperseded> SupersedeAsync(SupersedePlanRequest request, CancellationToken cancellationToken = default)
+    private readonly CommandRunner _runner = new(context);
+
+    public Task<PlanSuperseded> SupersedeAsync(SupersedePlanRequest request, CancellationToken cancellationToken = default)
     {
         Validate.Request(request);
         var plan = Validate.Required(request.Plan, nameof(request.Plan));
+        var obligationRef = Validate.Required(request.Obligation, nameof(request.Obligation));
         if (string.IsNullOrWhiteSpace(request.Reason))
         {
             throw new RuleViolationException(ErrorCodes.InvalidRequest, "A reason is required to supersede a plan.");
         }
 
-        var tenant = await context.LoadAsync(cancellationToken).ConfigureAwait(false);
-        var location = await context.ResolveAsync(Validate.Required(request.Obligation, nameof(request.Obligation)), tenant, cancellationToken).ConfigureAwait(false);
-        var account = await context.LoadAccountAsync(location.AccountId, cancellationToken).ConfigureAwait(false);
-        var obligation = account.GetObligation(location.ObligationId);
-        var previous = obligation.ActivePlan
-            ?? throw new RuleViolationException(ErrorCodes.InvalidRequest, $"Obligation {obligation.ExternalId} has no active plan.");
+        return _runner.RunAsync(
+            request,
+            "SupersedePlan",
+            async (tenant, ct) =>
+            {
+                var (_, obligation) = await LoadAsync(tenant, obligationRef, ct).ConfigureAwait(false);
+                var schedule = ScheduleBuilder.Build(0, plan, obligation.Originated, obligation.Currency, tenant.Policy.DefaultGrace, tenant.Calendar, DateTimeOffset.UnixEpoch);
+                var fingerprint = new Fingerprint("SupersedePlan").Add("obligation", obligation.Id.ToString()).Add("reason", request.Reason);
+                return ObligationsService.AddSchedule(fingerprint, schedule);
+            },
+            async (tenant, ct) =>
+            {
+                var (account, obligation) = await LoadAsync(tenant, obligationRef, ct).ConfigureAwait(false);
+                var previous = obligation.ActivePlan
+                    ?? throw new RuleViolationException(ErrorCodes.InvalidRequest, $"Obligation {obligation.ExternalId} has no active plan.");
+                var now = tenant.Clock.UtcNow;
+                var replacement = ScheduleBuilder.Build(
+                    obligation.Plans.Max(p => p.Version) + 1, plan, obligation.Originated, obligation.Currency, tenant.Policy.DefaultGrace, tenant.Calendar, now);
+                var updated = obligation.SupersedePlan(replacement, now, request.Reason);
 
-        var now = tenant.Clock.UtcNow;
-        var replacement = ScheduleBuilder.Build(
-            obligation.Plans.Max(p => p.Version) + 1,
-            plan,
-            obligation.Originated,
-            obligation.Currency,
-            tenant.Policy.DefaultGrace,
-            tenant.Calendar,
-            now);
+                var commit = new Commit
+                {
+                    Tenant = context.TenantId,
+                    Accounts = [account.ReplaceObligation(updated)],
+                    Events = [DomainEvent.Create(context.Time, "PlanSuperseded", context.TenantId, account.Id,
+                        ("obligationId", obligation.Id.ToString()), ("previousVersion", previous.Version.ToString(System.Globalization.CultureInfo.InvariantCulture)))],
+                };
+                return new Planned<PlanSuperseded>(commit, new PlanSuperseded(obligation.Id, previous.Version, replacement.Version));
+            },
+            result => result,
+            cancellationToken);
+    }
 
-        var updated = obligation.SupersedePlan(replacement, now, request.Reason);
-        await context.Accounts.SaveAsync(account.ReplaceObligation(updated), cancellationToken).ConfigureAwait(false);
-        return new PlanSuperseded(obligation.Id, previous.Version, replacement.Version);
+    private async Task<(CustomerAccount Account, Obligation Obligation)> LoadAsync(TenantSnapshot tenant, ObligationRef reference, CancellationToken ct)
+    {
+        var location = await context.ResolveAsync(reference, tenant, ct).ConfigureAwait(false);
+        var account = await context.LoadAccountAsync(location.AccountId, ct).ConfigureAwait(false);
+        return (account, account.GetObligation(location.ObligationId));
     }
 }
 
@@ -144,6 +226,7 @@ internal sealed class QueriesService(TenantContext context) : IInstalmentQueries
             loaded.Id,
             loaded.ExternalId,
             loaded.OpenedAt,
+            loaded.UnappliedByCurrency(),
             [.. loaded.Obligations.OrderBy(o => o.OpenedAt).Select(o =>
                 new ObligationSummary(o.Id, o.ExternalId, o.PaymentReference, o.Status, ViewMapper.Outstanding(o)))]);
     }
@@ -152,6 +235,19 @@ internal sealed class QueriesService(TenantContext context) : IInstalmentQueries
     {
         var (tenant, found) = await LoadObligationAsync(obligation, cancellationToken).ConfigureAwait(false);
         return ViewMapper.ToView(found, asOfDate ?? tenant.Clock.Today);
+    }
+
+    public async Task<PaymentView> GetPaymentAsync(PaymentRef payment, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(payment);
+        await context.LoadAsync(cancellationToken).ConfigureAwait(false);
+        var record = await PaymentLookup.FindAsync(context, payment, cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("Payment", payment.ToString());
+        var holding = await PaymentLookup.HoldingAsync(context, record, cancellationToken).ConfigureAwait(false);
+        return new PaymentView(
+            record.Id, record.Source, record.Amount, record.ValueAt, record.RecordedAt, record.TargetKind, record.RawReference,
+            holding.AccountId, holding.Lot?.Directive ?? record.IdentifiedObligation, holding.Lot?.Remaining ?? Money.Zero(record.Amount.Currency),
+            record.ExceptionId, record.Metadata);
     }
 
     public async Task<ScheduleView> GetScheduleAsync(ObligationRef obligation, DateOnly? asOfDate = null, CancellationToken cancellationToken = default)
@@ -172,6 +268,39 @@ internal sealed class QueriesService(TenantContext context) : IInstalmentQueries
         var location = await context.ResolveAsync(reference, tenant, cancellationToken).ConfigureAwait(false);
         var account = await context.LoadAccountAsync(location.AccountId, cancellationToken).ConfigureAwait(false);
         return (tenant, account.GetObligation(location.ObligationId));
+    }
+}
+
+/// <summary>Finds a payment and where its funds are held now.</summary>
+internal static class PaymentLookup
+{
+    public sealed record Holding(AccountId? AccountId, FundsLot? Lot);
+
+    public static async Task<PaymentRecord?> FindAsync(TenantContext context, PaymentRef reference, CancellationToken ct) =>
+        reference.Id is { } id
+            ? await context.Store.GetPaymentAsync(context.TenantId, id, ct).ConfigureAwait(false)
+            : await context.Store.FindPaymentAsync(context.TenantId, reference.Source!, ct).ConfigureAwait(false);
+
+    public static async Task<Holding> HoldingAsync(TenantContext context, PaymentRecord payment, CancellationToken ct)
+    {
+        var assignment = await context.Store.GetAssignmentAsync(context.TenantId, payment.Id, ct).ConfigureAwait(false);
+        var accountId = assignment?.AccountId ?? payment.AccountId;
+        if (accountId is { } holder)
+        {
+            var account = await context.LoadAccountAsync(holder, ct).ConfigureAwait(false);
+            return new Holding(holder, account.Lots.SingleOrDefault(l => l.PaymentId == payment.Id));
+        }
+
+        var pool = await context.Store.LoadUnidentifiedAsync(context.TenantId, payment.Source.Source, ct).ConfigureAwait(false);
+        return new Holding(null, pool.Lots.SingleOrDefault(l => l.PaymentId == payment.Id));
+    }
+
+    public static async Task<PaymentExceptionView> ToViewAsync(TenantContext context, PaymentExceptionRecord exception, CancellationToken ct)
+    {
+        var payment = await context.Store.GetPaymentAsync(context.TenantId, exception.PaymentId, ct).ConfigureAwait(false)
+            ?? throw new InvalidOperationException($"Payment {exception.PaymentId} of exception {exception.Id} is missing.");
+        var assignment = await context.Store.GetAssignmentAsync(context.TenantId, payment.Id, ct).ConfigureAwait(false);
+        return ViewMapper.ToView(exception, payment, assignment?.AccountId ?? payment.AccountId);
     }
 }
 
@@ -219,9 +348,23 @@ internal static class ViewMapper
             InstalmentEvaluator.DaysPastDue(instalment, asOf),
             [.. instalment.Components.Select(c => new InstalmentComponentView(c.Key, c.Due, c.Allocated, c.Waived, c.Outstanding))]);
 
+    public static PaymentExceptionView ToView(PaymentExceptionRecord exception, PaymentRecord payment, AccountId? heldBy) =>
+        new(
+            exception.Id,
+            exception.PaymentId,
+            exception.Reason,
+            exception.Detail,
+            exception.RawReference,
+            exception.Candidates,
+            payment.Amount,
+            heldBy,
+            exception.OpenedAt,
+            exception.Status,
+            exception.Resolution is { } r ? new ResolutionView(r.Kind, r.ResolvedBy, r.Note, r.At) : null);
+
     /// <summary>
-    /// Component balances. Until the journal lands (M3/M4), paid and waived amounts are summed from the active
-    /// plan; afterwards they come from the obligation's component projections.
+    /// Component balances. Until allocation lands (M4), paid and waived amounts are summed from the active plan;
+    /// afterwards they come from the obligation's component projections.
     /// </summary>
     private static List<ComponentBalanceView> Balances(Obligation obligation)
     {

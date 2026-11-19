@@ -19,8 +19,14 @@ public sealed record PlanSuperseded(ObligationId ObligationId, int PreviousVersi
 /// <param name="AccountId">The account ID.</param>
 /// <param name="ExternalId">The host's customer ID.</param>
 /// <param name="OpenedAt">When the account was opened.</param>
+/// <param name="Unapplied">Funds received but not yet applied, one entry per currency held.</param>
 /// <param name="Obligations">A summary of each obligation, oldest first.</param>
-public sealed record AccountSummary(AccountId AccountId, string ExternalId, DateTimeOffset OpenedAt, IReadOnlyList<ObligationSummary> Obligations);
+public sealed record AccountSummary(
+    AccountId AccountId,
+    string ExternalId,
+    DateTimeOffset OpenedAt,
+    IReadOnlyList<Money> Unapplied,
+    IReadOnlyList<ObligationSummary> Obligations);
 
 /// <summary>A one-line summary of an obligation.</summary>
 /// <param name="ObligationId">The obligation ID.</param>

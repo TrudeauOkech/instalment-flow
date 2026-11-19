@@ -5,15 +5,21 @@ namespace InstalmentFlow.Engine;
 
 internal sealed class EngineServices(
     ITenantStore tenants,
-    IAccountStore accounts,
+    ILedgerStore ledger,
     TimeProvider timeProvider,
-    IReadOnlyDictionary<TenantId, IBusinessCalendar> calendars)
+    IReadOnlyDictionary<TenantId, IBusinessCalendar> calendars,
+    IPaymentReferenceResolver? referenceResolver,
+    int maxAttempts)
 {
     private readonly ConcurrentDictionary<string, TimeZoneInfo> _timeZones = new(StringComparer.Ordinal);
 
     public ITenantStore TenantStore { get; } = tenants;
 
-    public IAccountStore AccountStore { get; } = accounts;
+    public ILedgerStore LedgerStore { get; } = ledger;
+
+    public IPaymentReferenceResolver? ReferenceResolver { get; } = referenceResolver;
+
+    public int MaxAttempts { get; } = maxAttempts;
 
     public TimeProvider TimeProvider { get; } = timeProvider;
 
@@ -96,6 +102,8 @@ internal sealed class TenantScopedFlow : IInstalmentFlow
         Accounts = new AccountsService(context);
         Obligations = new ObligationsService(context);
         Plans = new PlansService(context);
+        Payments = new PaymentsService(context);
+        Exceptions = new ExceptionsService(context);
         Queries = new QueriesService(context);
     }
 
@@ -106,6 +114,10 @@ internal sealed class TenantScopedFlow : IInstalmentFlow
     public IObligations Obligations { get; }
 
     public IPlans Plans { get; }
+
+    public IPayments Payments { get; }
+
+    public IPaymentExceptions Exceptions { get; }
 
     public IInstalmentQueries Queries { get; }
 }
@@ -122,7 +134,9 @@ internal sealed class TenantContext(TenantId tenantId, EngineServices services)
 
     public EngineServices Services { get; } = services;
 
-    public IAccountStore Accounts => Services.AccountStore;
+    public ILedgerStore Store => Services.LedgerStore;
+
+    public TimeProvider Time => Services.TimeProvider;
 
     public async Task<TenantSnapshot> LoadAsync(CancellationToken cancellationToken)
     {
@@ -133,7 +147,7 @@ internal sealed class TenantContext(TenantId tenantId, EngineServices services)
 
     public async Task<Domain.CustomerAccount> LoadAccountAsync(AccountId accountId, CancellationToken cancellationToken)
     {
-        var account = await Accounts.LoadAsync(TenantId, accountId, cancellationToken).ConfigureAwait(false)
+        var account = await Store.LoadAccountAsync(TenantId, accountId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("Account", accountId.ToString());
         if (account.TenantId != TenantId)
         {
@@ -151,7 +165,7 @@ internal sealed class TenantContext(TenantId tenantId, EngineServices services)
             return id;
         }
 
-        return await Accounts.FindAccountAsync(TenantId, reference.ExternalId!, cancellationToken).ConfigureAwait(false)
+        return await Store.FindAccountAsync(TenantId, reference.ExternalId!, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("Account", reference.ToString());
     }
 
@@ -165,7 +179,7 @@ internal sealed class TenantContext(TenantId tenantId, EngineServices services)
         }
 
         var lookup = new ObligationLookup(reference.Id, reference.ExternalId, normalisedReference);
-        return await Accounts.FindObligationAsync(TenantId, lookup, cancellationToken).ConfigureAwait(false)
+        return await Store.FindObligationAsync(TenantId, lookup, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("Obligation", reference.ToString());
     }
 }
