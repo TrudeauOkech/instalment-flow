@@ -29,6 +29,11 @@ internal static class EventJson
             Optional(json, "merchantReference", e.MerchantReference);
             Optional(json, "reversedTransactionId", e.ReversedTransactionId);
             Optional(json, "reason", e.Reason);
+            if (e.RequiresVerification)
+            {
+                json.WriteBoolean("requiresVerification", true);
+            }
+
             json.WriteStartObject("metadata");
             foreach (var (key, value) in e.Metadata.OrderBy(m => m.Key, StringComparer.Ordinal))
             {
@@ -54,7 +59,8 @@ internal static class EventJson
             : null;
         return NormalisedPaymentEvent.Restore(
             (PaymentEventKind)root.GetProperty("kind").GetInt32(), Text("provider")!, Text("providerAccount")!, Text("transactionId"), amount, valueAt,
-            Text("accountReference"), Text("payer"), Text("correlationId"), Text("merchantReference"), Text("reversedTransactionId"), Text("reason"), metadata);
+            Text("accountReference"), Text("payer"), Text("correlationId"), Text("merchantReference"), Text("reversedTransactionId"), Text("reason"), metadata,
+            root.TryGetProperty("requiresVerification", out var verify) && verify.ValueKind == JsonValueKind.True);
     }
 
     private static void Optional(Utf8JsonWriter json, string name, string? value)

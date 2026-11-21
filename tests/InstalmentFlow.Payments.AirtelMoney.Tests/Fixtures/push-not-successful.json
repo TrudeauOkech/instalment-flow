@@ -1,0 +1,4 @@
+{
+  "data": { "transaction": { "id": "{ref}", "status": "FAILED" } },
+  "status": { "code": "200", "message": "Transaction timed out", "result_code": "DP00800001007", "success": false }
+}

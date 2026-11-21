@@ -1,1 +1,55 @@
 #nullable enable
+InstalmentFlow.Payments.AirtelMoney.AirtelAccount
+InstalmentFlow.Payments.AirtelMoney.AirtelAccount.<Clone>$() -> InstalmentFlow.Payments.AirtelMoney.AirtelAccount!
+InstalmentFlow.Payments.AirtelMoney.AirtelAccount.Account.get -> string!
+InstalmentFlow.Payments.AirtelMoney.AirtelAccount.Account.init -> void
+InstalmentFlow.Payments.AirtelMoney.AirtelAccount.AirtelAccount() -> void
+InstalmentFlow.Payments.AirtelMoney.AirtelAccount.Country.get -> string!
+InstalmentFlow.Payments.AirtelMoney.AirtelAccount.Country.init -> void
+InstalmentFlow.Payments.AirtelMoney.AirtelAccount.Currency.get -> InstalmentFlow.Currency!
+InstalmentFlow.Payments.AirtelMoney.AirtelAccount.Currency.init -> void
+InstalmentFlow.Payments.AirtelMoney.AirtelAccount.Equals(InstalmentFlow.Payments.AirtelMoney.AirtelAccount? other) -> bool
+InstalmentFlow.Payments.AirtelMoney.AirtelAdapter
+InstalmentFlow.Payments.AirtelMoney.AirtelAdapter.AirtelAdapter(System.Net.Http.HttpClient! http, InstalmentFlow.Payments.IProviderCredentialSource! credentials, InstalmentFlow.Payments.AirtelMoney.AirtelOptions! options, System.TimeProvider? timeProvider = null) -> void
+InstalmentFlow.Payments.AirtelMoney.AirtelAdapter.Capabilities.get -> InstalmentFlow.Payments.ProviderCapabilities
+InstalmentFlow.Payments.AirtelMoney.AirtelAdapter.InitiateAsync(InstalmentFlow.Payments.CollectionRequest! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<InstalmentFlow.Payments.InitiationResult!>!
+InstalmentFlow.Payments.AirtelMoney.AirtelAdapter.ParseCallbackAsync(InstalmentFlow.Payments.ProviderCallback! callback, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<InstalmentFlow.Payments.CallbackParseResult!>
+InstalmentFlow.Payments.AirtelMoney.AirtelAdapter.Provider.get -> string!
+InstalmentFlow.Payments.AirtelMoney.AirtelAdapter.QueryAsync(InstalmentFlow.Payments.ProviderTransactionRef! reference, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<InstalmentFlow.Payments.StatusQueryResult!>!
+InstalmentFlow.Payments.AirtelMoney.AirtelApiException
+InstalmentFlow.Payments.AirtelMoney.AirtelApiException.AirtelApiException(int statusCode, string? resultCode, string! message) -> void
+InstalmentFlow.Payments.AirtelMoney.AirtelApiException.ResultCode.get -> string?
+InstalmentFlow.Payments.AirtelMoney.AirtelApiException.StatusCode.get -> int
+InstalmentFlow.Payments.AirtelMoney.AirtelCredentialNames
+InstalmentFlow.Payments.AirtelMoney.AirtelEnvironment
+InstalmentFlow.Payments.AirtelMoney.AirtelEnvironment.Production = 1 -> InstalmentFlow.Payments.AirtelMoney.AirtelEnvironment
+InstalmentFlow.Payments.AirtelMoney.AirtelEnvironment.Sandbox = 0 -> InstalmentFlow.Payments.AirtelMoney.AirtelEnvironment
+InstalmentFlow.Payments.AirtelMoney.AirtelMsisdnFormat
+InstalmentFlow.Payments.AirtelMoney.AirtelMsisdnFormat.International = 2 -> InstalmentFlow.Payments.AirtelMoney.AirtelMsisdnFormat
+InstalmentFlow.Payments.AirtelMoney.AirtelMsisdnFormat.National = 0 -> InstalmentFlow.Payments.AirtelMoney.AirtelMsisdnFormat
+InstalmentFlow.Payments.AirtelMoney.AirtelMsisdnFormat.NationalWithZero = 1 -> InstalmentFlow.Payments.AirtelMoney.AirtelMsisdnFormat
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.Accounts.get -> System.Collections.Generic.IList<InstalmentFlow.Payments.AirtelMoney.AirtelAccount!>!
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.AirtelOptions() -> void
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.AllowFractionalAmounts.get -> bool
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.AllowFractionalAmounts.set -> void
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.BaseAddress.get -> System.Uri?
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.BaseAddress.set -> void
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.CollectionPath.get -> string!
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.CollectionPath.set -> void
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.EnquiryPath.get -> string!
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.EnquiryPath.set -> void
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.Environment.get -> InstalmentFlow.Payments.AirtelMoney.AirtelEnvironment
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.Environment.set -> void
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.MaxCallbackBytes.get -> int
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.MaxCallbackBytes.set -> void
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.MsisdnFormat.get -> InstalmentFlow.Payments.AirtelMoney.AirtelMsisdnFormat
+InstalmentFlow.Payments.AirtelMoney.AirtelOptions.MsisdnFormat.set -> void
+const InstalmentFlow.Payments.AirtelMoney.AirtelAdapter.CollectionResult = "collection" -> string!
+const InstalmentFlow.Payments.AirtelMoney.AirtelCredentialNames.ClientId = "ClientId" -> string!
+const InstalmentFlow.Payments.AirtelMoney.AirtelCredentialNames.ClientSecret = "ClientSecret" -> string!
+override InstalmentFlow.Payments.AirtelMoney.AirtelAccount.Equals(object? obj) -> bool
+override InstalmentFlow.Payments.AirtelMoney.AirtelAccount.GetHashCode() -> int
+override InstalmentFlow.Payments.AirtelMoney.AirtelAccount.ToString() -> string!
+static InstalmentFlow.Payments.AirtelMoney.AirtelAccount.operator !=(InstalmentFlow.Payments.AirtelMoney.AirtelAccount? left, InstalmentFlow.Payments.AirtelMoney.AirtelAccount? right) -> bool
+static InstalmentFlow.Payments.AirtelMoney.AirtelAccount.operator ==(InstalmentFlow.Payments.AirtelMoney.AirtelAccount? left, InstalmentFlow.Payments.AirtelMoney.AirtelAccount? right) -> bool

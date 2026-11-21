@@ -222,7 +222,7 @@ internal sealed class IntentResolverService(PaymentsContext context) : IIntentRe
         StatusQueryResult status;
         try
         {
-            status = await query.QueryAsync(new ProviderTransactionRef(intent.ProviderAccount, intent.CorrelationId, intent.Id.ToString("N")), cancellationToken).ConfigureAwait(false);
+            status = await query.QueryAsync(new ProviderTransactionRef(intent.ProviderAccount, intent.CorrelationId, intent.Id.ToString("N"), intent.Amount), cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -237,11 +237,11 @@ internal sealed class IntentResolverService(PaymentsContext context) : IIntentRe
 
         switch (status.Status)
         {
-            case ProviderTransactionStatus.Succeeded when status.TransactionId is not null && status.Amount is not null:
+            case ProviderTransactionStatus.Succeeded when status.TransactionId is not null:
             {
                 // The payment goes through the inbox like any other, which records it once and confirms the intent.
                 var paid = NormalisedPaymentEvent.CollectionSucceeded(
-                    intent.Provider, intent.ProviderAccount, intent.CorrelationId, intent.Id.ToString("N"), status.TransactionId, status.Amount,
+                    intent.Provider, intent.ProviderAccount, intent.CorrelationId, intent.Id.ToString("N"), status.TransactionId, status.Amount ?? intent.Amount,
                     status.ValueAt ?? now, intent.AccountReference);
                 await context.Inbox.EnqueueAsync(paid, InboxOrigin.StatusQuery, ReadOnlyMemory<byte>.Empty, cancellationToken).ConfigureAwait(false);
                 await IntentService.MoveAsync(context, intent, i => i with { StatusChecks = i.StatusChecks + 1, NextCheckAt = now + options.MaxCheckInterval }, cancellationToken)
@@ -255,6 +255,17 @@ internal sealed class IntentResolverService(PaymentsContext context) : IIntentRe
                     Status = PaymentIntentStatus.Failed, FailureReason = status.Reason, StatusChecks = i.StatusChecks + 1, NextCheckAt = null,
                 }, cancellationToken).ConfigureAwait(false);
                 return Outcome.Failed;
+
+            case ProviderTransactionStatus.Ambiguous when now < intent.ExpiresAt:
+            {
+                var later = now + PaymentsContext.Backoff(options.FirstCheck, options.MaxCheckInterval, intent.StatusChecks + 1);
+                await IntentService.MoveAsync(context, intent, i => i with
+                {
+                    Status = PaymentIntentStatus.Ambiguous, FailureReason = status.Reason ?? "The provider does not know the outcome.", StatusChecks = i.StatusChecks + 1,
+                    NextCheckAt = later < i.ExpiresAt ? later : i.ExpiresAt,
+                }, cancellationToken).ConfigureAwait(false);
+                return Outcome.Pending;
+            }
 
             default:
                 if (now >= intent.ExpiresAt)

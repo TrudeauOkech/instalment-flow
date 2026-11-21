@@ -1,0 +1,4 @@
+{
+  "data": { "transaction": { "id": "{ref}", "status": "SUCCESS" } },
+  "status": { "code": "200", "message": "SUCCESS", "result_code": "ESB000010", "response_code": "DP00800001006", "success": true }
+}

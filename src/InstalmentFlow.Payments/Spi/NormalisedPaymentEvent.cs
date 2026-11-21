@@ -68,6 +68,12 @@ public sealed record NormalisedPaymentEvent
     /// <summary>Why a collection failed, or why a payment was reversed.</summary>
     public string? Reason { get; private init; }
 
+    /// <summary>
+    /// The provider's notification cannot be trusted on its own (it is unsigned and the provider offers a status query):
+    /// the inbox confirms a collection success with a status query before recording it (R-I3).
+    /// </summary>
+    public bool RequiresVerification { get; private init; }
+
     /// <summary>Provider details to keep with the payment.</summary>
     public IReadOnlyDictionary<string, string> Metadata { get; private init; } = new Dictionary<string, string>();
 
@@ -116,42 +122,50 @@ public sealed record NormalisedPaymentEvent
         };
     }
 
-    /// <summary>A requested collection was paid. At least one of <paramref name="correlationId"/> and <paramref name="merchantReference"/> is needed.</summary>
+    /// <summary>
+    /// A requested collection was paid. At least one of <paramref name="correlationId"/> and <paramref name="merchantReference"/>
+    /// is needed. <paramref name="amount"/> null means the amount requested, for providers whose notifications omit it.
+    /// </summary>
     public static NormalisedPaymentEvent CollectionSucceeded(
-        string provider, string providerAccount, string? correlationId, string? merchantReference, string transactionId, Money amount, DateTimeOffset valueAt,
-        string? accountReference = null, string? payer = null, IReadOnlyDictionary<string, string>? metadata = null)
+        string provider, string providerAccount, string? correlationId, string? merchantReference, string transactionId, Money? amount, DateTimeOffset valueAt,
+        string? accountReference = null, string? payer = null, IReadOnlyDictionary<string, string>? metadata = null, bool requiresVerification = false)
     {
         RequireCollectionKey(correlationId, merchantReference);
         ArgumentException.ThrowIfNullOrWhiteSpace(transactionId);
-        RequirePositive(amount);
+        if (amount is not null)
+        {
+            RequirePositive(amount);
+        }
+
         return new NormalisedPaymentEvent(PaymentEventKind.CollectionSucceeded, provider, providerAccount)
         {
             CorrelationId = correlationId, MerchantReference = merchantReference, TransactionId = transactionId, Amount = amount, ValueAt = valueAt,
-            AccountReference = accountReference, Payer = payer, Metadata = Copy(metadata),
+            AccountReference = accountReference, Payer = payer, Metadata = Copy(metadata), RequiresVerification = requiresVerification,
         };
     }
 
     /// <summary>A requested collection failed or was cancelled. At least one of <paramref name="correlationId"/> and <paramref name="merchantReference"/> is needed.</summary>
     public static NormalisedPaymentEvent CollectionFailed(
-        string provider, string providerAccount, string? correlationId, string? merchantReference, string reason, IReadOnlyDictionary<string, string>? metadata = null)
+        string provider, string providerAccount, string? correlationId, string? merchantReference, string reason, IReadOnlyDictionary<string, string>? metadata = null,
+        bool requiresVerification = false)
     {
         RequireCollectionKey(correlationId, merchantReference);
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
         return new NormalisedPaymentEvent(PaymentEventKind.CollectionFailed, provider, providerAccount)
         {
-            CorrelationId = correlationId, MerchantReference = merchantReference, Reason = reason, Metadata = Copy(metadata),
+            CorrelationId = correlationId, MerchantReference = merchantReference, Reason = reason, Metadata = Copy(metadata), RequiresVerification = requiresVerification,
         };
     }
 
     internal static NormalisedPaymentEvent Restore(
         PaymentEventKind kind, string provider, string providerAccount, string? transactionId, Money? amount, DateTimeOffset? valueAt,
         string? accountReference, string? payer, string? correlationId, string? merchantReference, string? reversedTransactionId, string? reason,
-        IReadOnlyDictionary<string, string>? metadata) =>
+        IReadOnlyDictionary<string, string>? metadata, bool requiresVerification = false) =>
         new(kind, provider, providerAccount)
         {
             TransactionId = transactionId, Amount = amount, ValueAt = valueAt, AccountReference = accountReference, Payer = payer,
             CorrelationId = correlationId, MerchantReference = merchantReference, ReversedTransactionId = reversedTransactionId, Reason = reason,
-            Metadata = Copy(metadata),
+            Metadata = Copy(metadata), RequiresVerification = requiresVerification,
         };
 
     private static void RequirePositive(Money amount)

@@ -401,7 +401,29 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
   - sample 04 and sample 05 (existing LMS).
 - **Acceptance:** `WebApplicationFactory` tests cover each endpoint, including concurrent duplicate posts.
 
-### M11 — Airtel Money adapter → **0.4.0** (M)
+### M11 — Airtel Money adapter → **0.4.0** (M) — ✅ built 2026-11-22; UAT verification pending before release
+
+> **Spike:** the developer portal could not be read. The six sources disagree on the collection path (v1 or v2), the token lifetime, the meaning of every `DP` code and callback signing. None documents till notifications or statements. See [docs/integrations/airtel.md](../integrations/airtel.md).
+>
+> **Delivered** (`InstalmentFlow.Payments.AirtelMoney`):
+> - **Tokens:** OAuth, refreshed at 80% of the stated lifetime, plus a single retry after a 401.
+> - **USSD push:** the disputed choices are options (path, number format, host). Only an explicit success is "accepted"; refusal codes are ambiguous, never failed.
+> - **Enquiry:** `TS` succeeded, `TF`/`TE` failed, `TA` ambiguous, `TIP` in progress. It reads both response shapes.
+> - **Callbacks:** treated as prompts.
+>
+> **Payments package:**
+> - `NormalisedPaymentEvent.RequiresVerification`: the inbox confirms untrusted collection successes and failures with the status query, so forged ones record or fail nothing.
+> - A collection amount may be omitted (the intent's is used).
+> - `ProviderTransactionRef.RequestedAmount`.
+> - `ProviderTransactionStatus.Ambiguous`, which moves an intent to ambiguous.
+> - Error code `IF6007`.
+>
+> **Sample 06:** UAT runs, recording responses.
+>
+> **Tests:** 33, using 11 documented fixtures on an in-process fake API. They cover the request shape and options, token refresh, every enquiry status, callback parsing and 2,000 fuzzed payloads. End to end, they cover a confirmed collection, a forged success, a forged failure, in-progress retries, an ambiguous push resolved by enquiry, a lost reply and a duplicate callback. 4 manual mutation checks, all killed.
+>
+> **Before release (acceptance):** run sample 06 against UAT, settle the disputed rows, and replace the fixtures. Refunds and disbursements are not built (ADR-010).
+
 - **Pre-work spike:** verify:
   - v1 or v2 collection paths;
   - the callback authentication mechanism;

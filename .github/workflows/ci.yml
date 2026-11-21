@@ -50,6 +50,7 @@ jobs:
             dotnet test --no-build -c Release --project tests/InstalmentFlow.Tests
             dotnet test --no-build -c Release --project tests/InstalmentFlow.Payments.Tests
             dotnet test --no-build -c Release --project tests/InstalmentFlow.Payments.Mpesa.Tests
+            dotnet test --no-build -c Release --project tests/InstalmentFlow.Payments.AirtelMoney.Tests
             dotnet test --no-build -c Release --project tests/InstalmentFlow.AspNetCore.Tests
             dotnet test --no-build -c Release --project tests/InstalmentFlow.ArchitectureTests
           fi

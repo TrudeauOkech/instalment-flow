@@ -1,0 +1,1 @@
+{ "transaction": { "id": "{ref}", "message": "Transaction failed: incorrect PIN", "status_code": "TF", "airtel_money_id": "" } }

@@ -152,9 +152,21 @@ internal sealed class InboxService(PaymentsContext context) : IProviderInbox
             case PaymentEventKind.CollectionSucceeded:
             {
                 var intent = await FindIntentAsync(tenant, paymentEvent, cancellationToken).ConfigureAwait(false);
+                var amount = paymentEvent.Amount ?? intent?.Amount
+                    ?? throw new RuleViolationException(PaymentsErrorCodes.UnverifiableCollection, "The collection's amount is not reported and no intent states it.");
+                if (paymentEvent.RequiresVerification)
+                {
+                    if (await VerifyAsync(paymentEvent, intent, amount, cancellationToken).ConfigureAwait(false) is not { } confirmed)
+                    {
+                        return null;   // the provider says it failed: the notification was wrong, nothing is recorded
+                    }
+
+                    amount = confirmed;
+                }
+
                 var target = intent?.Target
                     ?? (string.IsNullOrWhiteSpace(paymentEvent.AccountReference) ? PaymentTarget.Unknown : PaymentTarget.ForReference(paymentEvent.AccountReference));
-                var recorded = await flow.Payments.RecordAsync(Record(paymentEvent, key, target), cancellationToken).ConfigureAwait(false);
+                var recorded = await flow.Payments.RecordAsync(Record(paymentEvent, key, target, amount), cancellationToken).ConfigureAwait(false);
                 if (intent is not null)
                 {
                     await IntentService.MoveAsync(context, intent, i => i with
@@ -169,7 +181,8 @@ internal sealed class InboxService(PaymentsContext context) : IProviderInbox
 
             case PaymentEventKind.CollectionFailed:
             {
-                if (await FindIntentAsync(tenant, paymentEvent, cancellationToken).ConfigureAwait(false) is { } intent)
+                if (await FindIntentAsync(tenant, paymentEvent, cancellationToken).ConfigureAwait(false) is { } intent &&
+                    (!paymentEvent.RequiresVerification || await ConfirmFailureAsync(paymentEvent, intent, cancellationToken).ConfigureAwait(false)))
                 {
                     await IntentService.MoveAsync(context, intent, i => i with
                     {
@@ -195,6 +208,56 @@ internal sealed class InboxService(PaymentsContext context) : IProviderInbox
         }
     }
 
+    /// <summary>
+    /// Confirms an untrusted collection success with the provider (R-I3). Returns the amount paid; null if the provider
+    /// says the collection failed (the intent fails too). While the provider does not know yet, the entry is retried.
+    /// </summary>
+    private async Task<Money?> VerifyAsync(NormalisedPaymentEvent paymentEvent, IntentRecord? intent, Money amount, CancellationToken cancellationToken)
+    {
+        var query = context.Settings.Providers.StatusQuery(paymentEvent.Provider)
+            ?? throw new RuleViolationException(PaymentsErrorCodes.UnverifiableCollection, $"Provider '{paymentEvent.Provider}' cannot confirm the collection.");
+        var merchantReference = paymentEvent.MerchantReference ?? intent?.Id.ToString("N")
+            ?? throw new RuleViolationException(PaymentsErrorCodes.UnverifiableCollection, "The collection cannot be identified for confirmation.");
+        var status = await query.QueryAsync(
+            new ProviderTransactionRef(paymentEvent.ProviderAccount, intent?.CorrelationId ?? paymentEvent.CorrelationId, merchantReference, amount), cancellationToken).ConfigureAwait(false);
+        switch (status.Status)
+        {
+            case ProviderTransactionStatus.Succeeded when status.TransactionId is null || status.TransactionId == paymentEvent.TransactionId:
+                return status.Amount ?? amount;
+
+            case ProviderTransactionStatus.Succeeded:
+                throw new RuleViolationException(PaymentsErrorCodes.UnverifiableCollection,
+                    $"The notification names receipt {paymentEvent.TransactionId} but the provider confirms {status.TransactionId}.");
+
+            case ProviderTransactionStatus.Failed:
+                if (intent is not null)
+                {
+                    await IntentService.MoveAsync(context, intent, i => i with
+                    {
+                        Status = PaymentIntentStatus.Failed, FailureReason = $"Notified as paid, but the provider reports: {status.Reason}", NextCheckAt = null,
+                    }, cancellationToken).ConfigureAwait(false);
+                }
+
+                return null;
+
+            default:
+                throw new InvalidOperationException($"The provider has not confirmed the collection yet ({status.Status}).");
+        }
+    }
+
+    /// <summary>An untrusted failure notice only fails the intent if the provider agrees; otherwise the resolver keeps checking.</summary>
+    private async Task<bool> ConfirmFailureAsync(NormalisedPaymentEvent paymentEvent, IntentRecord intent, CancellationToken cancellationToken)
+    {
+        if (context.Settings.Providers.StatusQuery(paymentEvent.Provider) is not { } query)
+        {
+            return false;
+        }
+
+        var status = await query.QueryAsync(
+            new ProviderTransactionRef(paymentEvent.ProviderAccount, intent.CorrelationId ?? paymentEvent.CorrelationId, intent.Id.ToString("N"), intent.Amount), cancellationToken).ConfigureAwait(false);
+        return status.Status == ProviderTransactionStatus.Failed;
+    }
+
     private async Task<IntentRecord?> FindIntentAsync(TenantId tenant, NormalisedPaymentEvent paymentEvent, CancellationToken cancellationToken)
     {
         if (paymentEvent.CorrelationId is { } correlation &&
@@ -210,7 +273,7 @@ internal sealed class InboxService(PaymentsContext context) : IProviderInbox
             : null;
     }
 
-    private static RecordPaymentRequest Record(NormalisedPaymentEvent paymentEvent, string key, PaymentTarget target)
+    private static RecordPaymentRequest Record(NormalisedPaymentEvent paymentEvent, string key, PaymentTarget target, Money? amount = null)
     {
         var metadata = new Dictionary<string, string>(paymentEvent.Metadata, StringComparer.Ordinal);
         if (paymentEvent.Payer is { } payer && metadata.Count < MetadataLimit)
@@ -222,7 +285,7 @@ internal sealed class InboxService(PaymentsContext context) : IProviderInbox
         {
             IdempotencyKey = key,
             Source = new ExternalReference(paymentEvent.Source, paymentEvent.TransactionId!),
-            Amount = paymentEvent.Amount!,
+            Amount = amount ?? paymentEvent.Amount!,
             ValueAt = paymentEvent.ValueAt!.Value,
             Target = target,
             Metadata = metadata,

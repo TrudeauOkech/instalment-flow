@@ -224,7 +224,8 @@ public sealed record InitiationResult(InitiationOutcome Outcome, string? Correla
 /// <param name="ProviderAccount">The merchant account.</param>
 /// <param name="CorrelationId">The provider's ID, when the provider returned one.</param>
 /// <param name="MerchantReference">Our reference (the intent ID).</param>
-public sealed record ProviderTransactionRef(string ProviderAccount, string? CorrelationId, string MerchantReference);
+/// <param name="RequestedAmount">The amount requested, for providers whose answers do not state the amount paid.</param>
+public sealed record ProviderTransactionRef(string ProviderAccount, string? CorrelationId, string MerchantReference, Money? RequestedAmount = null);
 
 /// <summary>The provider's view of a requested collection.</summary>
 public enum ProviderTransactionStatus
@@ -240,6 +241,9 @@ public enum ProviderTransactionStatus
 
     /// <summary>The provider has no record of it (yet). Not a failure: the request may still be in flight.</summary>
     NotFound = 4,
+
+    /// <summary>The provider itself does not know the outcome (Airtel <c>TA</c>); the intent becomes ambiguous and is checked again.</summary>
+    Ambiguous = 5,
 }
 
 /// <summary>The result of a status query.</summary>
@@ -256,8 +260,11 @@ public sealed record StatusQueryResult(ProviderTransactionStatus Status, string?
     /// <summary>The provider has no record of it.</summary>
     public static StatusQueryResult NotFound { get; } = new(ProviderTransactionStatus.NotFound, null, null, null, null);
 
-    /// <summary>The customer paid.</summary>
-    public static StatusQueryResult Succeeded(string transactionId, Money amount, DateTimeOffset valueAt) =>
+    /// <summary>The provider does not know the outcome.</summary>
+    public static StatusQueryResult Ambiguous(string? reason = null) => new(ProviderTransactionStatus.Ambiguous, null, null, null, reason);
+
+    /// <summary>The customer paid. <paramref name="amount"/> null means the amount requested; <paramref name="valueAt"/> null means unknown.</summary>
+    public static StatusQueryResult Succeeded(string transactionId, Money? amount, DateTimeOffset? valueAt) =>
         new(ProviderTransactionStatus.Succeeded, transactionId, amount, valueAt, null);
 
     /// <summary>The collection failed.</summary>

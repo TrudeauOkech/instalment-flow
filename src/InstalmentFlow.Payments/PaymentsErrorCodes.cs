@@ -20,4 +20,7 @@ public static class PaymentsErrorCodes
 
     /// <summary>A collection needs a known obligation or customer as its target.</summary>
     public const string InvalidIntentTarget = "IF6006";
+
+    /// <summary>A collection notification could not be confirmed: its amount is unknown, or the provider contradicts it.</summary>
+    public const string UnverifiableCollection = "IF6007";
 }

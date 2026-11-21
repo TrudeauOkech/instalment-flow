@@ -16,15 +16,18 @@ InstalmentFlow.Payments.Mpesa.MpesaAccount.ShortCode.init -> void
 InstalmentFlow.Payments.Mpesa.MpesaAccount.StkCallbackUrl.get -> System.Uri?
 InstalmentFlow.Payments.Mpesa.MpesaAccount.StkCallbackUrl.init -> void
 InstalmentFlow.Payments.Mpesa.MpesaAdapter
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.Acknowledge(InstalmentFlow.Payments.ProviderCallback! callback, InstalmentFlow.Payments.InboxReceipt! receipt) -> InstalmentFlow.Payments.ProviderReply!
 InstalmentFlow.Payments.Mpesa.MpesaAdapter.Capabilities.get -> InstalmentFlow.Payments.ProviderCapabilities
 InstalmentFlow.Payments.Mpesa.MpesaAdapter.InitiateAsync(InstalmentFlow.Payments.CollectionRequest! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<InstalmentFlow.Payments.InitiationResult!>!
 InstalmentFlow.Payments.Mpesa.MpesaAdapter.MpesaAdapter(System.Net.Http.HttpClient! http, InstalmentFlow.Payments.IProviderCredentialSource! credentials, InstalmentFlow.Payments.Mpesa.MpesaOptions! options, System.TimeProvider? timeProvider = null) -> void
 InstalmentFlow.Payments.Mpesa.MpesaAdapter.ParseCallbackAsync(InstalmentFlow.Payments.ProviderCallback! callback, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<InstalmentFlow.Payments.CallbackParseResult!>
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.ParseValidation(InstalmentFlow.Payments.ProviderCallback! callback) -> InstalmentFlow.Payments.PaymentValidationRequest?
 InstalmentFlow.Payments.Mpesa.MpesaAdapter.Provider.get -> string!
 InstalmentFlow.Payments.Mpesa.MpesaAdapter.QueryAsync(InstalmentFlow.Payments.ProviderTransactionRef! reference, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<InstalmentFlow.Payments.StatusQueryResult!>!
 InstalmentFlow.Payments.Mpesa.MpesaAdapter.ReadAsync(string! providerAccount, System.DateTimeOffset windowStart, System.DateTimeOffset windowEnd, System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<InstalmentFlow.Payments.ProviderStatementLine!>!
 InstalmentFlow.Payments.Mpesa.MpesaAdapter.RegisterC2BUrlsAsync(string! shortCode, System.Uri! confirmationUrl, System.Uri! validationUrl, bool acceptWhenValidationFails = true, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
 InstalmentFlow.Payments.Mpesa.MpesaAdapter.RegisterPullAsync(string! shortCode, string! nominatedNumber, System.Uri! callbackUrl, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.Reply(InstalmentFlow.Payments.ValidationDecision decision) -> InstalmentFlow.Payments.ProviderReply!
 InstalmentFlow.Payments.Mpesa.MpesaAdapter.RequestTransactionStatusAsync(string! shortCode, string! receipt, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
 InstalmentFlow.Payments.Mpesa.MpesaAdapter.SimulateC2BAsync(string! shortCode, InstalmentFlow.Money! amount, string! msisdn, string! billReference, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
 InstalmentFlow.Payments.Mpesa.MpesaApiException
@@ -76,6 +79,7 @@ InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.TransactionId.init -> void
 const InstalmentFlow.Payments.Mpesa.MpesaAdapter.C2BConfirmation = "c2b-confirmation" -> string!
 const InstalmentFlow.Payments.Mpesa.MpesaAdapter.StkResult = "stk" -> string!
 const InstalmentFlow.Payments.Mpesa.MpesaAdapter.TransactionStatusResult = "transaction-status" -> string!
+const InstalmentFlow.Payments.Mpesa.MpesaAdapter.TransactionStatusTimeout = "transaction-status-timeout" -> string!
 const InstalmentFlow.Payments.Mpesa.MpesaCredentialNames.Certificate = "Certificate" -> string!
 const InstalmentFlow.Payments.Mpesa.MpesaCredentialNames.ConsumerKey = "ConsumerKey" -> string!
 const InstalmentFlow.Payments.Mpesa.MpesaCredentialNames.ConsumerSecret = "ConsumerSecret" -> string!
@@ -98,7 +102,3 @@ static InstalmentFlow.Payments.Mpesa.MpesaValidation.Parse(System.ReadOnlyMemory
 static InstalmentFlow.Payments.Mpesa.MpesaValidation.Reject(InstalmentFlow.Payments.Mpesa.MpesaRejection reason) -> byte[]!
 static InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.operator !=(InstalmentFlow.Payments.Mpesa.MpesaValidationRequest? left, InstalmentFlow.Payments.Mpesa.MpesaValidationRequest? right) -> bool
 static InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.operator ==(InstalmentFlow.Payments.Mpesa.MpesaValidationRequest? left, InstalmentFlow.Payments.Mpesa.MpesaValidationRequest? right) -> bool
-InstalmentFlow.Payments.Mpesa.MpesaAdapter.Acknowledge(InstalmentFlow.Payments.ProviderCallback! callback, InstalmentFlow.Payments.InboxReceipt! receipt) -> InstalmentFlow.Payments.ProviderReply!
-InstalmentFlow.Payments.Mpesa.MpesaAdapter.ParseValidation(InstalmentFlow.Payments.ProviderCallback! callback) -> InstalmentFlow.Payments.PaymentValidationRequest?
-InstalmentFlow.Payments.Mpesa.MpesaAdapter.Reply(InstalmentFlow.Payments.ValidationDecision decision) -> InstalmentFlow.Payments.ProviderReply!
-const InstalmentFlow.Payments.Mpesa.MpesaAdapter.TransactionStatusTimeout = "transaction-status-timeout" -> string!

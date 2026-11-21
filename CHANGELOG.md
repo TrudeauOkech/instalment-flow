@@ -36,6 +36,13 @@ All notable changes to this project are documented here. The format follows
   - Sample 05, an ASP.NET Core host that runs against itself.
 - Payments package: `InstalmentFlowPayments.GetHealthAsync`, `FindProvider`, `RouteAsync` and `Flows`; `ProviderReply`, `IProviderReplies`, `IPaymentValidation`, `PaymentValidationRequest` and `ValidationDecision`. The M-Pesa adapter implements Daraja's acknowledgements and C2B validation through them.
 
+- M11 Airtel Money adapter, `InstalmentFlow.Payments.AirtelMoney` (built against documented payloads; UAT verification pending, see [docs/integrations/airtel.md](docs/integrations/airtel.md)):
+  - `AirtelAdapter`: USSD push collection and transaction enquiry (`TS`, `TF`, `TE`, `TA` ambiguous, `TIP`). OAuth with refresh before expiry and once after a 401.
+  - The disputed details are options: collection path (`/merchant/v2/payments/` by default), phone-number format, host, and fractional amounts.
+  - Callbacks (`/hooks/{secret}/airtel/collection/{account}`) are confirmed with an enquiry before anything is recorded or failed. Refusal codes leave an intent ambiguous, never failed. No refunds or disbursements (ADR-010).
+  - Sample 06 runs against Airtel's UAT and records its responses.
+- Payments package: `NormalisedPaymentEvent.RequiresVerification`, which confirms untrusted collection successes and failures with the status query before acting; optional collection amounts (the intent's amount is used); `ProviderTransactionRef.RequestedAmount`; `ProviderTransactionStatus.Ambiguous`; and `PaymentsErrorCodes.UnverifiableCollection` (`IF6007`).
+
 ### Changed
 - The public API of 0.2.0-preview.1 is recorded in `PublicAPI.Shipped.txt`.
 - The unreleased `PaymentsSchema` migration now also records each open intent's state and age in `intent_checks`, for health checks.
