@@ -67,6 +67,12 @@ public static class ErrorCodes
     /// <summary>A payment exception is already resolved or cannot be resolved this way.</summary>
     public const string ExceptionNotResolvable = "IF1012";
 
+    /// <summary>An allocation strategy produced a plan the engine rejected, or failed (ADR-006).</summary>
+    public const string InvalidAllocationPlan = "IF2002";
+
+    /// <summary>The allocation strategy named in a policy or request is not registered.</summary>
+    public const string UnknownAllocationStrategy = "IF2003";
+
     /// <summary>The account changed concurrently and the command could not be applied.</summary>
     public const string ConcurrencyConflict = "IF3001";
 

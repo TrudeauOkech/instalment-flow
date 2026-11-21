@@ -16,6 +16,7 @@ internal enum JournalKind
     PaymentReceived = 2,
     PaymentUnidentified = 3,
     UnidentifiedAssigned = 4,
+    FundsAllocated = 5,
 }
 
 /// <summary>The kind of fact a ledger line points back to (invariant I-15). Persisted; never renumber.</summary>
@@ -24,6 +25,7 @@ internal enum LedgerSourceType
     Obligation = 1,
     Payment = 2,
     Assignment = 3,
+    Allocation = 4,
 }
 
 /// <summary>One debit or credit on one ledger account. Exactly one of debit and credit is positive.</summary>
@@ -79,7 +81,9 @@ internal sealed class JournalBuilder(JournalKind kind)
     public JournalBuilder Credit(string account, Money amount, LedgerSourceType sourceType, Guid sourceId) =>
         Add(account, amount, debit: false, sourceType, sourceId);
 
-    public JournalTransaction Build(TenantId tenant, AccountId? accountId, string idempotencyKey, DateOnly effectiveDate, DateTimeOffset recordedAt, TimeProvider time)
+    public bool IsEmpty => _lines.Count == 0;
+
+    public JournalTransaction Build(TenantId tenant, AccountId? accountId, string idempotencyKey, DateOnly effectiveDate, DateTimeOffset recordedAt, TimeProvider time, JournalTxId? id = null)
     {
         if (_lines.Count < 2)
         {
@@ -96,7 +100,7 @@ internal sealed class JournalBuilder(JournalKind kind)
             }
         }
 
-        return new JournalTransaction(JournalTxId.New(time), tenant, kind, accountId, idempotencyKey, effectiveDate, recordedAt, [.. _lines]);
+        return new JournalTransaction(id ?? JournalTxId.New(time), tenant, kind, accountId, idempotencyKey, effectiveDate, recordedAt, [.. _lines]);
     }
 
     private JournalBuilder Add(string account, Money amount, bool debit, LedgerSourceType sourceType, Guid sourceId)

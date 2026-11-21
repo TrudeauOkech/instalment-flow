@@ -31,6 +31,9 @@ public interface IInstalmentFlow
     /// <summary>Incoming payments.</summary>
     IPayments Payments { get; }
 
+    /// <summary>Allocation of funds already recorded.</summary>
+    IAllocations Allocations { get; }
+
     /// <summary>The payment exception queue.</summary>
     IPaymentExceptions Exceptions { get; }
 

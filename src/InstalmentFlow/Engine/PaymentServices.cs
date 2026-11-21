@@ -64,7 +64,7 @@ internal sealed class PaymentsService(TenantContext context) : IPayments
 
         var now = tenant.Clock.UtcNow;
         var paymentId = PaymentId.New(context.Time);
-        var exceptionId = decision.Exception is null ? (PaymentExceptionId?)null : PaymentExceptionId.New(context.Time);
+        var journalId = JournalTxId.New(context.Time);
         var lot = new FundsLot(paymentId, amount, amount, decision.DirectedTo, request.ValueAt);
         var rawReference = Truncate(target.RawReference);
 
@@ -74,12 +74,7 @@ internal sealed class PaymentsService(TenantContext context) : IPayments
                 decision.HoldingAccount is { } holder ? LedgerAccounts.Unapplied(holder, amount.Currency) : LedgerAccounts.Unidentified(source.Source),
                 amount,
                 LedgerSourceType.Payment,
-                paymentId.Value)
-            .Build(context.TenantId, decision.HoldingAccount, request.IdempotencyKey, tenant.Clock.ToBusinessDate(request.ValueAt), now, context.Time);
-
-        var payment = new PaymentRecord(
-            paymentId, source, amount, request.ValueAt, now, target.Kind, rawReference, decision.HoldingAccount,
-            decision.DirectedTo, exceptionId, journal.Id, metadata);
+                paymentId.Value);
 
         var events = ImmutableArray.CreateBuilder<DomainEvent>();
         events.Add(DomainEvent.Create(
@@ -91,11 +86,38 @@ internal sealed class PaymentsService(TenantContext context) : IPayments
             ("source", source.ToString()),
             ("amount", amount.ToString())));
 
-        var commit = CommitFor() with { Journal = journal, Payments = [payment] };
+        var commit = CommitFor();
         var unappliedAfter = Money.Zero(amount.Currency);
+        var allocation = (LotAllocation?)null;
+        var exceptionReason = decision.Exception;
+        var exceptionDetail = decision.Detail;
+        var exceptionCandidates = decision.Candidates;
+
         if (decision.HoldingAccount is { } accountId)
         {
             var account = (await context.LoadAccountAsync(accountId, ct).ConfigureAwait(false)).AddLot(lot);
+            var eligible = decision.DirectedTo is { } directed ? [directed] : decision.StrategyEligible;
+            if (!eligible.IsEmpty)
+            {
+                // ADR-002: a failing or faulty strategy must never cost the payment. Keep the funds and explain why.
+                // Allocator.Run posts journal lines only after the plan is validated, so a failure leaves none behind.
+                try
+                {
+                    allocation = Allocator.Run(context, tenant, account, paymentId, eligible, null, journalId, journal);
+                    account = allocation.Account;
+                    events.AddRange(Allocator.Events(context, allocation));
+                }
+#pragma warning disable CA1031 // Any strategy failure, including host code, must leave the payment recorded (ADR-002).
+                catch (Exception ex) when (ex is not OperationCanceledException)
+#pragma warning restore CA1031
+                {
+                    allocation = null;
+                    exceptionReason = PaymentExceptionReason.AllocationFailed;
+                    exceptionDetail = $"Allocation failed; the funds are held as unapplied. {ex.Message}";
+                    exceptionCandidates = [];
+                }
+            }
+
             commit = commit with { Accounts = [account] };
             unappliedAfter = account.Unapplied(amount.Currency);
         }
@@ -105,25 +127,48 @@ internal sealed class PaymentsService(TenantContext context) : IPayments
             commit = commit with { Pools = [pool with { Lots = pool.Lots.Add(lot) }] };
         }
 
+        var exceptionId = exceptionReason is null ? (PaymentExceptionId?)null : PaymentExceptionId.New(context.Time);
+        var payment = new PaymentRecord(
+            paymentId, source, amount, request.ValueAt, now, target.Kind, rawReference, decision.HoldingAccount,
+            decision.DirectedTo, exceptionId, journalId, metadata);
+
         PaymentExceptionView? exceptionView = null;
         if (exceptionId is { } id)
         {
-            var exception = new PaymentExceptionRecord(id, paymentId, decision.Exception!.Value, decision.Detail, rawReference, decision.Candidates, now, null);
+            var exception = new PaymentExceptionRecord(id, paymentId, exceptionReason!.Value, exceptionDetail, rawReference, exceptionCandidates, now, null);
             commit = commit with { NewExceptions = [exception] };
             events.Add(DomainEvent.Create(context.Time, "PaymentExceptionRaised", context.TenantId, decision.HoldingAccount,
                 ("exceptionId", id.ToString()), ("paymentId", paymentId.ToString()), ("reason", exception.Reason.ToString())));
             exceptionView = ViewMapper.ToView(exception, payment, decision.HoldingAccount);
         }
 
+        var records = allocation?.Allocations ?? [];
+        var allocated = Money.Sum(amount.Currency, records.Select(a => a.Amount));
+        commit = commit with
+        {
+            Journal = journal.Build(context.TenantId, decision.HoldingAccount, request.IdempotencyKey, tenant.Clock.ToBusinessDate(request.ValueAt), now, context.Time, journalId),
+            Payments = [payment],
+            Allocations = records,
+            Events = events.ToImmutable(),
+        };
+
+        var outcome = decision.HoldingAccount is null ? RecordOutcome.Unidentified
+            : allocated == amount ? RecordOutcome.Allocated
+            : allocated.IsPositive ? RecordOutcome.PartiallyAllocated
+            : RecordOutcome.HeldUnapplied;
         var result = new RecordPaymentResult(
-            decision.HoldingAccount is null ? RecordOutcome.Unidentified : RecordOutcome.HeldUnapplied,
+            outcome,
             paymentId,
             decision.HoldingAccount,
             decision.DirectedTo,
             amount,
+            allocated,
             unappliedAfter,
+            [.. records.Select(Allocator.ToView)],
+            allocation?.InstalmentsSettled ?? [],
+            allocation?.ObligationsSettled ?? [],
             exceptionView);
-        return new Planned<RecordPaymentResult>(commit with { Events = events.ToImmutable() }, result);
+        return new Planned<RecordPaymentResult>(commit, result);
     }
 
     private async Task<ResolvedTarget> ResolveTargetAsync(TenantSnapshot tenant, PaymentTarget target, CancellationToken ct)
@@ -270,7 +315,11 @@ internal sealed class PaymentsService(TenantContext context) : IPayments
         var unapplied = holding.AccountId is { } holder
             ? (await context.LoadAccountAsync(holder, ct).ConfigureAwait(false)).Unapplied(existing.Amount.Currency)
             : Money.Zero(existing.Amount.Currency);
-        return new RecordPaymentResult(RecordOutcome.Duplicate, existing.Id, holding.AccountId, holding.Lot?.Directive, existing.Amount, unapplied, exception);
+        var allocations = await context.Store.ListAllocationsAsync(context.TenantId, existing.Id, ct).ConfigureAwait(false);
+        return new RecordPaymentResult(
+            RecordOutcome.Duplicate, existing.Id, holding.AccountId, holding.Lot?.Directive, existing.Amount,
+            Money.Sum(existing.Amount.Currency, allocations.Select(a => a.Amount)), unapplied,
+            [.. allocations.Select(Allocator.ToView)], [], [], exception);
     }
 
     private Commit CommitFor() => new() { Tenant = context.TenantId };
@@ -380,28 +429,97 @@ internal sealed class ExceptionsService(TenantContext context) : IPaymentExcepti
                 var directive = await DirectiveAsync(tenant, account, request.Obligation, lot.Remaining.Currency, ct).ConfigureAwait(false);
 
                 var now = tenant.Clock.UtcNow;
+                var journalId = JournalTxId.New(context.Time);
                 var journal = new JournalBuilder(JournalKind.UnidentifiedAssigned)
                     .Debit(LedgerAccounts.Unidentified(payment.Source.Source), lot.Remaining, LedgerSourceType.Assignment, payment.Id.Value)
-                    .Credit(LedgerAccounts.Unapplied(account.Id, lot.Remaining.Currency), lot.Remaining, LedgerSourceType.Assignment, payment.Id.Value)
-                    .Build(context.TenantId, account.Id, request.IdempotencyKey, tenant.Clock.Today, now, context.Time);
+                    .Credit(LedgerAccounts.Unapplied(account.Id, lot.Remaining.Currency), lot.Remaining, LedgerSourceType.Assignment, payment.Id.Value);
 
                 var updatedAccount = account.AddLot(lot with { Directive = directive });
-                var resolved = exception with { Resolution = new ExceptionResolution(ExceptionResolutionKind.AssignedToCustomer, resolvedBy, request.Note, now, journal.Id) };
+                var allocation = directive is { } target
+                    ? Allocator.Run(context, tenant, updatedAccount, payment.Id, [target], null, journalId, journal)
+                    : LotAllocation.None(updatedAccount);
+                updatedAccount = allocation.Account;
+
+                var resolved = exception with { Resolution = new ExceptionResolution(ExceptionResolutionKind.AssignedToCustomer, resolvedBy, request.Note, now, journalId) };
                 var commit = new Commit
                 {
                     Tenant = context.TenantId,
                     Accounts = [updatedAccount],
                     Pools = [pool with { Lots = pool.Lots.Remove(lot) }],
-                    Journal = journal,
-                    Assignments = [new PaymentAssignment(payment.Id, account.Id, lot.Remaining, journal.Id, now, exception.Id)],
+                    Journal = journal.Build(context.TenantId, account.Id, request.IdempotencyKey, tenant.Clock.Today, now, context.Time, journalId),
+                    Assignments = [new PaymentAssignment(payment.Id, account.Id, lot.Remaining, journalId, now, exception.Id)],
+                    Allocations = allocation.Allocations,
                     ResolvedExceptions = [resolved],
                     Events =
                     [
                         DomainEvent.Create(context.Time, "PaymentAssigned", context.TenantId, account.Id, ("paymentId", payment.Id.ToString()), ("amount", lot.Remaining.ToString())),
                         DomainEvent.Create(context.Time, "PaymentExceptionResolved", context.TenantId, account.Id, ("exceptionId", exception.Id.ToString()), ("resolution", "AssignedToCustomer")),
+                        .. Allocator.Events(context, allocation),
                     ],
                 };
                 var result = new ResolutionResult(ViewMapper.ToView(resolved, payment, account.Id), account.Id, updatedAccount.Unapplied(lot.Remaining.Currency));
+                return new Planned<ResolutionResult>(commit, result);
+            },
+            result => result,
+            cancellationToken);
+    }
+
+    public Task<ResolutionResult> AllocateToObligationAsync(AllocateToObligationRequest request, CancellationToken cancellationToken = default)
+    {
+        Validate.Request(request);
+        var obligationRef = Validate.Required(request.Obligation, nameof(request.Obligation));
+        var resolvedBy = RequireText(request.ResolvedBy, nameof(request.ResolvedBy));
+
+        return _runner.RunAsync(
+            request,
+            "AllocateToObligation",
+            (_, _) => Task.FromResult(new Fingerprint("AllocateToObligation")
+                .Add("exception", request.ExceptionId.ToString())
+                .Add("obligation", obligationRef.ToString())
+                .Add("resolvedBy", resolvedBy)
+                .Add("note", request.Note)),
+            async (tenant, ct) =>
+            {
+                var exception = RequireOpen(await LoadAsync(request.ExceptionId, ct).ConfigureAwait(false));
+                var payment = await RequirePaymentAsync(exception, ct).ConfigureAwait(false);
+                var holding = await PaymentLookup.HoldingAsync(context, payment, ct).ConfigureAwait(false);
+                if (holding.AccountId is not { } holder || holding.Lot is null)
+                {
+                    throw NotResolvable("The funds are unidentified; assign them to a customer first (optionally with the obligation).");
+                }
+
+                if (!holding.Lot.Remaining.IsPositive)
+                {
+                    throw NotResolvable($"Payment {payment.Source} has no unapplied funds left.");
+                }
+
+                var account = await context.LoadAccountAsync(holder, ct).ConfigureAwait(false);
+                var target = await DirectiveAsync(tenant, account, obligationRef, holding.Lot.Remaining.Currency, ct).ConfigureAwait(false);
+
+                var now = tenant.Clock.UtcNow;
+                var journalId = JournalTxId.New(context.Time);
+                var journal = new JournalBuilder(JournalKind.FundsAllocated);
+                var directed = account.ReplaceLot(holding.Lot with { Directive = target });
+                var allocation = Allocator.Run(context, tenant, directed, payment.Id, [target!.Value], null, journalId, journal);
+
+                var resolved = exception with
+                {
+                    Resolution = new ExceptionResolution(ExceptionResolutionKind.AllocatedToObligation, resolvedBy, request.Note, now, journal.IsEmpty ? null : journalId),
+                };
+                var commit = new Commit
+                {
+                    Tenant = context.TenantId,
+                    Accounts = [allocation.Account],
+                    Journal = journal.IsEmpty ? null : journal.Build(context.TenantId, holder, request.IdempotencyKey, tenant.Clock.Today, now, context.Time, journalId),
+                    Allocations = allocation.Allocations,
+                    ResolvedExceptions = [resolved],
+                    Events =
+                    [
+                        DomainEvent.Create(context.Time, "PaymentExceptionResolved", context.TenantId, holder, ("exceptionId", exception.Id.ToString()), ("resolution", "AllocatedToObligation")),
+                        .. Allocator.Events(context, allocation),
+                    ],
+                };
+                var result = new ResolutionResult(ViewMapper.ToView(resolved, payment, holder), holder, allocation.Account.Unapplied(holding.Lot.Remaining.Currency));
                 return new Planned<ResolutionResult>(commit, result);
             },
             result => result,

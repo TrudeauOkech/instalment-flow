@@ -38,7 +38,7 @@ public sealed class InstalmentFlowFactory : IInstalmentFlowFactory
         configure?.Invoke(builder);
 
         var store = new InMemoryStore();
-        var services = new EngineServices(store, store, builder.TimeProvider, builder.Calendars, builder.ReferenceResolver, builder.MaxAttempts);
+        var services = new EngineServices(store, store, builder.TimeProvider, builder.Calendars, builder.ReferenceResolver, builder.MaxAttempts, builder.Strategies);
         foreach (var tenant in builder.Tenants)
         {
             TenantAdmin.ValidateTimeZone(tenant.TimeZone);
@@ -47,7 +47,7 @@ public sealed class InstalmentFlowFactory : IInstalmentFlowFactory
                 tenant.BaseCurrency,
                 tenant.TimeZone,
                 [new TenantPolicyVersion(1, tenant.Policy, builder.TimeProvider.GetUtcNow(), "configuration")]);
-            tenant.Policy.Validate();
+            services.ValidatePolicy(tenant.Policy);
             store.Create(record);
         }
 
@@ -80,6 +80,24 @@ public sealed class InstalmentFlowBuilder
     internal IPaymentReferenceResolver? ReferenceResolver { get; private set; }
 
     internal int MaxAttempts { get; private set; } = CommandRunner.DefaultMaxAttempts;
+
+    internal Dictionary<StrategyRef, IAllocationStrategy> Strategies { get; } = AllocationStrategies.All.ToDictionary(s => s.Ref);
+
+    /// <summary>
+    /// Registers a custom allocation strategy (ADR-006). Tenants select it by <see cref="StrategyRef"/> in their policy.
+    /// Built-in names and versions cannot be replaced.
+    /// </summary>
+    public InstalmentFlowBuilder AddAllocationStrategy(IAllocationStrategy strategy)
+    {
+        ArgumentNullException.ThrowIfNull(strategy);
+        ArgumentNullException.ThrowIfNull(strategy.Ref);
+        if (!Strategies.TryAdd(strategy.Ref, strategy))
+        {
+            throw new ArgumentException($"An allocation strategy {strategy.Ref} is already registered.", nameof(strategy));
+        }
+
+        return this;
+    }
 
     /// <summary>
     /// How many times a command is attempted when another command for the same customer commits first

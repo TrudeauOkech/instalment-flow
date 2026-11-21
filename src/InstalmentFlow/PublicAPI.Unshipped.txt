@@ -12,6 +12,7 @@ const InstalmentFlow.ErrorCodes.DuplicatePaymentReference = "IF1006" -> string!
 const InstalmentFlow.ErrorCodes.DuplicateTenant = "IF5003" -> string!
 const InstalmentFlow.ErrorCodes.ExceptionNotResolvable = "IF1012" -> string!
 const InstalmentFlow.ErrorCodes.IdempotencyKeyReused = "IF1002" -> string!
+const InstalmentFlow.ErrorCodes.InvalidAllocationPlan = "IF2002" -> string!
 const InstalmentFlow.ErrorCodes.InvalidAmount = "IF1003" -> string!
 const InstalmentFlow.ErrorCodes.InvalidPaymentReference = "IF1005" -> string!
 const InstalmentFlow.ErrorCodes.InvalidRequest = "IF1009" -> string!
@@ -20,6 +21,7 @@ const InstalmentFlow.ErrorCodes.NotFound = "IF1010" -> string!
 const InstalmentFlow.ErrorCodes.PaymentConflict = "IF1011" -> string!
 const InstalmentFlow.ErrorCodes.PlanHasFinancialHistory = "IF4001" -> string!
 const InstalmentFlow.ErrorCodes.TenantMismatch = "IF5001" -> string!
+const InstalmentFlow.ErrorCodes.UnknownAllocationStrategy = "IF2003" -> string!
 const InstalmentFlow.ErrorCodes.UnknownCurrency = "IF1004" -> string!
 const InstalmentFlow.ErrorCodes.UnknownTenant = "IF5002" -> string!
 const InstalmentFlow.ExternalReference.MaxSourceLength = 64 -> int
@@ -65,6 +67,116 @@ InstalmentFlow.AccountSummary.OpenedAt.get -> System.DateTimeOffset
 InstalmentFlow.AccountSummary.OpenedAt.init -> void
 InstalmentFlow.AccountSummary.Unapplied.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.Money!>!
 InstalmentFlow.AccountSummary.Unapplied.init -> void
+InstalmentFlow.AllocateFundsRequest
+InstalmentFlow.AllocateFundsRequest.Account.get -> InstalmentFlow.AccountRef!
+InstalmentFlow.AllocateFundsRequest.Account.init -> void
+InstalmentFlow.AllocateFundsRequest.AllocateFundsRequest() -> void
+InstalmentFlow.AllocateFundsRequest.AllowAcrossObligations.get -> bool
+InstalmentFlow.AllocateFundsRequest.AllowAcrossObligations.init -> void
+InstalmentFlow.AllocateFundsRequest.Equals(InstalmentFlow.AllocateFundsRequest? other) -> bool
+InstalmentFlow.AllocateFundsRequest.Obligation.get -> InstalmentFlow.ObligationRef?
+InstalmentFlow.AllocateFundsRequest.Obligation.init -> void
+InstalmentFlow.AllocateFundsRequest.Payment.get -> InstalmentFlow.PaymentRef?
+InstalmentFlow.AllocateFundsRequest.Payment.init -> void
+InstalmentFlow.AllocateFundsRequest.Strategy.get -> InstalmentFlow.StrategyRef?
+InstalmentFlow.AllocateFundsRequest.Strategy.init -> void
+InstalmentFlow.AllocateToObligationRequest
+InstalmentFlow.AllocateToObligationRequest.AllocateToObligationRequest() -> void
+InstalmentFlow.AllocateToObligationRequest.Equals(InstalmentFlow.AllocateToObligationRequest? other) -> bool
+InstalmentFlow.AllocateToObligationRequest.ExceptionId.get -> InstalmentFlow.PaymentExceptionId
+InstalmentFlow.AllocateToObligationRequest.ExceptionId.init -> void
+InstalmentFlow.AllocateToObligationRequest.Note.get -> string?
+InstalmentFlow.AllocateToObligationRequest.Note.init -> void
+InstalmentFlow.AllocateToObligationRequest.Obligation.get -> InstalmentFlow.ObligationRef!
+InstalmentFlow.AllocateToObligationRequest.Obligation.init -> void
+InstalmentFlow.AllocateToObligationRequest.ResolvedBy.get -> string!
+InstalmentFlow.AllocateToObligationRequest.ResolvedBy.init -> void
+InstalmentFlow.AllocationContext
+InstalmentFlow.AllocationContext.<Clone>$() -> InstalmentFlow.AllocationContext!
+InstalmentFlow.AllocationContext.AllocationContext(InstalmentFlow.Money! Amount, System.DateOnly AsOf, System.Collections.Generic.IReadOnlyList<InstalmentFlow.AllocationTarget!>! Targets, System.Collections.Generic.IReadOnlyList<InstalmentFlow.ComponentType>! ComponentOrder) -> void
+InstalmentFlow.AllocationContext.Amount.get -> InstalmentFlow.Money!
+InstalmentFlow.AllocationContext.Amount.init -> void
+InstalmentFlow.AllocationContext.AsOf.get -> System.DateOnly
+InstalmentFlow.AllocationContext.AsOf.init -> void
+InstalmentFlow.AllocationContext.ComponentOrder.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.ComponentType>!
+InstalmentFlow.AllocationContext.ComponentOrder.init -> void
+InstalmentFlow.AllocationContext.Deconstruct(out InstalmentFlow.Money! Amount, out System.DateOnly AsOf, out System.Collections.Generic.IReadOnlyList<InstalmentFlow.AllocationTarget!>! Targets, out System.Collections.Generic.IReadOnlyList<InstalmentFlow.ComponentType>! ComponentOrder) -> void
+InstalmentFlow.AllocationContext.Equals(InstalmentFlow.AllocationContext? other) -> bool
+InstalmentFlow.AllocationContext.RankOf(InstalmentFlow.ComponentType type) -> int
+InstalmentFlow.AllocationContext.Targets.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.AllocationTarget!>!
+InstalmentFlow.AllocationContext.Targets.init -> void
+InstalmentFlow.AllocationLine
+InstalmentFlow.AllocationLine.<Clone>$() -> InstalmentFlow.AllocationLine!
+InstalmentFlow.AllocationLine.AllocationLine(InstalmentFlow.AllocationTarget! Target, InstalmentFlow.Money! Amount) -> void
+InstalmentFlow.AllocationLine.Amount.get -> InstalmentFlow.Money!
+InstalmentFlow.AllocationLine.Amount.init -> void
+InstalmentFlow.AllocationLine.Deconstruct(out InstalmentFlow.AllocationTarget! Target, out InstalmentFlow.Money! Amount) -> void
+InstalmentFlow.AllocationLine.Equals(InstalmentFlow.AllocationLine? other) -> bool
+InstalmentFlow.AllocationLine.Target.get -> InstalmentFlow.AllocationTarget!
+InstalmentFlow.AllocationLine.Target.init -> void
+InstalmentFlow.AllocationLineView
+InstalmentFlow.AllocationLineView.<Clone>$() -> InstalmentFlow.AllocationLineView!
+InstalmentFlow.AllocationLineView.AllocationLineView(InstalmentFlow.PaymentId PaymentId, InstalmentFlow.ObligationId ObligationId, int InstalmentSequence, System.DateOnly DueDate, InstalmentFlow.ComponentKey! Component, InstalmentFlow.Money! Amount, InstalmentFlow.StrategyRef! Strategy) -> void
+InstalmentFlow.AllocationLineView.Amount.get -> InstalmentFlow.Money!
+InstalmentFlow.AllocationLineView.Amount.init -> void
+InstalmentFlow.AllocationLineView.Component.get -> InstalmentFlow.ComponentKey!
+InstalmentFlow.AllocationLineView.Component.init -> void
+InstalmentFlow.AllocationLineView.Deconstruct(out InstalmentFlow.PaymentId PaymentId, out InstalmentFlow.ObligationId ObligationId, out int InstalmentSequence, out System.DateOnly DueDate, out InstalmentFlow.ComponentKey! Component, out InstalmentFlow.Money! Amount, out InstalmentFlow.StrategyRef! Strategy) -> void
+InstalmentFlow.AllocationLineView.DueDate.get -> System.DateOnly
+InstalmentFlow.AllocationLineView.DueDate.init -> void
+InstalmentFlow.AllocationLineView.Equals(InstalmentFlow.AllocationLineView? other) -> bool
+InstalmentFlow.AllocationLineView.InstalmentSequence.get -> int
+InstalmentFlow.AllocationLineView.InstalmentSequence.init -> void
+InstalmentFlow.AllocationLineView.ObligationId.get -> InstalmentFlow.ObligationId
+InstalmentFlow.AllocationLineView.ObligationId.init -> void
+InstalmentFlow.AllocationLineView.PaymentId.get -> InstalmentFlow.PaymentId
+InstalmentFlow.AllocationLineView.PaymentId.init -> void
+InstalmentFlow.AllocationLineView.Strategy.get -> InstalmentFlow.StrategyRef!
+InstalmentFlow.AllocationLineView.Strategy.init -> void
+InstalmentFlow.AllocationPlan
+InstalmentFlow.AllocationPlan.<Clone>$() -> InstalmentFlow.AllocationPlan!
+InstalmentFlow.AllocationPlan.AllocationPlan(System.Collections.Generic.IReadOnlyList<InstalmentFlow.AllocationLine!>! Lines) -> void
+InstalmentFlow.AllocationPlan.Deconstruct(out System.Collections.Generic.IReadOnlyList<InstalmentFlow.AllocationLine!>! Lines) -> void
+InstalmentFlow.AllocationPlan.Equals(InstalmentFlow.AllocationPlan? other) -> bool
+InstalmentFlow.AllocationPlan.Lines.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.AllocationLine!>!
+InstalmentFlow.AllocationPlan.Lines.init -> void
+InstalmentFlow.AllocationResult
+InstalmentFlow.AllocationResult.<Clone>$() -> InstalmentFlow.AllocationResult!
+InstalmentFlow.AllocationResult.AccountId.get -> InstalmentFlow.AccountId
+InstalmentFlow.AllocationResult.AccountId.init -> void
+InstalmentFlow.AllocationResult.Allocated.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.Money!>!
+InstalmentFlow.AllocationResult.Allocated.init -> void
+InstalmentFlow.AllocationResult.AllocationResult(InstalmentFlow.AccountId AccountId, System.Collections.Generic.IReadOnlyList<InstalmentFlow.Money!>! Allocated, System.Collections.Generic.IReadOnlyList<InstalmentFlow.Money!>! UnappliedAfter, System.Collections.Generic.IReadOnlyList<InstalmentFlow.AllocationLineView!>! Lines, System.Collections.Generic.IReadOnlyList<InstalmentFlow.InstalmentRef!>! InstalmentsSettled, System.Collections.Generic.IReadOnlyList<InstalmentFlow.ObligationId>! ObligationsSettled) -> void
+InstalmentFlow.AllocationResult.Deconstruct(out InstalmentFlow.AccountId AccountId, out System.Collections.Generic.IReadOnlyList<InstalmentFlow.Money!>! Allocated, out System.Collections.Generic.IReadOnlyList<InstalmentFlow.Money!>! UnappliedAfter, out System.Collections.Generic.IReadOnlyList<InstalmentFlow.AllocationLineView!>! Lines, out System.Collections.Generic.IReadOnlyList<InstalmentFlow.InstalmentRef!>! InstalmentsSettled, out System.Collections.Generic.IReadOnlyList<InstalmentFlow.ObligationId>! ObligationsSettled) -> void
+InstalmentFlow.AllocationResult.Equals(InstalmentFlow.AllocationResult? other) -> bool
+InstalmentFlow.AllocationResult.InstalmentsSettled.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.InstalmentRef!>!
+InstalmentFlow.AllocationResult.InstalmentsSettled.init -> void
+InstalmentFlow.AllocationResult.Lines.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.AllocationLineView!>!
+InstalmentFlow.AllocationResult.Lines.init -> void
+InstalmentFlow.AllocationResult.ObligationsSettled.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.ObligationId>!
+InstalmentFlow.AllocationResult.ObligationsSettled.init -> void
+InstalmentFlow.AllocationResult.UnappliedAfter.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.Money!>!
+InstalmentFlow.AllocationResult.UnappliedAfter.init -> void
+InstalmentFlow.AllocationStrategies
+InstalmentFlow.AllocationTarget
+InstalmentFlow.AllocationTarget.<Clone>$() -> InstalmentFlow.AllocationTarget!
+InstalmentFlow.AllocationTarget.AllocationTarget(InstalmentFlow.ObligationId ObligationId, System.DateTimeOffset ObligationOpenedAt, int InstalmentSequence, System.DateOnly DueDate, bool IsCurrent, InstalmentFlow.ComponentKey! Component, InstalmentFlow.Money! Outstanding) -> void
+InstalmentFlow.AllocationTarget.Component.get -> InstalmentFlow.ComponentKey!
+InstalmentFlow.AllocationTarget.Component.init -> void
+InstalmentFlow.AllocationTarget.Deconstruct(out InstalmentFlow.ObligationId ObligationId, out System.DateTimeOffset ObligationOpenedAt, out int InstalmentSequence, out System.DateOnly DueDate, out bool IsCurrent, out InstalmentFlow.ComponentKey! Component, out InstalmentFlow.Money! Outstanding) -> void
+InstalmentFlow.AllocationTarget.DueDate.get -> System.DateOnly
+InstalmentFlow.AllocationTarget.DueDate.init -> void
+InstalmentFlow.AllocationTarget.Equals(InstalmentFlow.AllocationTarget? other) -> bool
+InstalmentFlow.AllocationTarget.InstalmentSequence.get -> int
+InstalmentFlow.AllocationTarget.InstalmentSequence.init -> void
+InstalmentFlow.AllocationTarget.IsCurrent.get -> bool
+InstalmentFlow.AllocationTarget.IsCurrent.init -> void
+InstalmentFlow.AllocationTarget.ObligationId.get -> InstalmentFlow.ObligationId
+InstalmentFlow.AllocationTarget.ObligationId.init -> void
+InstalmentFlow.AllocationTarget.ObligationOpenedAt.get -> System.DateTimeOffset
+InstalmentFlow.AllocationTarget.ObligationOpenedAt.init -> void
+InstalmentFlow.AllocationTarget.Outstanding.get -> InstalmentFlow.Money!
+InstalmentFlow.AllocationTarget.Outstanding.init -> void
 InstalmentFlow.AssignToCustomerRequest
 InstalmentFlow.AssignToCustomerRequest.Account.get -> InstalmentFlow.AccountRef!
 InstalmentFlow.AssignToCustomerRequest.Account.init -> void
@@ -197,6 +309,10 @@ InstalmentFlow.FrequencyUnit
 InstalmentFlow.FrequencyUnit.Day = 1 -> InstalmentFlow.FrequencyUnit
 InstalmentFlow.FrequencyUnit.Month = 3 -> InstalmentFlow.FrequencyUnit
 InstalmentFlow.FrequencyUnit.Week = 2 -> InstalmentFlow.FrequencyUnit
+InstalmentFlow.FutureInstalmentPolicy
+InstalmentFlow.FutureInstalmentPolicy.ApplyToNextInstalments = 1 -> InstalmentFlow.FutureInstalmentPolicy
+InstalmentFlow.FutureInstalmentPolicy.HoldAsCredit = 0 -> InstalmentFlow.FutureInstalmentPolicy
+InstalmentFlow.FutureInstalmentPolicy.PrepayPrincipal = 2 -> InstalmentFlow.FutureInstalmentPolicy
 InstalmentFlow.GracePeriod
 InstalmentFlow.GracePeriod.<Clone>$() -> InstalmentFlow.GracePeriod!
 InstalmentFlow.GracePeriod.Days.get -> int
@@ -204,6 +320,11 @@ InstalmentFlow.GracePeriod.Equals(InstalmentFlow.GracePeriod? other) -> bool
 InstalmentFlow.GracePeriod.LastGraceDay(System.DateOnly dueDate) -> System.DateOnly
 InstalmentFlow.IAccounts
 InstalmentFlow.IAccounts.OpenAsync(InstalmentFlow.OpenAccountRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.AccountOpened!>!
+InstalmentFlow.IAllocations
+InstalmentFlow.IAllocations.AllocateAsync(InstalmentFlow.AllocateFundsRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.AllocationResult!>!
+InstalmentFlow.IAllocationStrategy
+InstalmentFlow.IAllocationStrategy.Plan(InstalmentFlow.AllocationContext! context) -> InstalmentFlow.AllocationPlan!
+InstalmentFlow.IAllocationStrategy.Ref.get -> InstalmentFlow.StrategyRef!
 InstalmentFlow.IBusinessCalendar
 InstalmentFlow.IBusinessCalendar.AdjustDueDate(System.DateOnly scheduledDate) -> System.DateOnly
 InstalmentFlow.IdempotencyKey
@@ -213,6 +334,7 @@ InstalmentFlow.IdempotencyKey.IdempotencyKey(string! value) -> void
 InstalmentFlow.IdempotencyKey.Value.get -> string!
 InstalmentFlow.IInstalmentFlow
 InstalmentFlow.IInstalmentFlow.Accounts.get -> InstalmentFlow.IAccounts!
+InstalmentFlow.IInstalmentFlow.Allocations.get -> InstalmentFlow.IAllocations!
 InstalmentFlow.IInstalmentFlow.Exceptions.get -> InstalmentFlow.IPaymentExceptions!
 InstalmentFlow.IInstalmentFlow.Obligations.get -> InstalmentFlow.IObligations!
 InstalmentFlow.IInstalmentFlow.Payments.get -> InstalmentFlow.IPayments!
@@ -243,8 +365,10 @@ InstalmentFlow.InstalmentComponentView.Paid.init -> void
 InstalmentFlow.InstalmentComponentView.Waived.get -> InstalmentFlow.Money!
 InstalmentFlow.InstalmentComponentView.Waived.init -> void
 InstalmentFlow.InstalmentFlowBuilder
+InstalmentFlow.InstalmentFlowBuilder.AddAllocationStrategy(InstalmentFlow.IAllocationStrategy! strategy) -> InstalmentFlow.InstalmentFlowBuilder!
 InstalmentFlow.InstalmentFlowBuilder.AddTenant(InstalmentFlow.TenantId! tenantId, InstalmentFlow.Currency! baseCurrency, string! timeZone, System.Func<InstalmentFlow.TenantPolicy!, InstalmentFlow.TenantPolicy!>? policy = null) -> InstalmentFlow.InstalmentFlowBuilder!
 InstalmentFlow.InstalmentFlowBuilder.UseBusinessCalendar(InstalmentFlow.TenantId! tenantId, InstalmentFlow.IBusinessCalendar! calendar) -> InstalmentFlow.InstalmentFlowBuilder!
+InstalmentFlow.InstalmentFlowBuilder.UseConcurrencyRetries(int maxAttempts) -> InstalmentFlow.InstalmentFlowBuilder!
 InstalmentFlow.InstalmentFlowBuilder.UsePaymentReferenceResolver(InstalmentFlow.IPaymentReferenceResolver! resolver) -> InstalmentFlow.InstalmentFlowBuilder!
 InstalmentFlow.InstalmentFlowBuilder.UseTimeProvider(System.TimeProvider! timeProvider) -> InstalmentFlow.InstalmentFlowBuilder!
 InstalmentFlow.InstalmentFlowException
@@ -264,6 +388,15 @@ InstalmentFlow.InstalmentPaymentState.Paid = 3 -> InstalmentFlow.InstalmentPayme
 InstalmentFlow.InstalmentPaymentState.PartiallyPaid = 2 -> InstalmentFlow.InstalmentPaymentState
 InstalmentFlow.InstalmentPaymentState.Unpaid = 1 -> InstalmentFlow.InstalmentPaymentState
 InstalmentFlow.InstalmentPaymentState.Waived = 4 -> InstalmentFlow.InstalmentPaymentState
+InstalmentFlow.InstalmentRef
+InstalmentFlow.InstalmentRef.<Clone>$() -> InstalmentFlow.InstalmentRef!
+InstalmentFlow.InstalmentRef.Deconstruct(out InstalmentFlow.ObligationId ObligationId, out int Sequence) -> void
+InstalmentFlow.InstalmentRef.Equals(InstalmentFlow.InstalmentRef? other) -> bool
+InstalmentFlow.InstalmentRef.InstalmentRef(InstalmentFlow.ObligationId ObligationId, int Sequence) -> void
+InstalmentFlow.InstalmentRef.ObligationId.get -> InstalmentFlow.ObligationId
+InstalmentFlow.InstalmentRef.ObligationId.init -> void
+InstalmentFlow.InstalmentRef.Sequence.get -> int
+InstalmentFlow.InstalmentRef.Sequence.init -> void
 InstalmentFlow.InstalmentTiming
 InstalmentFlow.InstalmentTiming.Due = 2 -> InstalmentFlow.InstalmentTiming
 InstalmentFlow.InstalmentTiming.InGrace = 3 -> InstalmentFlow.InstalmentTiming
@@ -300,6 +433,7 @@ InstalmentFlow.InvalidAmountException.InvalidAmountException(string! message) ->
 InstalmentFlow.IObligations
 InstalmentFlow.IObligations.OpenAsync(InstalmentFlow.OpenObligationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.ObligationOpened!>!
 InstalmentFlow.IPaymentExceptions
+InstalmentFlow.IPaymentExceptions.AllocateToObligationAsync(InstalmentFlow.AllocateToObligationRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.ResolutionResult!>!
 InstalmentFlow.IPaymentExceptions.AssignToCustomerAsync(InstalmentFlow.AssignToCustomerRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.ResolutionResult!>!
 InstalmentFlow.IPaymentExceptions.DismissAsync(InstalmentFlow.DismissExceptionRequest! request, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.ResolutionResult!>!
 InstalmentFlow.IPaymentExceptions.GetAsync(InstalmentFlow.PaymentExceptionId exceptionId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.PaymentExceptionView!>!
@@ -446,6 +580,7 @@ InstalmentFlow.PaymentExceptionId.PaymentExceptionId(System.Guid Value) -> void
 InstalmentFlow.PaymentExceptionId.Value.get -> System.Guid
 InstalmentFlow.PaymentExceptionId.Value.init -> void
 InstalmentFlow.PaymentExceptionReason
+InstalmentFlow.PaymentExceptionReason.AllocationFailed = 7 -> InstalmentFlow.PaymentExceptionReason
 InstalmentFlow.PaymentExceptionReason.AllocationInstructionRequired = 3 -> InstalmentFlow.PaymentExceptionReason
 InstalmentFlow.PaymentExceptionReason.AmbiguousReference = 2 -> InstalmentFlow.PaymentExceptionReason
 InstalmentFlow.PaymentExceptionReason.CurrencyMismatch = 5 -> InstalmentFlow.PaymentExceptionReason
@@ -511,9 +646,11 @@ InstalmentFlow.PaymentView
 InstalmentFlow.PaymentView.<Clone>$() -> InstalmentFlow.PaymentView!
 InstalmentFlow.PaymentView.AccountId.get -> InstalmentFlow.AccountId?
 InstalmentFlow.PaymentView.AccountId.init -> void
+InstalmentFlow.PaymentView.Allocated.get -> InstalmentFlow.Money!
+InstalmentFlow.PaymentView.Allocated.init -> void
 InstalmentFlow.PaymentView.Amount.get -> InstalmentFlow.Money!
 InstalmentFlow.PaymentView.Amount.init -> void
-InstalmentFlow.PaymentView.Deconstruct(out InstalmentFlow.PaymentId PaymentId, out InstalmentFlow.ExternalReference! Source, out InstalmentFlow.Money! Amount, out System.DateTimeOffset ValueAt, out System.DateTimeOffset RecordedAt, out InstalmentFlow.PaymentTargetKind TargetKind, out string? RawReference, out InstalmentFlow.AccountId? AccountId, out InstalmentFlow.ObligationId? IdentifiedObligation, out InstalmentFlow.Money! Unapplied, out InstalmentFlow.PaymentExceptionId? ExceptionId, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Metadata) -> void
+InstalmentFlow.PaymentView.Deconstruct(out InstalmentFlow.PaymentId PaymentId, out InstalmentFlow.ExternalReference! Source, out InstalmentFlow.Money! Amount, out System.DateTimeOffset ValueAt, out System.DateTimeOffset RecordedAt, out InstalmentFlow.PaymentTargetKind TargetKind, out string? RawReference, out InstalmentFlow.AccountId? AccountId, out InstalmentFlow.ObligationId? IdentifiedObligation, out InstalmentFlow.Money! Allocated, out InstalmentFlow.Money! Unapplied, out InstalmentFlow.PaymentExceptionId? ExceptionId, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Metadata) -> void
 InstalmentFlow.PaymentView.Equals(InstalmentFlow.PaymentView? other) -> bool
 InstalmentFlow.PaymentView.ExceptionId.get -> InstalmentFlow.PaymentExceptionId?
 InstalmentFlow.PaymentView.ExceptionId.init -> void
@@ -523,7 +660,7 @@ InstalmentFlow.PaymentView.Metadata.get -> System.Collections.Generic.IReadOnlyD
 InstalmentFlow.PaymentView.Metadata.init -> void
 InstalmentFlow.PaymentView.PaymentId.get -> InstalmentFlow.PaymentId
 InstalmentFlow.PaymentView.PaymentId.init -> void
-InstalmentFlow.PaymentView.PaymentView(InstalmentFlow.PaymentId PaymentId, InstalmentFlow.ExternalReference! Source, InstalmentFlow.Money! Amount, System.DateTimeOffset ValueAt, System.DateTimeOffset RecordedAt, InstalmentFlow.PaymentTargetKind TargetKind, string? RawReference, InstalmentFlow.AccountId? AccountId, InstalmentFlow.ObligationId? IdentifiedObligation, InstalmentFlow.Money! Unapplied, InstalmentFlow.PaymentExceptionId? ExceptionId, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Metadata) -> void
+InstalmentFlow.PaymentView.PaymentView(InstalmentFlow.PaymentId PaymentId, InstalmentFlow.ExternalReference! Source, InstalmentFlow.Money! Amount, System.DateTimeOffset ValueAt, System.DateTimeOffset RecordedAt, InstalmentFlow.PaymentTargetKind TargetKind, string? RawReference, InstalmentFlow.AccountId? AccountId, InstalmentFlow.ObligationId? IdentifiedObligation, InstalmentFlow.Money! Allocated, InstalmentFlow.Money! Unapplied, InstalmentFlow.PaymentExceptionId? ExceptionId, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Metadata) -> void
 InstalmentFlow.PaymentView.RawReference.get -> string?
 InstalmentFlow.PaymentView.RawReference.init -> void
 InstalmentFlow.PaymentView.RecordedAt.get -> System.DateTimeOffset
@@ -587,8 +724,10 @@ InstalmentFlow.PlanVersionView.Status.init -> void
 InstalmentFlow.PlanVersionView.Version.get -> int
 InstalmentFlow.PlanVersionView.Version.init -> void
 InstalmentFlow.RecordOutcome
+InstalmentFlow.RecordOutcome.Allocated = 4 -> InstalmentFlow.RecordOutcome
 InstalmentFlow.RecordOutcome.Duplicate = 3 -> InstalmentFlow.RecordOutcome
 InstalmentFlow.RecordOutcome.HeldUnapplied = 1 -> InstalmentFlow.RecordOutcome
+InstalmentFlow.RecordOutcome.PartiallyAllocated = 5 -> InstalmentFlow.RecordOutcome
 InstalmentFlow.RecordOutcome.Unidentified = 2 -> InstalmentFlow.RecordOutcome
 InstalmentFlow.RecordPaymentRequest
 InstalmentFlow.RecordPaymentRequest.Amount.get -> InstalmentFlow.Money!
@@ -607,19 +746,27 @@ InstalmentFlow.RecordPaymentResult
 InstalmentFlow.RecordPaymentResult.<Clone>$() -> InstalmentFlow.RecordPaymentResult!
 InstalmentFlow.RecordPaymentResult.AccountId.get -> InstalmentFlow.AccountId?
 InstalmentFlow.RecordPaymentResult.AccountId.init -> void
+InstalmentFlow.RecordPaymentResult.Allocated.get -> InstalmentFlow.Money!
+InstalmentFlow.RecordPaymentResult.Allocated.init -> void
 InstalmentFlow.RecordPaymentResult.Amount.get -> InstalmentFlow.Money!
 InstalmentFlow.RecordPaymentResult.Amount.init -> void
-InstalmentFlow.RecordPaymentResult.Deconstruct(out InstalmentFlow.RecordOutcome Outcome, out InstalmentFlow.PaymentId PaymentId, out InstalmentFlow.AccountId? AccountId, out InstalmentFlow.ObligationId? IdentifiedObligation, out InstalmentFlow.Money! Amount, out InstalmentFlow.Money! UnappliedAfter, out InstalmentFlow.PaymentExceptionView? Exception) -> void
+InstalmentFlow.RecordPaymentResult.Deconstruct(out InstalmentFlow.RecordOutcome Outcome, out InstalmentFlow.PaymentId PaymentId, out InstalmentFlow.AccountId? AccountId, out InstalmentFlow.ObligationId? IdentifiedObligation, out InstalmentFlow.Money! Amount, out InstalmentFlow.Money! Allocated, out InstalmentFlow.Money! UnappliedAfter, out System.Collections.Generic.IReadOnlyList<InstalmentFlow.AllocationLineView!>! Lines, out System.Collections.Generic.IReadOnlyList<InstalmentFlow.InstalmentRef!>! InstalmentsSettled, out System.Collections.Generic.IReadOnlyList<InstalmentFlow.ObligationId>! ObligationsSettled, out InstalmentFlow.PaymentExceptionView? Exception) -> void
 InstalmentFlow.RecordPaymentResult.Equals(InstalmentFlow.RecordPaymentResult? other) -> bool
 InstalmentFlow.RecordPaymentResult.Exception.get -> InstalmentFlow.PaymentExceptionView?
 InstalmentFlow.RecordPaymentResult.Exception.init -> void
 InstalmentFlow.RecordPaymentResult.IdentifiedObligation.get -> InstalmentFlow.ObligationId?
 InstalmentFlow.RecordPaymentResult.IdentifiedObligation.init -> void
+InstalmentFlow.RecordPaymentResult.InstalmentsSettled.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.InstalmentRef!>!
+InstalmentFlow.RecordPaymentResult.InstalmentsSettled.init -> void
+InstalmentFlow.RecordPaymentResult.Lines.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.AllocationLineView!>!
+InstalmentFlow.RecordPaymentResult.Lines.init -> void
+InstalmentFlow.RecordPaymentResult.ObligationsSettled.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.ObligationId>!
+InstalmentFlow.RecordPaymentResult.ObligationsSettled.init -> void
 InstalmentFlow.RecordPaymentResult.Outcome.get -> InstalmentFlow.RecordOutcome
 InstalmentFlow.RecordPaymentResult.Outcome.init -> void
 InstalmentFlow.RecordPaymentResult.PaymentId.get -> InstalmentFlow.PaymentId
 InstalmentFlow.RecordPaymentResult.PaymentId.init -> void
-InstalmentFlow.RecordPaymentResult.RecordPaymentResult(InstalmentFlow.RecordOutcome Outcome, InstalmentFlow.PaymentId PaymentId, InstalmentFlow.AccountId? AccountId, InstalmentFlow.ObligationId? IdentifiedObligation, InstalmentFlow.Money! Amount, InstalmentFlow.Money! UnappliedAfter, InstalmentFlow.PaymentExceptionView? Exception) -> void
+InstalmentFlow.RecordPaymentResult.RecordPaymentResult(InstalmentFlow.RecordOutcome Outcome, InstalmentFlow.PaymentId PaymentId, InstalmentFlow.AccountId? AccountId, InstalmentFlow.ObligationId? IdentifiedObligation, InstalmentFlow.Money! Amount, InstalmentFlow.Money! Allocated, InstalmentFlow.Money! UnappliedAfter, System.Collections.Generic.IReadOnlyList<InstalmentFlow.AllocationLineView!>! Lines, System.Collections.Generic.IReadOnlyList<InstalmentFlow.InstalmentRef!>! InstalmentsSettled, System.Collections.Generic.IReadOnlyList<InstalmentFlow.ObligationId>! ObligationsSettled, InstalmentFlow.PaymentExceptionView? Exception) -> void
 InstalmentFlow.RecordPaymentResult.UnappliedAfter.get -> InstalmentFlow.Money!
 InstalmentFlow.RecordPaymentResult.UnappliedAfter.init -> void
 InstalmentFlow.ReferenceCandidate
@@ -701,6 +848,12 @@ InstalmentFlow.ScheduleView.Versions.init -> void
 InstalmentFlow.SoleObligationPolicy
 InstalmentFlow.SoleObligationPolicy.AutoAllocate = 1 -> InstalmentFlow.SoleObligationPolicy
 InstalmentFlow.SoleObligationPolicy.Hold = 0 -> InstalmentFlow.SoleObligationPolicy
+InstalmentFlow.StrategyRef
+InstalmentFlow.StrategyRef.<Clone>$() -> InstalmentFlow.StrategyRef!
+InstalmentFlow.StrategyRef.Equals(InstalmentFlow.StrategyRef? other) -> bool
+InstalmentFlow.StrategyRef.Name.get -> string!
+InstalmentFlow.StrategyRef.StrategyRef(string! name, int version) -> void
+InstalmentFlow.StrategyRef.Version.get -> int
 InstalmentFlow.SupersedePlanRequest
 InstalmentFlow.SupersedePlanRequest.Equals(InstalmentFlow.SupersedePlanRequest? other) -> bool
 InstalmentFlow.SupersedePlanRequest.Obligation.get -> InstalmentFlow.ObligationRef!
@@ -727,9 +880,15 @@ InstalmentFlow.TenantId.TenantId(string! value) -> void
 InstalmentFlow.TenantId.Value.get -> string!
 InstalmentFlow.TenantPolicy
 InstalmentFlow.TenantPolicy.<Clone>$() -> InstalmentFlow.TenantPolicy!
+InstalmentFlow.TenantPolicy.Allocation.get -> InstalmentFlow.StrategyRef!
+InstalmentFlow.TenantPolicy.Allocation.init -> void
+InstalmentFlow.TenantPolicy.ComponentOrder.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.ComponentType>!
+InstalmentFlow.TenantPolicy.ComponentOrder.init -> void
 InstalmentFlow.TenantPolicy.DefaultGrace.get -> InstalmentFlow.GracePeriod!
 InstalmentFlow.TenantPolicy.DefaultGrace.init -> void
 InstalmentFlow.TenantPolicy.Equals(InstalmentFlow.TenantPolicy? other) -> bool
+InstalmentFlow.TenantPolicy.FutureInstalments.get -> InstalmentFlow.FutureInstalmentPolicy
+InstalmentFlow.TenantPolicy.FutureInstalments.init -> void
 InstalmentFlow.TenantPolicy.MultipleObligations.get -> InstalmentFlow.MultipleObligationsPolicy
 InstalmentFlow.TenantPolicy.MultipleObligations.init -> void
 InstalmentFlow.TenantPolicy.PaymentReference.get -> InstalmentFlow.ReferenceFormat!
@@ -782,6 +941,32 @@ override InstalmentFlow.AccountRef.ToString() -> string!
 override InstalmentFlow.AccountSummary.Equals(object? obj) -> bool
 override InstalmentFlow.AccountSummary.GetHashCode() -> int
 override InstalmentFlow.AccountSummary.ToString() -> string!
+override InstalmentFlow.AllocateFundsRequest.<Clone>$() -> InstalmentFlow.AllocateFundsRequest!
+override InstalmentFlow.AllocateFundsRequest.Equals(object? obj) -> bool
+override InstalmentFlow.AllocateFundsRequest.GetHashCode() -> int
+override InstalmentFlow.AllocateFundsRequest.ToString() -> string!
+override InstalmentFlow.AllocateToObligationRequest.<Clone>$() -> InstalmentFlow.AllocateToObligationRequest!
+override InstalmentFlow.AllocateToObligationRequest.Equals(object? obj) -> bool
+override InstalmentFlow.AllocateToObligationRequest.GetHashCode() -> int
+override InstalmentFlow.AllocateToObligationRequest.ToString() -> string!
+override InstalmentFlow.AllocationContext.Equals(object? obj) -> bool
+override InstalmentFlow.AllocationContext.GetHashCode() -> int
+override InstalmentFlow.AllocationContext.ToString() -> string!
+override InstalmentFlow.AllocationLine.Equals(object? obj) -> bool
+override InstalmentFlow.AllocationLine.GetHashCode() -> int
+override InstalmentFlow.AllocationLine.ToString() -> string!
+override InstalmentFlow.AllocationLineView.Equals(object? obj) -> bool
+override InstalmentFlow.AllocationLineView.GetHashCode() -> int
+override InstalmentFlow.AllocationLineView.ToString() -> string!
+override InstalmentFlow.AllocationPlan.Equals(object? obj) -> bool
+override InstalmentFlow.AllocationPlan.GetHashCode() -> int
+override InstalmentFlow.AllocationPlan.ToString() -> string!
+override InstalmentFlow.AllocationResult.Equals(object? obj) -> bool
+override InstalmentFlow.AllocationResult.GetHashCode() -> int
+override InstalmentFlow.AllocationResult.ToString() -> string!
+override InstalmentFlow.AllocationTarget.Equals(object? obj) -> bool
+override InstalmentFlow.AllocationTarget.GetHashCode() -> int
+override InstalmentFlow.AllocationTarget.ToString() -> string!
 override InstalmentFlow.AssignToCustomerRequest.<Clone>$() -> InstalmentFlow.AssignToCustomerRequest!
 override InstalmentFlow.AssignToCustomerRequest.Equals(object? obj) -> bool
 override InstalmentFlow.AssignToCustomerRequest.GetHashCode() -> int
@@ -832,6 +1017,9 @@ override InstalmentFlow.InstalmentComponentView.ToString() -> string!
 override InstalmentFlow.InstalmentFlowRequest.Equals(object? obj) -> bool
 override InstalmentFlow.InstalmentFlowRequest.GetHashCode() -> int
 override InstalmentFlow.InstalmentFlowRequest.ToString() -> string!
+override InstalmentFlow.InstalmentRef.Equals(object? obj) -> bool
+override InstalmentFlow.InstalmentRef.GetHashCode() -> int
+override InstalmentFlow.InstalmentRef.ToString() -> string!
 override InstalmentFlow.InstalmentView.Equals(object? obj) -> bool
 override InstalmentFlow.InstalmentView.GetHashCode() -> int
 override InstalmentFlow.InstalmentView.ToString() -> string!
@@ -916,6 +1104,9 @@ override InstalmentFlow.ScheduleContext.ToString() -> string!
 override InstalmentFlow.ScheduleView.Equals(object? obj) -> bool
 override InstalmentFlow.ScheduleView.GetHashCode() -> int
 override InstalmentFlow.ScheduleView.ToString() -> string!
+override InstalmentFlow.StrategyRef.Equals(object? obj) -> bool
+override InstalmentFlow.StrategyRef.GetHashCode() -> int
+override InstalmentFlow.StrategyRef.ToString() -> string!
 override InstalmentFlow.SupersedePlanRequest.<Clone>$() -> InstalmentFlow.SupersedePlanRequest!
 override InstalmentFlow.SupersedePlanRequest.Equals(object? obj) -> bool
 override InstalmentFlow.SupersedePlanRequest.GetHashCode() -> int
@@ -932,6 +1123,8 @@ override InstalmentFlow.TenantPolicyVersion.ToString() -> string!
 override InstalmentFlow.TenantView.Equals(object? obj) -> bool
 override InstalmentFlow.TenantView.GetHashCode() -> int
 override InstalmentFlow.TenantView.ToString() -> string!
+override sealed InstalmentFlow.AllocateFundsRequest.Equals(InstalmentFlow.InstalmentFlowRequest? other) -> bool
+override sealed InstalmentFlow.AllocateToObligationRequest.Equals(InstalmentFlow.InstalmentFlowRequest? other) -> bool
 override sealed InstalmentFlow.AssignToCustomerRequest.Equals(InstalmentFlow.InstalmentFlowRequest? other) -> bool
 override sealed InstalmentFlow.DismissExceptionRequest.Equals(InstalmentFlow.InstalmentFlowRequest? other) -> bool
 override sealed InstalmentFlow.OpenAccountRequest.Equals(InstalmentFlow.InstalmentFlowRequest? other) -> bool
@@ -950,6 +1143,30 @@ static InstalmentFlow.AccountRef.operator !=(InstalmentFlow.AccountRef? left, In
 static InstalmentFlow.AccountRef.operator ==(InstalmentFlow.AccountRef? left, InstalmentFlow.AccountRef? right) -> bool
 static InstalmentFlow.AccountSummary.operator !=(InstalmentFlow.AccountSummary? left, InstalmentFlow.AccountSummary? right) -> bool
 static InstalmentFlow.AccountSummary.operator ==(InstalmentFlow.AccountSummary? left, InstalmentFlow.AccountSummary? right) -> bool
+static InstalmentFlow.AllocateFundsRequest.operator !=(InstalmentFlow.AllocateFundsRequest? left, InstalmentFlow.AllocateFundsRequest? right) -> bool
+static InstalmentFlow.AllocateFundsRequest.operator ==(InstalmentFlow.AllocateFundsRequest? left, InstalmentFlow.AllocateFundsRequest? right) -> bool
+static InstalmentFlow.AllocateToObligationRequest.operator !=(InstalmentFlow.AllocateToObligationRequest? left, InstalmentFlow.AllocateToObligationRequest? right) -> bool
+static InstalmentFlow.AllocateToObligationRequest.operator ==(InstalmentFlow.AllocateToObligationRequest? left, InstalmentFlow.AllocateToObligationRequest? right) -> bool
+static InstalmentFlow.AllocationContext.operator !=(InstalmentFlow.AllocationContext? left, InstalmentFlow.AllocationContext? right) -> bool
+static InstalmentFlow.AllocationContext.operator ==(InstalmentFlow.AllocationContext? left, InstalmentFlow.AllocationContext? right) -> bool
+static InstalmentFlow.AllocationLine.operator !=(InstalmentFlow.AllocationLine? left, InstalmentFlow.AllocationLine? right) -> bool
+static InstalmentFlow.AllocationLine.operator ==(InstalmentFlow.AllocationLine? left, InstalmentFlow.AllocationLine? right) -> bool
+static InstalmentFlow.AllocationLineView.operator !=(InstalmentFlow.AllocationLineView? left, InstalmentFlow.AllocationLineView? right) -> bool
+static InstalmentFlow.AllocationLineView.operator ==(InstalmentFlow.AllocationLineView? left, InstalmentFlow.AllocationLineView? right) -> bool
+static InstalmentFlow.AllocationPlan.Empty.get -> InstalmentFlow.AllocationPlan!
+static InstalmentFlow.AllocationPlan.FillInOrder(InstalmentFlow.AllocationContext! context, System.Collections.Generic.IEnumerable<InstalmentFlow.AllocationTarget!>! order) -> InstalmentFlow.AllocationPlan!
+static InstalmentFlow.AllocationPlan.operator !=(InstalmentFlow.AllocationPlan? left, InstalmentFlow.AllocationPlan? right) -> bool
+static InstalmentFlow.AllocationPlan.operator ==(InstalmentFlow.AllocationPlan? left, InstalmentFlow.AllocationPlan? right) -> bool
+static InstalmentFlow.AllocationResult.operator !=(InstalmentFlow.AllocationResult? left, InstalmentFlow.AllocationResult? right) -> bool
+static InstalmentFlow.AllocationResult.operator ==(InstalmentFlow.AllocationResult? left, InstalmentFlow.AllocationResult? right) -> bool
+static InstalmentFlow.AllocationStrategies.All.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.IAllocationStrategy!>!
+static InstalmentFlow.AllocationStrategies.ChargesFirst.get -> InstalmentFlow.IAllocationStrategy!
+static InstalmentFlow.AllocationStrategies.CurrentDueFirst.get -> InstalmentFlow.IAllocationStrategy!
+static InstalmentFlow.AllocationStrategies.OldestDueFirst.get -> InstalmentFlow.IAllocationStrategy!
+static InstalmentFlow.AllocationStrategies.PrincipalFirst.get -> InstalmentFlow.IAllocationStrategy!
+static InstalmentFlow.AllocationStrategies.Proportional.get -> InstalmentFlow.IAllocationStrategy!
+static InstalmentFlow.AllocationTarget.operator !=(InstalmentFlow.AllocationTarget? left, InstalmentFlow.AllocationTarget? right) -> bool
+static InstalmentFlow.AllocationTarget.operator ==(InstalmentFlow.AllocationTarget? left, InstalmentFlow.AllocationTarget? right) -> bool
 static InstalmentFlow.AssignToCustomerRequest.operator !=(InstalmentFlow.AssignToCustomerRequest? left, InstalmentFlow.AssignToCustomerRequest? right) -> bool
 static InstalmentFlow.AssignToCustomerRequest.operator ==(InstalmentFlow.AssignToCustomerRequest? left, InstalmentFlow.AssignToCustomerRequest? right) -> bool
 static InstalmentFlow.BusinessCalendars.None.get -> InstalmentFlow.IBusinessCalendar!
@@ -1024,6 +1241,8 @@ static InstalmentFlow.InstalmentComponentView.operator ==(InstalmentFlow.Instalm
 static InstalmentFlow.InstalmentFlowFactory.CreateInMemory(System.Action<InstalmentFlow.InstalmentFlowBuilder!>? configure = null) -> InstalmentFlow.InstalmentFlowFactory!
 static InstalmentFlow.InstalmentFlowRequest.operator !=(InstalmentFlow.InstalmentFlowRequest? left, InstalmentFlow.InstalmentFlowRequest? right) -> bool
 static InstalmentFlow.InstalmentFlowRequest.operator ==(InstalmentFlow.InstalmentFlowRequest? left, InstalmentFlow.InstalmentFlowRequest? right) -> bool
+static InstalmentFlow.InstalmentRef.operator !=(InstalmentFlow.InstalmentRef? left, InstalmentFlow.InstalmentRef? right) -> bool
+static InstalmentFlow.InstalmentRef.operator ==(InstalmentFlow.InstalmentRef? left, InstalmentFlow.InstalmentRef? right) -> bool
 static InstalmentFlow.InstalmentView.operator !=(InstalmentFlow.InstalmentView? left, InstalmentFlow.InstalmentView? right) -> bool
 static InstalmentFlow.InstalmentView.operator ==(InstalmentFlow.InstalmentView? left, InstalmentFlow.InstalmentView? right) -> bool
 static InstalmentFlow.Money.Kes(decimal amount) -> InstalmentFlow.Money!
@@ -1111,6 +1330,8 @@ static InstalmentFlow.ScheduleContext.operator !=(InstalmentFlow.ScheduleContext
 static InstalmentFlow.ScheduleContext.operator ==(InstalmentFlow.ScheduleContext? left, InstalmentFlow.ScheduleContext? right) -> bool
 static InstalmentFlow.ScheduleView.operator !=(InstalmentFlow.ScheduleView? left, InstalmentFlow.ScheduleView? right) -> bool
 static InstalmentFlow.ScheduleView.operator ==(InstalmentFlow.ScheduleView? left, InstalmentFlow.ScheduleView? right) -> bool
+static InstalmentFlow.StrategyRef.operator !=(InstalmentFlow.StrategyRef? left, InstalmentFlow.StrategyRef? right) -> bool
+static InstalmentFlow.StrategyRef.operator ==(InstalmentFlow.StrategyRef? left, InstalmentFlow.StrategyRef? right) -> bool
 static InstalmentFlow.SupersedePlanRequest.operator !=(InstalmentFlow.SupersedePlanRequest? left, InstalmentFlow.SupersedePlanRequest? right) -> bool
 static InstalmentFlow.SupersedePlanRequest.operator ==(InstalmentFlow.SupersedePlanRequest? left, InstalmentFlow.SupersedePlanRequest? right) -> bool
 static InstalmentFlow.TenantClock.ForTimeZone(string! timeZoneId, System.TimeProvider? timeProvider = null) -> InstalmentFlow.TenantClock!
@@ -1129,4 +1350,3 @@ static readonly InstalmentFlow.ReferenceFormat.MatchTimeout -> System.TimeSpan
 virtual InstalmentFlow.InstalmentFlowRequest.EqualityContract.get -> System.Type!
 virtual InstalmentFlow.InstalmentFlowRequest.Equals(InstalmentFlow.InstalmentFlowRequest? other) -> bool
 virtual InstalmentFlow.InstalmentFlowRequest.PrintMembers(System.Text.StringBuilder! builder) -> bool
-InstalmentFlow.InstalmentFlowBuilder.UseConcurrencyRetries(int maxAttempts) -> InstalmentFlow.InstalmentFlowBuilder!

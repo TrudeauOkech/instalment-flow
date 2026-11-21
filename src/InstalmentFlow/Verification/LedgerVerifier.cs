@@ -59,9 +59,10 @@ internal static class LedgerVerifier
             }
 
             var lot = held[0].Lot;
-            if (lot.Original != payment.Amount || lot.Remaining.IsNegative || lot.Remaining > lot.Original)
+            var allocated = snapshot.Allocations.Where(a => a.PaymentId == payment.Id).Sum(a => a.Amount.Amount);
+            if (lot.Original != payment.Amount || lot.Remaining.IsNegative || lot.Remaining.Amount + allocated != lot.Original.Amount)
             {
-                violations.Add($"I-5: lot of payment {payment.Source} has original {lot.Original} and remaining {lot.Remaining} for a payment of {payment.Amount}.");
+                violations.Add($"I-5: lot of payment {payment.Source}: original {lot.Original}, remaining {lot.Remaining}, allocated {allocated}, payment {payment.Amount}.");
             }
         }
 
@@ -120,12 +121,49 @@ internal static class LedgerVerifier
 
             foreach (var obligation in account.Obligations)
             {
+                var allocations = snapshot.Allocations.Where(a => a.ObligationId == obligation.Id).ToList();
                 foreach (var component in obligation.Originated)
                 {
+                    var paid = allocations.Where(a => a.Component == component.Key).Sum(a => a.Amount.Amount);
                     var journal = Balance(LedgerAccounts.Receivable(obligation.Id, component.Key), obligation.Currency);
-                    if (journal != component.Amount.Amount)
+                    if (journal != component.Amount.Amount - paid)
                     {
-                        violations.Add($"I-10: obligation {obligation.PaymentReference} {component.Key} is {component.Amount} but the journal says {journal}.");
+                        violations.Add($"I-10: obligation {obligation.PaymentReference} {component.Key} owes {component.Amount} less {paid} paid, but the journal says {journal}.");
+                    }
+                }
+
+                foreach (var plan in obligation.Plans)
+                {
+                    foreach (var instalment in plan.Instalments)
+                    {
+                        foreach (var component in instalment.Components)
+                        {
+                            // I-6: nothing over-settled; projections equal allocation facts.
+                            var paid = allocations
+                                .Where(a => a.PlanVersion == plan.Version && a.InstalmentSequence == instalment.Sequence && a.Component == component.Key)
+                                .Sum(a => a.Amount.Amount);
+                            if (component.Outstanding.IsNegative || component.Allocated.Amount != paid)
+                            {
+                                violations.Add($"I-6: {obligation.PaymentReference} v{plan.Version} #{instalment.Sequence} {component.Key}: due {component.Due}, allocated {component.Allocated}, facts {paid}.");
+                            }
+                        }
+                    }
+                }
+
+                // I-12: settled exactly when nothing is outstanding.
+                var outstanding = obligation.ActivePlan?.Instalments.Any(i => i.Outstanding.IsPositive) ?? false;
+                if ((obligation.Status == ObligationStatus.Settled) == outstanding)
+                {
+                    violations.Add($"I-12: obligation {obligation.PaymentReference} is {obligation.Status} with outstanding = {outstanding}.");
+                }
+
+                // I-23: every allocation targets a plan version of its obligation, and superseded plans have none.
+                foreach (var allocation in allocations)
+                {
+                    var plan = obligation.Plans.SingleOrDefault(p => p.Version == allocation.PlanVersion);
+                    if (plan is null || plan.Status == PlanVersionStatus.Superseded)
+                    {
+                        violations.Add($"I-23: allocation {allocation.Id} targets plan version {allocation.PlanVersion} of {obligation.PaymentReference}.");
                     }
                 }
             }

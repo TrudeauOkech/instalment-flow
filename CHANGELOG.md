@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- M4 allocation engine:
+  - `IAllocationStrategy`, `AllocationContext`, `AllocationPlan` (with `FillInOrder`) and an engine-side plan validator: a plan that over-settles, overspends the funds, pays a non-eligible target, repeats a target, uses another currency or is negative is rejected (`IF2002`).
+  - Built-in strategies `oldest-due-first@1` (default), `current-due-first@1`, `principal-first@1`, `charges-first@1`, `proportional@1` and directed allocation, with deterministic tie-breaking (I-14).
+  - Tenant policy: a pinned strategy version (`Allocation`), `ComponentOrder` (default principal → interest → fee → penalty) and `FutureInstalments` (`HoldAsCredit` by default, `ApplyToNextInstalments`, `PrepayPrincipal`).
+  - `Payments.RecordAsync` now allocates identified payments in the same command. Directed payments never spill onto another loan (I-21); a customer with several loans and no reference is held with `AllocationInstructionRequired` (I-20).
+  - `Allocations.AllocateAsync` for manual or customer-directed allocation of unapplied funds; `Exceptions.AllocateToObligationAsync`; `AssignToCustomerAsync` with an obligation allocates in the same command.
+  - `InstalmentFlowBuilder.AddAllocationStrategy` for custom strategies (`IF2003` for an unknown one). A faulty or throwing strategy leaves the funds held with `AllocationFailed` (ADR-002).
+  - Allocations record the strategy and the policy version; the ledger verifier also checks I-6, I-12 and I-23.
+  - Executable golden tables in `docs/allocation-strategies/*.md`.
 - M3 payment recording, identification and exceptions:
   - `Payments.RecordAsync` always records a confirmed payment: a funds lot plus a balanced journal entry, held as customer unapplied funds or tenant unidentified funds.
   - Identification by payment reference, known obligation or known customer, following ADR-009. Ambiguous payments are never directed. Tenant policies `SoleObligation` and `MultipleObligations` default to `Hold`. `IPaymentReferenceResolver` handles legacy references.
