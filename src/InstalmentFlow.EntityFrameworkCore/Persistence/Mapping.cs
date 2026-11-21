@@ -25,8 +25,6 @@ internal static class Mapping
 
     public static ComponentKey Key(short type, string code) => new((ComponentType)type, code.Length == 0 ? null : code);
 
-    // ----- Account aggregate -----
-
     public static AccountRows ToRows(CustomerAccount account)
     {
         var tenant = account.TenantId.Value;
@@ -130,8 +128,6 @@ internal static class Mapping
         return new CustomerAccount(account.TenantId, new AccountId(account.AccountId), account.ExternalId, account.Version, account.OpenedAt,
             obligations, [.. rows.Lots.OrderBy(l => l.Ordinal).Select(ToLot)]);
     }
-
-    // ----- Facts -----
 
     public static PaymentRow ToRow(string tenant, PaymentRecord p) => new()
     {

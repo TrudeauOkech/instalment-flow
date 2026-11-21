@@ -337,7 +337,6 @@ internal sealed class InstalmentFlowDbContext(DbContextOptions<InstalmentFlowDbC
             Tenant(e);
         });
 
-        // Snake-case names for every table column, key, index and foreign key.
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
         {
             var table = entity.GetTableName()!;

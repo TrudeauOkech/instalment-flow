@@ -58,8 +58,6 @@ internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, Concurr
         return result;
     }
 
-    // ----- Tenants -----
-
     public async ValueTask<TenantRecord?> GetAsync(TenantId tenantId, CancellationToken cancellationToken) =>
         await InTenantAsync(tenantId, (_, db) => LoadTenantAsync(db, tenantId.Value, cancellationToken), cancellationToken).ConfigureAwait(false);
 
@@ -109,8 +107,6 @@ internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, Concurr
         var policies = await db.PolicyVersions.Where(p => p.TenantId == tenant).ToListAsync(ct).ConfigureAwait(false);
         return Mapping.ToTenant(row, policies);
     }
-
-    // ----- Aggregates -----
 
     public async ValueTask<CustomerAccount?> LoadAccountAsync(TenantId tenantId, AccountId accountId, CancellationToken cancellationToken) =>
         await InTenantAsync(tenantId, async (session, db) =>
@@ -205,8 +201,6 @@ internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, Concurr
         command.Parameters.AddWithValue("id", id);
         await command.ExecuteScalarAsync(ct).ConfigureAwait(false);
     }
-
-    // ----- Lookups -----
 
     public async ValueTask<AccountId?> FindAccountAsync(TenantId tenantId, string externalId, CancellationToken cancellationToken) =>
         await InTenantAsync(tenantId, async (_, db) =>
@@ -369,8 +363,6 @@ internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, Concurr
         join tx in db.JournalTransactions on new { row.TenantId, row.JournalTxId } equals new { tx.TenantId, tx.JournalTxId }
         orderby tx.Seq, row.Position
         select row;
-
-    // ----- History, journal and verification -----
 
     public async ValueTask<AccountHistory> LoadHistoryAsync(TenantId tenantId, AccountId accountId, CancellationToken cancellationToken) =>
         await InTenantAsync(tenantId, async (_, db) =>

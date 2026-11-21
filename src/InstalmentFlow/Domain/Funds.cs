@@ -82,7 +82,7 @@ internal sealed record PaymentExceptionRecord(
     };
 }
 
-/// <summary>A domain event, delivered through the outbox from milestone M7. Typed public contracts arrive then.</summary>
+/// <summary>A domain event, written to the outbox in the same commit and published as an <see cref="IntegrationEvent"/>.</summary>
 internal sealed record DomainEvent(
     Guid EventId,
     string Type,

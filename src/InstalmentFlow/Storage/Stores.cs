@@ -4,8 +4,7 @@ using InstalmentFlow.Ledger;
 
 namespace InstalmentFlow.Storage;
 
-// Storage ports are internal until milestone M7, when the PostgreSQL store proves their shape. Every method takes
-// the tenant explicitly (ADR-007): there is no ambient tenant.
+// Storage ports are internal (ADR-017). Every method takes the tenant explicitly (ADR-007): there is no ambient tenant.
 
 internal sealed record TenantRecord(TenantId Id, Currency BaseCurrency, string TimeZone, ImmutableArray<TenantPolicyVersion> Policies)
 {
@@ -209,8 +208,6 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
     private readonly Lock _tenantsLock = new();
     private ImmutableDictionary<TenantId, TenantState> _tenants = ImmutableDictionary<TenantId, TenantState>.Empty;
 
-    // ----- Tenants -----
-
     public ValueTask<TenantRecord?> GetAsync(TenantId tenantId, CancellationToken cancellationToken) =>
         ValueTask.FromResult(_tenants.TryGetValue(tenantId, out var state) ? state.Tenant : null);
 
@@ -244,8 +241,6 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
             return ValueTask.FromResult(state.Tenant);
         }
     }
-
-    // ----- Reads -----
 
     public ValueTask<CustomerAccount?> LoadAccountAsync(TenantId tenantId, AccountId accountId, CancellationToken cancellationToken) =>
         ValueTask.FromResult(State(tenantId).Data.Accounts.GetValueOrDefault(accountId));
@@ -402,8 +397,6 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
             [.. data.Journal],
             [.. data.Events]);
     }
-
-    // ----- Writes -----
 
     public ValueTask CommitAsync(Commit commit, CancellationToken cancellationToken)
     {

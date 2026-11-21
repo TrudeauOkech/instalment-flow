@@ -36,8 +36,6 @@ public sealed record AsOf
     public override string ToString() => BusinessDate is { } date ? date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) : Instant!.Value.ToString("O");
 }
 
-// ----- Statements -----
-
 /// <summary>What a statement line records. The values match the journal's transaction kinds.</summary>
 public enum StatementEntryKind
 {
@@ -99,8 +97,6 @@ public sealed record StatementLine(
     Money Allocated,
     Money Change,
     Money Balance);
-
-// ----- Payment trace -----
 
 /// <summary>A step in a payment's history.</summary>
 public enum PaymentTraceStepKind
@@ -168,8 +164,6 @@ public sealed record PaymentTraceStep(
 /// <param name="Steps">Its history, oldest first.</param>
 public sealed record PaymentTrace(PaymentView Payment, Money Deficit, IReadOnlyList<PaymentTraceStep> Steps);
 
-// ----- Journal export -----
-
 /// <summary>A position in the tenant's journal, for incremental export to a general ledger.</summary>
 /// <param name="Position">The position of the last transaction read; 0 before the first.</param>
 public readonly record struct JournalCursor(long Position)
@@ -203,8 +197,6 @@ public sealed record JournalTransactionView(
     DateOnly EffectiveDate,
     DateTimeOffset RecordedAt,
     IReadOnlyList<JournalLineView> Lines);
-
-// ----- Verification -----
 
 /// <summary>What <see cref="IInstalmentQueries.VerifyAsync"/> checks.</summary>
 public sealed record VerifyScope

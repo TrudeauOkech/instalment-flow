@@ -68,7 +68,6 @@ internal sealed class EqualInstalmentsGenerator : IScheduleGenerator
     }
 }
 
-/// <summary>A schedule supplied instalment by instalment.</summary>
 internal sealed class CustomScheduleGenerator : IScheduleGenerator
 {
     private readonly IReadOnlyList<PlannedInstalment> _instalments;

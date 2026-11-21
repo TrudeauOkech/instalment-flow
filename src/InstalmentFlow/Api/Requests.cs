@@ -2,7 +2,7 @@ namespace InstalmentFlow;
 
 /// <summary>
 /// Base type for every command. The idempotency key makes a command safe to retry; the same key with a
-/// different request will be rejected with <c>IF1002</c> once idempotency storage lands (milestone M3).
+/// different request is rejected with <c>IF1002</c>.
 /// </summary>
 public abstract record InstalmentFlowRequest
 {

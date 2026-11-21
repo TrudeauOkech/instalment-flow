@@ -38,7 +38,7 @@ internal abstract record ResolvedTarget
 
 /// <summary>Where the funds are held and what they may be applied to.</summary>
 /// <param name="HoldingAccount">The customer holding the funds, or null for tenant unidentified funds.</param>
-/// <param name="DirectedTo">The obligation the funds are directed to (cases 1 and 2), applied by allocation in M4.</param>
+/// <param name="DirectedTo">The obligation the funds are directed to (cases 1 and 2).</param>
 /// <param name="StrategyEligible">Obligations a strategy may spread the funds across (case 3 with explicit opt-in).</param>
 /// <param name="Exception">The exception to raise, if any.</param>
 /// <param name="Detail">A human-readable explanation.</param>

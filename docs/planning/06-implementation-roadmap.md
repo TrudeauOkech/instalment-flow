@@ -219,14 +219,14 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
   - reversal-after-refund deficit;
   - interleavings of reversals with allocations (in-memory parallel).
 
-### M6 — Queries, history and Verify → **release 0.1.0-preview** (M) — ✅ done 2026-11-21 (preview not yet published)
+### M6 — Queries, history and Verify → **release 0.1.0-preview** (M) — ✅ done 2026-11-21 — published as 0.1.0-preview.1
 
 > **Delivered:**
 > - **As-of:** `AsOf.Date(day)` (end of a business date) or `AsOf.At(instant)` on the account, obligation and schedule queries. Every money fact references its journal transaction, so a past state is the fold of the facts of the transactions recorded up to the cut-off, replayed in journal order (funds lots, including reversal deficits and failed refunds settling them; instalment components). Plan versions, which carry no money, are selected by their own timestamps. A cut-off at or after now returns the current state.
 > - **Queries:** `TracePaymentAsync` (every step of one payment; its parts reconcile to the amount), `GetStatementAsync` (one line per journal transaction, with the change and running balance of the customer's net position), `ReadJournalAsync` (cursor-based export in pages, with stable kind and source-type names) and `VerifyAsync` (the verifier's violations by invariant).
 > - **Testing package:** the scenario DSL from doc 04 §6 (customers, loans, reference resolver, payments, duplicate deliveries, reversals, charges, waivers, refunds, days passing), with assertions that need no test framework. The simulator steps come with the payments package (M8), so `InstalmentFlow.Testing` references only the core for now.
 > - **Samples and docs:** samples 01–03 check their own results and end with `VerifyAsync`; CI runs them on every leg. New docs: concepts and financial invariants (enforcement and verification per invariant). The README has a quickstart.
-> - **Release:** the five packages still without content are marked non-packable, so 0.1 ships `InstalmentFlow` and `InstalmentFlow.Testing`. CI has a `publish` job that pushes packages for `v*` tags through the `nuget` environment. Publishing uses nuget.org Trusted Publishing (no stored API key): it needs a trusted publisher policy on nuget.org, the environment's `NUGET_USER` secret and a `v0.1.0-preview.1` tag; none exists yet.
+> - **Release:** the five packages still without content are marked non-packable, so 0.1 ships `InstalmentFlow` and `InstalmentFlow.Testing`. CI has a `publish` job that pushes packages for `v*` tags through the `nuget` environment. Publishing uses nuget.org Trusted Publishing (no stored API key); 0.1.0-preview.1 was published from the `release/0.1` branch (M6 plus the Trusted Publishing workflow).
 >
 > **Tests:** 266 in total (240 core). The random-history property runs commands (payments, customer payments, reversals, charges and their reversals, waivers, refunds and their completion, sweeps, days passing). After every step it checks `Verify` and that the history fold reproduces the live projections; at the end it checks that every earlier state is reproduced as of its time. 10⁵ histories pass locally (about 90 seconds), and CI runs 10⁵ on one leg. It found one real difference while being written: an emptied charge component kept by the projection but dropped by the fold. Manual mutation checks: 9 mutants on the fold, statement and as-of routing. Six were killed at once; the other three (a failed refund settling a deficit, obligations opened after the cut-off, assigned unidentified funds) were killed by targeted tests.
 - **Features:**
@@ -240,7 +240,7 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
 - **Acceptance:** a projection equals the journal fold for 10⁵ random histories (I-10). Samples run in CI. NuGet preview is published.
 - **Tests:** property-based random histories with `Verify` after every step, and an as-of check that a past query is unaffected by later commands.
 
-### M7 — EF Core / PostgreSQL store → **0.2.0** (L) — ✅ done 2026-11-21 (preview not yet published)
+### M7 — EF Core / PostgreSQL store → **0.2.0** (L) — ✅ done 2026-11-21 — published as 0.2.0-preview.1
 
 > **Delivered:**
 > - **Schema:** EF Core mappings and one initial migration for the doc 05 schema, with the differences listed in doc 05 §8. It has tenant-first composite keys and foreign keys and `numeric(19,4)` money, and named constraints so refusals map back to engine errors. SQL in the migration adds append-only and no-truncate triggers on facts, the deferred balance check (I-1), and forced row-level security on every table using `set_config('instalment_flow.tenant_id', …, true)`. `MigrateAsync` applies migrations and grants the application and dispatcher roles. `GenerateMigrationScript` produces idempotent SQL. The factory refuses a missing or newer schema.
