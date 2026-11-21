@@ -94,7 +94,10 @@ jobs:
     needs: build-test
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    environment: nuget            # requires approval and holds the NUGET_API_KEY secret
+    environment: nuget            # requires approval; holds the NUGET_USER secret (nuget.org profile name)
+    permissions:
+      contents: read
+      id-token: write             # Trusted Publishing: exchange the workflow's OIDC token for a short-lived key
     steps:
       - uses: actions/download-artifact@v7
         with:
@@ -105,7 +108,13 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: NuGet login (Trusted Publishing)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Push packages
         run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
