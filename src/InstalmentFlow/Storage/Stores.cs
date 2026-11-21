@@ -39,6 +39,25 @@ internal sealed record Commit
 
     public ImmutableArray<AllocationRecord> Allocations { get; init; } = [];
 
+    public ImmutableArray<AllocationReversalRecord> AllocationReversals { get; init; } = [];
+
+    public ImmutableArray<PaymentReversalRecord> PaymentReversals { get; init; } = [];
+
+    /// <summary>Reversals parked until their payment arrives.</summary>
+    public ImmutableArray<PendingReversal> NewPendingReversals { get; init; } = [];
+
+    /// <summary>Parked reversals applied by this commit; each must still be pending.</summary>
+    public ImmutableArray<ReversalId> AppliedPendingReversals { get; init; } = [];
+
+    public ImmutableArray<ChargeRecord> Charges { get; init; } = [];
+
+    public ImmutableArray<ChargeReversalRecord> ChargeReversals { get; init; } = [];
+
+    public ImmutableArray<WaiverRecord> Waivers { get; init; } = [];
+
+    /// <summary>New refunds (status Requested), or completed ones replacing a stored Requested refund.</summary>
+    public ImmutableArray<RefundRecord> Refunds { get; init; } = [];
+
     public ImmutableArray<PaymentExceptionRecord> NewExceptions { get; init; } = [];
 
     public ImmutableArray<PaymentExceptionRecord> ResolvedExceptions { get; init; } = [];
@@ -54,6 +73,13 @@ internal sealed class DuplicatePaymentException(ExternalReference reference)
 {
     public ExternalReference Reference { get; } = reference;
 }
+
+/// <summary>Another command recorded a reversal with the same provider reference first.</summary>
+internal sealed class DuplicateReversalException(ExternalReference reference)
+    : Exception($"A reversal with reference {reference} is already recorded.");
+
+/// <summary>A recorded or parked reversal found by its provider reference.</summary>
+internal sealed record ReversalLookup(PaymentReversalRecord? Recorded, PendingReversal? Pending);
 
 /// <summary>Another command committed the same idempotency key first.</summary>
 internal sealed class IdempotencyKeyTakenException(string key) : Exception($"Idempotency key '{key}' was committed concurrently.");
@@ -90,14 +116,36 @@ internal interface ILedgerStore
 
     ValueTask<IReadOnlyList<PaymentExceptionRecord>> ListExceptionsAsync(TenantId tenantId, CancellationToken cancellationToken);
 
+    /// <summary>Every exception raised for a payment, oldest first.</summary>
+    ValueTask<IReadOnlyList<PaymentExceptionRecord>> ListPaymentExceptionsAsync(TenantId tenantId, PaymentId paymentId, CancellationToken cancellationToken);
+
     ValueTask<IdempotencyRecord?> GetIdempotencyAsync(TenantId tenantId, string key, CancellationToken cancellationToken);
 
     ValueTask<IReadOnlyList<AllocationRecord>> ListAllocationsAsync(TenantId tenantId, PaymentId paymentId, CancellationToken cancellationToken);
+
+    /// <summary>An account's allocations in the order they were recorded (LIFO unwinding depends on it).</summary>
+    ValueTask<IReadOnlyList<AllocationRecord>> ListAccountAllocationsAsync(TenantId tenantId, AccountId accountId, CancellationToken cancellationToken);
+
+    ValueTask<IReadOnlyList<AllocationReversalRecord>> ListAccountAllocationReversalsAsync(TenantId tenantId, AccountId accountId, CancellationToken cancellationToken);
+
+    ValueTask<IReadOnlyList<PaymentReversalRecord>> ListPaymentReversalsAsync(TenantId tenantId, PaymentId paymentId, CancellationToken cancellationToken);
+
+    ValueTask<ReversalLookup?> FindReversalAsync(TenantId tenantId, ExternalReference reference, CancellationToken cancellationToken);
+
+    /// <summary>Parked reversals waiting for the payment with this provider reference, oldest first.</summary>
+    ValueTask<IReadOnlyList<PendingReversal>> ListPendingReversalsAsync(TenantId tenantId, ExternalReference paymentSource, CancellationToken cancellationToken);
+
+    ValueTask<ChargeRecord?> GetChargeAsync(TenantId tenantId, ChargeId chargeId, CancellationToken cancellationToken);
+
+    ValueTask<ChargeReversalRecord?> GetChargeReversalAsync(TenantId tenantId, ChargeId chargeId, CancellationToken cancellationToken);
+
+    ValueTask<RefundRecord?> GetRefundAsync(TenantId tenantId, RefundId refundId, CancellationToken cancellationToken);
 
     /// <summary>Applies a commit atomically.</summary>
     /// <exception cref="ConcurrencyConflictException">An aggregate changed since it was loaded.</exception>
     /// <exception cref="IdempotencyKeyTakenException">The idempotency key was committed concurrently.</exception>
     /// <exception cref="DuplicatePaymentException">The payment's source reference is already recorded.</exception>
+    /// <exception cref="DuplicateReversalException">The reversal's provider reference is already recorded.</exception>
     /// <exception cref="RuleViolationException">A uniqueness or state rule would be broken.</exception>
     ValueTask CommitAsync(Commit commit, CancellationToken cancellationToken);
 }
@@ -110,6 +158,13 @@ internal sealed record LedgerSnapshot(
     ImmutableArray<PaymentRecord> Payments,
     ImmutableArray<PaymentAssignment> Assignments,
     ImmutableArray<AllocationRecord> Allocations,
+    ImmutableArray<AllocationReversalRecord> AllocationReversals,
+    ImmutableArray<PaymentReversalRecord> PaymentReversals,
+    ImmutableArray<PendingReversal> PendingReversals,
+    ImmutableArray<ChargeRecord> Charges,
+    ImmutableArray<ChargeReversalRecord> ChargeReversals,
+    ImmutableArray<WaiverRecord> Waivers,
+    ImmutableArray<RefundRecord> Refunds,
     ImmutableArray<PaymentExceptionRecord> Exceptions,
     ImmutableArray<JournalTransaction> Journal,
     ImmutableArray<DomainEvent> Events);
@@ -208,11 +263,50 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
     public ValueTask<IReadOnlyList<PaymentExceptionRecord>> ListExceptionsAsync(TenantId tenantId, CancellationToken cancellationToken) =>
         ValueTask.FromResult<IReadOnlyList<PaymentExceptionRecord>>([.. State(tenantId).Data.Exceptions.Values.OrderBy(e => e.OpenedAt).ThenBy(e => e.Id.Value)]);
 
+    public ValueTask<IReadOnlyList<PaymentExceptionRecord>> ListPaymentExceptionsAsync(TenantId tenantId, PaymentId paymentId, CancellationToken cancellationToken) =>
+        ValueTask.FromResult<IReadOnlyList<PaymentExceptionRecord>>(
+            [.. State(tenantId).Data.Exceptions.Values.Where(e => e.PaymentId == paymentId).OrderBy(e => e.OpenedAt).ThenBy(e => e.Id.Value)]);
+
     public ValueTask<IdempotencyRecord?> GetIdempotencyAsync(TenantId tenantId, string key, CancellationToken cancellationToken) =>
         ValueTask.FromResult(State(tenantId).Data.Idempotency.GetValueOrDefault(key));
 
     public ValueTask<IReadOnlyList<AllocationRecord>> ListAllocationsAsync(TenantId tenantId, PaymentId paymentId, CancellationToken cancellationToken) =>
         ValueTask.FromResult<IReadOnlyList<AllocationRecord>>([.. State(tenantId).Data.Allocations.Where(a => a.PaymentId == paymentId)]);
+
+    public ValueTask<IReadOnlyList<AllocationRecord>> ListAccountAllocationsAsync(TenantId tenantId, AccountId accountId, CancellationToken cancellationToken) =>
+        ValueTask.FromResult<IReadOnlyList<AllocationRecord>>([.. State(tenantId).Data.Allocations.Where(a => a.AccountId == accountId)]);
+
+    public ValueTask<IReadOnlyList<AllocationReversalRecord>> ListAccountAllocationReversalsAsync(TenantId tenantId, AccountId accountId, CancellationToken cancellationToken) =>
+        ValueTask.FromResult<IReadOnlyList<AllocationReversalRecord>>([.. State(tenantId).Data.AllocationReversals.Where(r => r.AccountId == accountId)]);
+
+    public ValueTask<IReadOnlyList<PaymentReversalRecord>> ListPaymentReversalsAsync(TenantId tenantId, PaymentId paymentId, CancellationToken cancellationToken) =>
+        ValueTask.FromResult<IReadOnlyList<PaymentReversalRecord>>([.. State(tenantId).Data.PaymentReversals.Where(r => r.PaymentId == paymentId)]);
+
+    public ValueTask<ReversalLookup?> FindReversalAsync(TenantId tenantId, ExternalReference reference, CancellationToken cancellationToken)
+    {
+        var data = State(tenantId).Data;
+        if (!data.ReversalsByReference.TryGetValue(reference, out var id))
+        {
+            return ValueTask.FromResult<ReversalLookup?>(null);
+        }
+
+        return ValueTask.FromResult<ReversalLookup?>(data.Pending.TryGetValue(id, out var pending)
+            ? new ReversalLookup(null, pending)
+            : new ReversalLookup(data.PaymentReversals.Single(r => r.Id == id), null));
+    }
+
+    public ValueTask<IReadOnlyList<PendingReversal>> ListPendingReversalsAsync(TenantId tenantId, ExternalReference paymentSource, CancellationToken cancellationToken) =>
+        ValueTask.FromResult<IReadOnlyList<PendingReversal>>(
+            [.. State(tenantId).Data.Pending.Values.Where(p => p.PaymentSource == paymentSource).OrderBy(p => p.At).ThenBy(p => p.Id.Value)]);
+
+    public ValueTask<ChargeRecord?> GetChargeAsync(TenantId tenantId, ChargeId chargeId, CancellationToken cancellationToken) =>
+        ValueTask.FromResult(State(tenantId).Data.Charges.GetValueOrDefault(chargeId));
+
+    public ValueTask<ChargeReversalRecord?> GetChargeReversalAsync(TenantId tenantId, ChargeId chargeId, CancellationToken cancellationToken) =>
+        ValueTask.FromResult(State(tenantId).Data.ChargeReversals.GetValueOrDefault(chargeId));
+
+    public ValueTask<RefundRecord?> GetRefundAsync(TenantId tenantId, RefundId refundId, CancellationToken cancellationToken) =>
+        ValueTask.FromResult(State(tenantId).Data.Refunds.GetValueOrDefault(refundId));
 
     public LedgerSnapshot Snapshot(TenantId tenantId)
     {
@@ -225,6 +319,13 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
             [.. data.Payments.Values],
             [.. data.Assignments.Values],
             [.. data.Allocations],
+            [.. data.AllocationReversals],
+            [.. data.PaymentReversals],
+            [.. data.Pending.Values],
+            [.. data.Charges.Values],
+            [.. data.ChargeReversals.Values],
+            [.. data.Waivers],
+            [.. data.Refunds.Values],
             [.. data.Exceptions.Values],
             [.. data.Journal],
             [.. data.Events]);
@@ -305,6 +406,60 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
         {
             throw new RuleViolationException(ErrorCodes.ExceptionNotResolvable, "The payment has already been assigned.");
         }
+
+        ValidateReversals(commit, data);
+
+        foreach (var reversal in commit.ChargeReversals)
+        {
+            if (!data.Charges.ContainsKey(reversal.ChargeId) || data.ChargeReversals.ContainsKey(reversal.ChargeId))
+            {
+                throw new RuleViolationException(ErrorCodes.InvalidRequest, $"Charge {reversal.ChargeId} is unknown or already reversed.");
+            }
+        }
+
+        foreach (var refund in commit.Refunds)
+        {
+            var stored = data.Refunds.GetValueOrDefault(refund.Id);
+            var valid = refund.Status == RefundStatus.Requested ? stored is null : stored?.Status == RefundStatus.Requested;
+            if (!valid)
+            {
+                throw new RuleViolationException(ErrorCodes.RefundNotPending, $"Refund {refund.Id} is not pending.");
+            }
+        }
+    }
+
+    private static void ValidateReversals(Commit commit, TenantData data)
+    {
+        var applied = commit.AppliedPendingReversals.ToHashSet();
+        if (applied.Any(id => !data.Pending.ContainsKey(id)))
+        {
+            // Another command applied the parked reversal first; retry against fresh state.
+            throw new ConcurrencyConflictException(default, CustomerAccount.NewVersion);
+        }
+
+        foreach (var reference in commit.PaymentReversals.Where(r => !applied.Contains(r.Id)).Select(r => r.Reference)
+                     .Concat(commit.NewPendingReversals.Select(p => p.Reference)).OfType<ExternalReference>())
+        {
+            if (data.ReversalsByReference.ContainsKey(reference))
+            {
+                throw new DuplicateReversalException(reference);
+            }
+        }
+
+        // Reversal before payment: parking and recording the payment must never miss each other.
+        var recorded = commit.Payments.Select(p => p.Source).ToHashSet();
+        foreach (var pending in commit.NewPendingReversals)
+        {
+            if (data.PaymentsBySource.ContainsKey(pending.PaymentSource) || recorded.Contains(pending.PaymentSource))
+            {
+                throw new ConcurrencyConflictException(default, CustomerAccount.NewVersion);
+            }
+        }
+
+        if (data.Pending.Values.Any(p => recorded.Contains(p.PaymentSource) && !applied.Contains(p.Id)))
+        {
+            throw new ConcurrencyConflictException(default, CustomerAccount.NewVersion);
+        }
     }
 
     private static TenantData Apply(Commit commit, TenantData data)
@@ -348,7 +503,20 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
             data = data with { Assignments = data.Assignments.Add(assignment.PaymentId, assignment) };
         }
 
-        data = data with { Allocations = data.Allocations.AddRange(commit.Allocations) };
+        data = data with
+        {
+            Allocations = data.Allocations.AddRange(commit.Allocations),
+            AllocationReversals = data.AllocationReversals.AddRange(commit.AllocationReversals),
+            PaymentReversals = data.PaymentReversals.AddRange(commit.PaymentReversals),
+            Pending = data.Pending.RemoveRange(commit.AppliedPendingReversals).AddRange(commit.NewPendingReversals.Select(p => KeyValuePair.Create(p.Id, p))),
+            ReversalsByReference = data.ReversalsByReference.SetItems(
+                commit.PaymentReversals.Where(r => r.Reference is not null).Select(r => KeyValuePair.Create(r.Reference!, r.Id))
+                    .Concat(commit.NewPendingReversals.Where(p => p.Reference is not null).Select(p => KeyValuePair.Create(p.Reference!, p.Id)))),
+            Charges = data.Charges.AddRange(commit.Charges.Select(c => KeyValuePair.Create(c.Id, c))),
+            ChargeReversals = data.ChargeReversals.AddRange(commit.ChargeReversals.Select(r => KeyValuePair.Create(r.ChargeId, r))),
+            Waivers = data.Waivers.AddRange(commit.Waivers),
+            Refunds = data.Refunds.SetItems(commit.Refunds.Select(r => KeyValuePair.Create(r.Id, r))),
+        };
 
         foreach (var exception in commit.NewExceptions.Concat(commit.ResolvedExceptions))
         {
@@ -400,6 +568,14 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
         ImmutableDictionary<ExternalReference, PaymentId> PaymentsBySource,
         ImmutableDictionary<PaymentId, PaymentAssignment> Assignments,
         ImmutableList<AllocationRecord> Allocations,
+        ImmutableList<AllocationReversalRecord> AllocationReversals,
+        ImmutableList<PaymentReversalRecord> PaymentReversals,
+        ImmutableDictionary<ReversalId, PendingReversal> Pending,
+        ImmutableDictionary<ExternalReference, ReversalId> ReversalsByReference,
+        ImmutableDictionary<ChargeId, ChargeRecord> Charges,
+        ImmutableDictionary<ChargeId, ChargeReversalRecord> ChargeReversals,
+        ImmutableList<WaiverRecord> Waivers,
+        ImmutableDictionary<RefundId, RefundRecord> Refunds,
         ImmutableDictionary<PaymentExceptionId, PaymentExceptionRecord> Exceptions,
         ImmutableDictionary<string, IdempotencyRecord> Idempotency,
         ImmutableList<JournalTransaction> Journal,
@@ -416,6 +592,14 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
             ImmutableDictionary<ExternalReference, PaymentId>.Empty,
             ImmutableDictionary<PaymentId, PaymentAssignment>.Empty,
             ImmutableList<AllocationRecord>.Empty,
+            ImmutableList<AllocationReversalRecord>.Empty,
+            ImmutableList<PaymentReversalRecord>.Empty,
+            ImmutableDictionary<ReversalId, PendingReversal>.Empty,
+            ImmutableDictionary<ExternalReference, ReversalId>.Empty,
+            ImmutableDictionary<ChargeId, ChargeRecord>.Empty,
+            ImmutableDictionary<ChargeId, ChargeReversalRecord>.Empty,
+            ImmutableList<WaiverRecord>.Empty,
+            ImmutableDictionary<RefundId, RefundRecord>.Empty,
             ImmutableDictionary<PaymentExceptionId, PaymentExceptionRecord>.Empty,
             ImmutableDictionary.Create<string, IdempotencyRecord>(StringComparer.Ordinal),
             ImmutableList<JournalTransaction>.Empty,

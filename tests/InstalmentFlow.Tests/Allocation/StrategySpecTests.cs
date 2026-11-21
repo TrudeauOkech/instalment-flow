@@ -174,7 +174,7 @@ public sealed class StrategySpecTests
                 [.. originated], [plan], null, s_epoch.AddMinutes(opened)));
         }
 
-        var lot = new FundsLot(paymentId, pay!, pay!, null, s_epoch);
+        var lot = FundsLot.Received(paymentId, pay!, null, s_epoch);
         var account = new CustomerAccount(s_tenant, accountId, "C-1", 1, s_epoch, built.ToImmutable(), [lot]);
         var eligibleIds = eligible.Count == 0
             ? labels.Keys.ToList()

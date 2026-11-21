@@ -19,19 +19,49 @@ internal sealed record Obligation(
 {
     public PlanVersion? ActivePlan => Plans.SingleOrDefault(p => p.Status == PlanVersionStatus.Active);
 
+    /// <summary>The plan whose balances are current: the active one, or the cancelled one after cancellation.</summary>
+    public PlanVersion? CurrentPlan => ActivePlan ?? Plans.LastOrDefault(p => p.Status == PlanVersionStatus.Cancelled);
+
+    public PlanVersion GetPlan(int version) => Plans.Single(p => p.Version == version);
+
+    /// <summary>Whether amounts can still be applied to, charged to or waived on this obligation.</summary>
+    public bool IsOpen => Status is ObligationStatus.Active or ObligationStatus.Settled;
+
     /// <summary>Replaces the active plan version and derives the status: settled once nothing is outstanding.</summary>
     public Obligation WithActivePlan(PlanVersion plan)
     {
         var current = ActivePlan ?? throw new InvalidOperationException($"Obligation {ExternalId} has no active plan.");
-        if (plan.Version != current.Version)
+        return plan.Version != current.Version
+            ? throw new InvalidOperationException("Only the active plan version can be updated.")
+            : WithPlan(plan);
+    }
+
+    /// <summary>
+    /// Replaces a plan version (active, or cancelled when a reversal re-opens a cancelled obligation's history) and
+    /// derives Active ⇄ Settled from what is outstanding. Closed and cancelled obligations keep their status.
+    /// </summary>
+    public Obligation WithPlan(PlanVersion plan)
+    {
+        var updated = this with { Plans = Plans.SetItem(Plans.IndexOf(GetPlan(plan.Version)), plan) };
+        if (!IsOpen || plan.Status != PlanVersionStatus.Active)
         {
-            throw new InvalidOperationException("Only the active plan version can be updated.");
+            return updated;
         }
 
-        var updated = this with { Plans = Plans.SetItem(Plans.IndexOf(current), plan) };
-        return Status == ObligationStatus.Active && plan.Instalments.All(i => !i.Outstanding.IsPositive)
-            ? updated with { Status = ObligationStatus.Settled }
-            : updated;
+        var outstanding = plan.Instalments.Any(i => i.Outstanding.IsPositive);
+        return updated with { Status = outstanding ? ObligationStatus.Active : ObligationStatus.Settled };
+    }
+
+    /// <summary>Cancels the obligation and its active plan together (ADR-011).</summary>
+    public Obligation Cancel(DateTimeOffset now, string reason)
+    {
+        var current = ActivePlan
+            ?? throw new RuleViolationException(ErrorCodes.InvalidRequest, $"Obligation {ExternalId} has no active plan.");
+        return this with
+        {
+            Status = ObligationStatus.Cancelled,
+            Plans = Plans.Replace(current, current.End(PlanVersionStatus.Cancelled, now, reason)),
+        };
     }
 
     public Obligation SupersedePlan(PlanVersion replacement, DateTimeOffset now, string reason)
@@ -83,6 +113,14 @@ internal sealed record CustomerAccount(
     /// <summary>Unapplied funds per currency held, ordered by currency code.</summary>
     public IReadOnlyList<Money> UnappliedByCurrency() =>
         [.. Lots.Select(l => l.Remaining.Currency).Distinct().OrderBy(c => c.Code, StringComparer.Ordinal).Select(Unapplied)];
+
+    /// <summary>What the customer owes from reversals of funds that had already been refunded (ADR-005), per currency.</summary>
+    public IReadOnlyList<Money> ReversalReceivableByCurrency() =>
+        [.. Lots.Where(l => l.Deficit.IsPositive).GroupBy(l => l.Deficit.Currency).OrderBy(g => g.Key.Code, StringComparer.Ordinal)
+            .Select(g => Money.Sum(g.Key, g.Select(l => l.Deficit)))];
+
+    public FundsLot GetLot(PaymentId payment) =>
+        Lots.SingleOrDefault(l => l.PaymentId == payment) ?? throw new InvalidOperationException($"Account {Id} holds no funds of payment {payment}.");
 
     public CustomerAccount AddLot(FundsLot lot) => this with { Lots = Lots.Add(lot) };
 

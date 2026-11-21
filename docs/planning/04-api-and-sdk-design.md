@@ -255,8 +255,13 @@ public sealed record PostChargeRequest : InstalmentFlowRequest
   - `IF1011` PaymentConflict (same provider reference, different amount);
   - `IF1012` ExceptionNotResolvable;
   - `IF2001` ReversalExceedsPayment;
+  - `IF2004` ReversalConflict (same reversal reference, different details);
+  - `IF2005` InsufficientFunds (refund larger than the eligible unapplied funds);
+  - `IF2006` RefundNotPending;
   - `IF3001` ConcurrencyRetriesExhausted;
   - `IF4001` PlanHasFinancialHistory;
+  - `IF4002` WriteOffMismatch (cancellation write-offs must equal what is outstanding);
+  - `IF4003` ObligationNotOpen (cancelled or closed);
   - `IF5001` TenantMismatch.
 
   `InstalmentFlow.AspNetCore` maps them to `ProblemDetails`.

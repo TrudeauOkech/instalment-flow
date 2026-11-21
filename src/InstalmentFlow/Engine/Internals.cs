@@ -118,6 +118,8 @@ internal sealed class TenantScopedFlow : IInstalmentFlow
         Payments = new PaymentsService(context);
         Allocations = new AllocationsService(context);
         Exceptions = new ExceptionsService(context);
+        Charges = new ChargesService(context);
+        Refunds = new RefundsService(context);
         Queries = new QueriesService(context);
     }
 
@@ -134,6 +136,10 @@ internal sealed class TenantScopedFlow : IInstalmentFlow
     public IAllocations Allocations { get; }
 
     public IPaymentExceptions Exceptions { get; }
+
+    public ICharges Charges { get; }
+
+    public IRefunds Refunds { get; }
 
     public IInstalmentQueries Queries { get; }
 }
@@ -219,6 +225,9 @@ internal static class Validate
 
         return value;
     }
+
+    public static string Text(string? value, string name) =>
+        string.IsNullOrWhiteSpace(value) ? throw new RuleViolationException(ErrorCodes.InvalidRequest, $"{name} is required.") : value;
 
     public static T Required<T>(T? value, string name)
         where T : class =>

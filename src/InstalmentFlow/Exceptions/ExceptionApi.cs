@@ -33,6 +33,12 @@ public enum PaymentExceptionReason
 
     /// <summary>The allocation strategy failed or produced an invalid plan; the funds are held (ADR-002).</summary>
     AllocationFailed = 7,
+
+    /// <summary>A reversal that arrived before the payment could not be applied in full; review it.</summary>
+    ParkedReversalNotApplied = 8,
+
+    /// <summary>A refund requested from the exception queue failed; the funds are held again.</summary>
+    RefundFailed = 9,
 }
 
 /// <summary>Whether an exception still needs action.</summary>
@@ -148,7 +154,11 @@ public sealed record DismissExceptionRequest : InstalmentFlowRequest
 /// <param name="Exception">The exception after resolution.</param>
 /// <param name="AccountId">The customer now holding the funds, if any.</param>
 /// <param name="UnappliedAfter">That customer's unapplied funds in the payment currency, if any.</param>
-public sealed record ResolutionResult(PaymentExceptionView Exception, AccountId? AccountId, Money? UnappliedAfter);
+public sealed record ResolutionResult(PaymentExceptionView Exception, AccountId? AccountId, Money? UnappliedAfter)
+{
+    /// <summary>The refund requested, for <see cref="IPaymentExceptions.MarkForRefundAsync"/>.</summary>
+    public RefundId? RefundId { get; init; }
+}
 
 /// <summary>
 /// The payment exception queue (ADR-009). Resolutions are ordinary commands: they are idempotent, and a wrong
@@ -171,6 +181,13 @@ public interface IPaymentExceptions
     /// be assigned to the customer first (or use <see cref="AssignToCustomerRequest.Obligation"/>).
     /// </summary>
     Task<ResolutionResult> AllocateToObligationAsync(AllocateToObligationRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Requests a refund of the payment's unapplied or unidentified funds (ADR-010), resolving the exception. The
+    /// host pays it out and calls <see cref="IRefunds.CompleteAsync"/>.
+    /// </summary>
+    /// <exception cref="RuleViolationException">The exception is resolved, or no funds are left (<c>IF1012</c>).</exception>
+    Task<ResolutionResult> MarkForRefundAsync(MarkForRefundRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Closes an exception without moving funds. Not allowed while the funds are still tenant unidentified funds

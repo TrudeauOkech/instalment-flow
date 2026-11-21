@@ -16,11 +16,13 @@ internal static class Allocator
         IReadOnlyCollection<ObligationId> eligible,
         StrategyRef? strategyOverride,
         JournalTxId journalTxId,
-        JournalBuilder journal)
+        JournalBuilder journal,
+        FutureInstalmentPolicy? futureOverride = null)
     {
         var strategy = context.Services.Strategy(strategyOverride ?? tenant.Policy.Allocation);
+        var policy = futureOverride is { } future ? tenant.Policy with { FutureInstalments = future } : tenant.Policy;
         var result = AllocationEngine.Allocate(
-            account, lot, eligible, strategy, tenant.Policy, tenant.Tenant.Current.Version, tenant.Clock.Today, journalTxId, tenant.Clock.UtcNow, context.Time);
+            account, lot, eligible, strategy, policy, tenant.Tenant.Current.Version, tenant.Clock.Today, journalTxId, tenant.Clock.UtcNow, context.Time);
 
         foreach (var allocation in result.Allocations)
         {
@@ -74,6 +76,74 @@ internal static class Allocator
         }
     }
 
+    /// <summary>What allocating a customer's held funds produced.</summary>
+    public sealed record Held(
+        CustomerAccount Account,
+        ImmutableArray<AllocationRecord> Allocations,
+        ImmutableArray<InstalmentRef> InstalmentsSettled,
+        ImmutableArray<ObligationId> ObligationsSettled,
+        ImmutableArray<DomainEvent> Events);
+
+    /// <summary>
+    /// Allocates a customer's unapplied funds, oldest lot first (by value time, then payment ID). Lots with an open
+    /// payment exception are skipped unless <paramref name="onlyPayment"/> names one explicitly (the caller checks it).
+    /// </summary>
+    public static async Task<Held> AllocateHeldAsync(
+        TenantContext context,
+        TenantSnapshot tenant,
+        CustomerAccount account,
+        ObligationId? instructed,
+        PaymentId? onlyPayment,
+        bool allowAcrossObligations,
+        StrategyRef? strategy,
+        FutureInstalmentPolicy? future,
+        JournalTxId journalId,
+        JournalBuilder journal,
+        CancellationToken ct)
+    {
+        var allocations = ImmutableArray.CreateBuilder<AllocationRecord>();
+        var settled = ImmutableArray.CreateBuilder<InstalmentRef>();
+        var obligationsSettled = ImmutableArray.CreateBuilder<ObligationId>();
+        var events = ImmutableArray.CreateBuilder<DomainEvent>();
+
+        var lots = account.Lots
+            .Where(l => l.Remaining.IsPositive && (onlyPayment is null || l.PaymentId == onlyPayment))
+            .OrderBy(l => l.ValueAt)
+            .ThenBy(l => l.PaymentId.Value)
+            .ToList();
+
+        foreach (var lot in lots)
+        {
+            if (onlyPayment is null && await HasOpenExceptionAsync(context, lot.PaymentId, ct).ConfigureAwait(false))
+            {
+                continue;
+            }
+
+            var current = account.GetLot(lot.PaymentId);
+            var eligible = instructed is { } id
+                ? (account.Obligations.Any(o => o.Id == id && ObligationFacts.From(o).IsPayableIn(current.Remaining.Currency)) ? [id] : ImmutableArray<ObligationId>.Empty)
+                : DefaultEligible(account, current, tenant.Policy, allowAcrossObligations);
+
+            var result = Run(context, tenant, account, current.PaymentId, eligible, strategy, journalId, journal, future);
+            account = result.Account;
+            allocations.AddRange(result.Allocations);
+            settled.AddRange(result.InstalmentsSettled);
+            obligationsSettled.AddRange(result.ObligationsSettled);
+            events.AddRange(Events(context, result));
+        }
+
+        return new Held(account, allocations.ToImmutable(), settled.ToImmutable(), obligationsSettled.ToImmutable(), events.ToImmutable());
+    }
+
+    public static async Task<bool> HasOpenExceptionAsync(TenantContext context, PaymentId paymentId, CancellationToken ct)
+    {
+        var payment = await context.Store.GetPaymentAsync(context.TenantId, paymentId, ct).ConfigureAwait(false);
+        return payment is not null && await HasOpenExceptionAsync(context, payment, ct).ConfigureAwait(false);
+    }
+
+    public static async Task<bool> HasOpenExceptionAsync(TenantContext context, PaymentRecord payment, CancellationToken ct) =>
+        (await context.Store.ListPaymentExceptionsAsync(context.TenantId, payment.Id, ct).ConfigureAwait(false)).Any(e => e.Status == PaymentExceptionStatus.Open);
+
     public static AllocationLineView ToView(AllocationRecord record) =>
         new(record.PaymentId, record.ObligationId, record.InstalmentSequence, record.DueDate, record.Component, record.Amount, record.Strategy);
 }
@@ -95,7 +165,8 @@ internal sealed class AllocationsService(TenantContext context) : IAllocations
                 .Add("obligation", request.Obligation?.ToString())
                 .Add("payment", request.Payment?.ToString())
                 .Add("across", request.AllowAcrossObligations ? 1 : 0)
-                .Add("strategy", request.Strategy?.ToString())),
+                .Add("strategy", request.Strategy?.ToString())
+                .Add("future", request.FutureInstalments is { } future ? (long)future : -1)),
             (tenant, ct) => PlanAsync(tenant, request, accountRef, ct),
             result => result,
             cancellationToken);
@@ -132,7 +203,7 @@ internal sealed class AllocationsService(TenantContext context) : IAllocations
                 throw new RuleViolationException(ErrorCodes.InvalidRequest, $"Payment {paymentRef} is not held by the customer.");
             }
 
-            if (await HasOpenExceptionAsync(payment, ct).ConfigureAwait(false))
+            if (await Allocator.HasOpenExceptionAsync(context, payment, ct).ConfigureAwait(false))
             {
                 throw new RuleViolationException(ErrorCodes.ExceptionNotResolvable, $"Payment {paymentRef} has an open exception; resolve it through the exception queue (I-20).");
             }
@@ -142,46 +213,20 @@ internal sealed class AllocationsService(TenantContext context) : IAllocations
 
         var journalId = JournalTxId.New(context.Time);
         var journal = new JournalBuilder(JournalKind.FundsAllocated);
-        var allocations = ImmutableArray.CreateBuilder<AllocationRecord>();
-        var settled = new List<InstalmentRef>();
-        var obligationsSettled = new List<ObligationId>();
-        var events = new List<DomainEvent>();
-
-        var lots = account.Lots
-            .Where(l => l.Remaining.IsPositive && (onlyPayment is null || l.PaymentId == onlyPayment))
-            .OrderBy(l => l.ValueAt)
-            .ThenBy(l => l.PaymentId.Value)
-            .ToList();
-
-        foreach (var lot in lots)
-        {
-            if (onlyPayment is null && await HasOpenExceptionAsync(lot.PaymentId, ct).ConfigureAwait(false))
-            {
-                continue;
-            }
-
-            var current = account.Lots.Single(l => l.PaymentId == lot.PaymentId);
-            var eligible = instructed is { } id
-                ? (account.Obligations.Any(o => o.Id == id && ObligationFacts.From(o).IsPayableIn(current.Remaining.Currency)) ? [id] : ImmutableArray<ObligationId>.Empty)
-                : Allocator.DefaultEligible(account, current, tenant.Policy, request.AllowAcrossObligations);
-
-            var result = Allocator.Run(context, tenant, account, current.PaymentId, eligible, request.Strategy, journalId, journal);
-            account = result.Account;
-            allocations.AddRange(result.Allocations);
-            settled.AddRange(result.InstalmentsSettled);
-            obligationsSettled.AddRange(result.ObligationsSettled);
-            events.AddRange(Allocator.Events(context, result));
-        }
+        var held = await Allocator.AllocateHeldAsync(
+            context, tenant, account, instructed, onlyPayment, request.AllowAcrossObligations, request.Strategy, request.FutureInstalments, journalId, journal, ct).ConfigureAwait(false);
+        account = held.Account;
+        var allocations = held.Allocations;
 
         var commit = new Commit { Tenant = context.TenantId };
-        if (allocations.Count > 0)
+        if (allocations.Length > 0)
         {
             commit = commit with
             {
                 Accounts = [account],
                 Journal = journal.Build(context.TenantId, account.Id, request.IdempotencyKey, tenant.Clock.Today, tenant.Clock.UtcNow, context.Time, journalId),
-                Allocations = allocations.ToImmutable(),
-                Events = [.. events],
+                Allocations = allocations,
+                Events = held.Events,
             };
         }
 
@@ -190,18 +235,8 @@ internal sealed class AllocationsService(TenantContext context) : IAllocations
             [.. allocations.GroupBy(a => a.Amount.Currency).OrderBy(g => g.Key.Code, StringComparer.Ordinal).Select(g => Money.Sum(g.Key, g.Select(a => a.Amount)))],
             account.UnappliedByCurrency(),
             [.. allocations.Select(Allocator.ToView)],
-            settled,
-            obligationsSettled);
+            held.InstalmentsSettled,
+            held.ObligationsSettled);
         return new Planned<AllocationResult>(commit, allocationResult);
     }
-
-    private async Task<bool> HasOpenExceptionAsync(PaymentId paymentId, CancellationToken ct)
-    {
-        var payment = await context.Store.GetPaymentAsync(context.TenantId, paymentId, ct).ConfigureAwait(false);
-        return payment is not null && await HasOpenExceptionAsync(payment, ct).ConfigureAwait(false);
-    }
-
-    private async Task<bool> HasOpenExceptionAsync(PaymentRecord payment, CancellationToken ct) =>
-        payment.ExceptionId is { } exceptionId &&
-        await context.Store.GetExceptionAsync(context.TenantId, exceptionId, ct).ConfigureAwait(false) is { Status: PaymentExceptionStatus.Open };
 }

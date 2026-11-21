@@ -6,7 +6,7 @@ using InstalmentFlow.Storage;
 
 namespace InstalmentFlow.Engine;
 
-internal sealed class PaymentsService(TenantContext context) : IPayments
+internal sealed partial class PaymentsService(TenantContext context) : IPayments
 {
     private const int MaxMetadataEntries = 32;
     private const int MaxMetadataKeyLength = 64;
@@ -65,7 +65,7 @@ internal sealed class PaymentsService(TenantContext context) : IPayments
         var now = tenant.Clock.UtcNow;
         var paymentId = PaymentId.New(context.Time);
         var journalId = JournalTxId.New(context.Time);
-        var lot = new FundsLot(paymentId, amount, amount, decision.DirectedTo, request.ValueAt);
+        var lot = FundsLot.Received(paymentId, amount, decision.DirectedTo, request.ValueAt);
         var rawReference = Truncate(target.RawReference);
 
         var journal = new JournalBuilder(decision.HoldingAccount is null ? JournalKind.PaymentUnidentified : JournalKind.PaymentReceived)
@@ -93,10 +93,34 @@ internal sealed class PaymentsService(TenantContext context) : IPayments
         var exceptionDetail = decision.Detail;
         var exceptionCandidates = decision.Candidates;
 
+        // Reversal before payment: reversals parked for this provider reference are applied first (ADR-005).
+        var pending = await context.Store.ListPendingReversalsAsync(context.TenantId, source, ct).ConfigureAwait(false);
+        var reversals = ImmutableArray.CreateBuilder<PaymentReversalRecord>();
+        var paymentRecordForReversal = new PaymentRecord(paymentId, source, amount, request.ValueAt, now, target.Kind, rawReference,
+            decision.HoldingAccount, decision.DirectedTo, null, journalId, metadata);
+        var mismatches = new List<string>();
+
         if (decision.HoldingAccount is { } accountId)
         {
             var account = (await context.LoadAccountAsync(accountId, ct).ConfigureAwait(false)).AddLot(lot);
+            foreach (var parked in pending)
+            {
+                if (ParkedAmount(parked, account.GetLot(paymentId), mismatches) is { } take)
+                {
+                    var applied = await Reversals.OnAccountAsync(context, tenant, account, paymentRecordForReversal, take, parked.Id, parked.Reference, parked.Reason, journalId, journal, ct).ConfigureAwait(false);
+                    account = applied.Account!;
+                    reversals.Add(applied.Record);
+                    events.AddRange(applied.Events);
+                }
+            }
+
             var eligible = decision.DirectedTo is { } directed ? [directed] : decision.StrategyEligible;
+            if (!account.GetLot(paymentId).Remaining.IsPositive)
+            {
+                eligible = [];
+                exceptionReason = null;
+            }
+
             if (!eligible.IsEmpty)
             {
                 // ADR-002: a failing or faulty strategy must never cost the payment. Keep the funds and explain why.
@@ -124,7 +148,31 @@ internal sealed class PaymentsService(TenantContext context) : IPayments
         else
         {
             var pool = await context.Store.LoadUnidentifiedAsync(context.TenantId, source.Source, ct).ConfigureAwait(false);
-            commit = commit with { Pools = [pool with { Lots = pool.Lots.Add(lot) }] };
+            pool = pool with { Lots = pool.Lots.Add(lot) };
+            foreach (var parked in pending)
+            {
+                if (ParkedAmount(parked, pool.GetLot(paymentId), mismatches) is { } take)
+                {
+                    var applied = Reversals.OnPool(context, tenant, pool, paymentRecordForReversal, take, parked.Id, parked.Reference, parked.Reason, journalId, journal);
+                    pool = applied.Pool!;
+                    reversals.Add(applied.Record);
+                    events.AddRange(applied.Events);
+                }
+            }
+
+            if (!pool.GetLot(paymentId).Remaining.IsPositive)
+            {
+                exceptionReason = null;
+            }
+
+            commit = commit with { Pools = [pool] };
+        }
+
+        if (mismatches.Count > 0)
+        {
+            exceptionReason = PaymentExceptionReason.ParkedReversalNotApplied;
+            exceptionDetail = string.Join(" ", mismatches) + (decision.Exception is null ? string.Empty : $" Identification: {decision.Detail}");
+            exceptionCandidates = decision.Candidates;
         }
 
         var exceptionId = exceptionReason is null ? (PaymentExceptionId?)null : PaymentExceptionId.New(context.Time);
@@ -149,11 +197,15 @@ internal sealed class PaymentsService(TenantContext context) : IPayments
             Journal = journal.Build(context.TenantId, decision.HoldingAccount, request.IdempotencyKey, tenant.Clock.ToBusinessDate(request.ValueAt), now, context.Time, journalId),
             Payments = [payment],
             Allocations = records,
+            PaymentReversals = reversals.ToImmutable(),
+            AppliedPendingReversals = [.. pending.Select(p => p.Id)],
             Events = events.ToImmutable(),
         };
 
-        var outcome = decision.HoldingAccount is null ? RecordOutcome.Unidentified
-            : allocated == amount ? RecordOutcome.Allocated
+        var reversed = Money.Sum(amount.Currency, reversals.Select(r => r.Amount));
+        var outcome = reversed == amount ? RecordOutcome.Reversed
+            : decision.HoldingAccount is null ? RecordOutcome.Unidentified
+            : allocated.IsPositive && allocated + reversed == amount ? RecordOutcome.Allocated
             : allocated.IsPositive ? RecordOutcome.PartiallyAllocated
             : RecordOutcome.HeldUnapplied;
         var result = new RecordPaymentResult(
@@ -169,6 +221,28 @@ internal sealed class PaymentsService(TenantContext context) : IPayments
             allocation?.ObligationsSettled ?? [],
             exceptionView);
         return new Planned<RecordPaymentResult>(commit, result);
+    }
+
+    /// <summary>
+    /// How much of a parked reversal to apply to a just-recorded payment. Recording never fails (ADR-002), so a
+    /// reversal in another currency, or for more than the payment, is not forced: it is applied as far as it can be
+    /// and explained in a payment exception.
+    /// </summary>
+    private static Money? ParkedAmount(PendingReversal parked, FundsLot lot, List<string> mismatches)
+    {
+        if (parked.Amount is { } wanted && wanted.Currency != lot.Original.Currency)
+        {
+            mismatches.Add($"A reversal of {wanted} parked for this payment was not applied: the payment is in {lot.Original.Currency}.");
+            return null;
+        }
+
+        var amount = Money.Min(parked.Amount ?? lot.Reversible, lot.Reversible);
+        if (parked.Amount is { } requested && requested > amount)
+        {
+            mismatches.Add($"A reversal of {requested} parked for this payment was applied only up to {amount}.");
+        }
+
+        return amount.IsPositive ? amount : null;
     }
 
     private async Task<ResolvedTarget> ResolveTargetAsync(TenantSnapshot tenant, PaymentTarget target, CancellationToken ct)
@@ -365,7 +439,7 @@ internal sealed class PaymentsService(TenantContext context) : IPayments
         raw is { Length: > PaymentTarget.MaxRawReferenceLength } ? raw[..PaymentTarget.MaxRawReferenceLength] : raw;
 }
 
-internal sealed class ExceptionsService(TenantContext context) : IPaymentExceptions
+internal sealed partial class ExceptionsService(TenantContext context) : IPaymentExceptions
 {
     private readonly CommandRunner _runner = new(context);
 
