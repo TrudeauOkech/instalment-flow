@@ -1,1 +1,100 @@
 #nullable enable
+InstalmentFlow.Payments.Mpesa.MpesaAccount
+InstalmentFlow.Payments.Mpesa.MpesaAccount.<Clone>$() -> InstalmentFlow.Payments.Mpesa.MpesaAccount!
+InstalmentFlow.Payments.Mpesa.MpesaAccount.CollectionType.get -> InstalmentFlow.Payments.Mpesa.MpesaCollectionType
+InstalmentFlow.Payments.Mpesa.MpesaAccount.CollectionType.init -> void
+InstalmentFlow.Payments.Mpesa.MpesaAccount.Equals(InstalmentFlow.Payments.Mpesa.MpesaAccount? other) -> bool
+InstalmentFlow.Payments.Mpesa.MpesaAccount.MpesaAccount() -> void
+InstalmentFlow.Payments.Mpesa.MpesaAccount.PartyB.get -> string?
+InstalmentFlow.Payments.Mpesa.MpesaAccount.PartyB.init -> void
+InstalmentFlow.Payments.Mpesa.MpesaAccount.QueueTimeoutUrl.get -> System.Uri?
+InstalmentFlow.Payments.Mpesa.MpesaAccount.QueueTimeoutUrl.init -> void
+InstalmentFlow.Payments.Mpesa.MpesaAccount.ResultUrl.get -> System.Uri?
+InstalmentFlow.Payments.Mpesa.MpesaAccount.ResultUrl.init -> void
+InstalmentFlow.Payments.Mpesa.MpesaAccount.ShortCode.get -> string!
+InstalmentFlow.Payments.Mpesa.MpesaAccount.ShortCode.init -> void
+InstalmentFlow.Payments.Mpesa.MpesaAccount.StkCallbackUrl.get -> System.Uri?
+InstalmentFlow.Payments.Mpesa.MpesaAccount.StkCallbackUrl.init -> void
+InstalmentFlow.Payments.Mpesa.MpesaAdapter
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.Capabilities.get -> InstalmentFlow.Payments.ProviderCapabilities
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.InitiateAsync(InstalmentFlow.Payments.CollectionRequest! request, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<InstalmentFlow.Payments.InitiationResult!>!
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.MpesaAdapter(System.Net.Http.HttpClient! http, InstalmentFlow.Payments.IProviderCredentialSource! credentials, InstalmentFlow.Payments.Mpesa.MpesaOptions! options, System.TimeProvider? timeProvider = null) -> void
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.ParseCallbackAsync(InstalmentFlow.Payments.ProviderCallback! callback, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<InstalmentFlow.Payments.CallbackParseResult!>
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.Provider.get -> string!
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.QueryAsync(InstalmentFlow.Payments.ProviderTransactionRef! reference, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<InstalmentFlow.Payments.StatusQueryResult!>!
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.ReadAsync(string! providerAccount, System.DateTimeOffset windowStart, System.DateTimeOffset windowEnd, System.Threading.CancellationToken cancellationToken) -> System.Collections.Generic.IAsyncEnumerable<InstalmentFlow.Payments.ProviderStatementLine!>!
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.RegisterC2BUrlsAsync(string! shortCode, System.Uri! confirmationUrl, System.Uri! validationUrl, bool acceptWhenValidationFails = true, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.RegisterPullAsync(string! shortCode, string! nominatedNumber, System.Uri! callbackUrl, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.RequestTransactionStatusAsync(string! shortCode, string! receipt, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.SimulateC2BAsync(string! shortCode, InstalmentFlow.Money! amount, string! msisdn, string! billReference, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<string!>!
+InstalmentFlow.Payments.Mpesa.MpesaApiException
+InstalmentFlow.Payments.Mpesa.MpesaApiException.ErrorCode.get -> string?
+InstalmentFlow.Payments.Mpesa.MpesaApiException.MpesaApiException(int statusCode, string? errorCode, string! message) -> void
+InstalmentFlow.Payments.Mpesa.MpesaApiException.StatusCode.get -> int
+InstalmentFlow.Payments.Mpesa.MpesaCollectionType
+InstalmentFlow.Payments.Mpesa.MpesaCollectionType.BuyGoods = 1 -> InstalmentFlow.Payments.Mpesa.MpesaCollectionType
+InstalmentFlow.Payments.Mpesa.MpesaCollectionType.PayBill = 0 -> InstalmentFlow.Payments.Mpesa.MpesaCollectionType
+InstalmentFlow.Payments.Mpesa.MpesaCredentialNames
+InstalmentFlow.Payments.Mpesa.MpesaEnvironment
+InstalmentFlow.Payments.Mpesa.MpesaEnvironment.Production = 1 -> InstalmentFlow.Payments.Mpesa.MpesaEnvironment
+InstalmentFlow.Payments.Mpesa.MpesaEnvironment.Sandbox = 0 -> InstalmentFlow.Payments.Mpesa.MpesaEnvironment
+InstalmentFlow.Payments.Mpesa.MpesaOptions
+InstalmentFlow.Payments.Mpesa.MpesaOptions.AccountReferenceMaxLength.get -> int
+InstalmentFlow.Payments.Mpesa.MpesaOptions.AccountReferenceMaxLength.set -> void
+InstalmentFlow.Payments.Mpesa.MpesaOptions.Accounts.get -> System.Collections.Generic.IList<InstalmentFlow.Payments.Mpesa.MpesaAccount!>!
+InstalmentFlow.Payments.Mpesa.MpesaOptions.BaseAddress.get -> System.Uri?
+InstalmentFlow.Payments.Mpesa.MpesaOptions.BaseAddress.set -> void
+InstalmentFlow.Payments.Mpesa.MpesaOptions.C2BRegisterPath.get -> string!
+InstalmentFlow.Payments.Mpesa.MpesaOptions.C2BRegisterPath.set -> void
+InstalmentFlow.Payments.Mpesa.MpesaOptions.Environment.get -> InstalmentFlow.Payments.Mpesa.MpesaEnvironment
+InstalmentFlow.Payments.Mpesa.MpesaOptions.Environment.set -> void
+InstalmentFlow.Payments.Mpesa.MpesaOptions.MaxCallbackBytes.get -> int
+InstalmentFlow.Payments.Mpesa.MpesaOptions.MaxCallbackBytes.set -> void
+InstalmentFlow.Payments.Mpesa.MpesaOptions.MpesaOptions() -> void
+InstalmentFlow.Payments.Mpesa.MpesaRejection
+InstalmentFlow.Payments.Mpesa.MpesaRejection.InvalidAccountNumber = 12 -> InstalmentFlow.Payments.Mpesa.MpesaRejection
+InstalmentFlow.Payments.Mpesa.MpesaRejection.InvalidAmount = 13 -> InstalmentFlow.Payments.Mpesa.MpesaRejection
+InstalmentFlow.Payments.Mpesa.MpesaRejection.InvalidMsisdn = 11 -> InstalmentFlow.Payments.Mpesa.MpesaRejection
+InstalmentFlow.Payments.Mpesa.MpesaSecurityCredential
+InstalmentFlow.Payments.Mpesa.MpesaStatements
+InstalmentFlow.Payments.Mpesa.MpesaValidation
+InstalmentFlow.Payments.Mpesa.MpesaValidationRequest
+InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.<Clone>$() -> InstalmentFlow.Payments.Mpesa.MpesaValidationRequest!
+InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.AccountReference.get -> string?
+InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.AccountReference.init -> void
+InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.Amount.get -> InstalmentFlow.Money!
+InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.Amount.init -> void
+InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.Deconstruct(out string! TransactionId, out string! ShortCode, out InstalmentFlow.Money! Amount, out string? AccountReference, out string? Payer) -> void
+InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.Equals(InstalmentFlow.Payments.Mpesa.MpesaValidationRequest? other) -> bool
+InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.MpesaValidationRequest(string! TransactionId, string! ShortCode, InstalmentFlow.Money! Amount, string? AccountReference, string? Payer) -> void
+InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.Payer.get -> string?
+InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.Payer.init -> void
+InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.ShortCode.get -> string!
+InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.ShortCode.init -> void
+InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.TransactionId.get -> string!
+InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.TransactionId.init -> void
+const InstalmentFlow.Payments.Mpesa.MpesaAdapter.C2BConfirmation = "c2b-confirmation" -> string!
+const InstalmentFlow.Payments.Mpesa.MpesaAdapter.StkResult = "stk" -> string!
+const InstalmentFlow.Payments.Mpesa.MpesaAdapter.TransactionStatusResult = "transaction-status" -> string!
+const InstalmentFlow.Payments.Mpesa.MpesaCredentialNames.Certificate = "Certificate" -> string!
+const InstalmentFlow.Payments.Mpesa.MpesaCredentialNames.ConsumerKey = "ConsumerKey" -> string!
+const InstalmentFlow.Payments.Mpesa.MpesaCredentialNames.ConsumerSecret = "ConsumerSecret" -> string!
+const InstalmentFlow.Payments.Mpesa.MpesaCredentialNames.InitiatorName = "InitiatorName" -> string!
+const InstalmentFlow.Payments.Mpesa.MpesaCredentialNames.InitiatorPassword = "InitiatorPassword" -> string!
+const InstalmentFlow.Payments.Mpesa.MpesaCredentialNames.Passkey = "Passkey" -> string!
+override InstalmentFlow.Payments.Mpesa.MpesaAccount.Equals(object? obj) -> bool
+override InstalmentFlow.Payments.Mpesa.MpesaAccount.GetHashCode() -> int
+override InstalmentFlow.Payments.Mpesa.MpesaAccount.ToString() -> string!
+override InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.Equals(object? obj) -> bool
+override InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.GetHashCode() -> int
+override InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.ToString() -> string!
+static InstalmentFlow.Payments.Mpesa.MpesaAccount.operator !=(InstalmentFlow.Payments.Mpesa.MpesaAccount? left, InstalmentFlow.Payments.Mpesa.MpesaAccount? right) -> bool
+static InstalmentFlow.Payments.Mpesa.MpesaAccount.operator ==(InstalmentFlow.Payments.Mpesa.MpesaAccount? left, InstalmentFlow.Payments.Mpesa.MpesaAccount? right) -> bool
+static InstalmentFlow.Payments.Mpesa.MpesaSecurityCredential.Encrypt(string! initiatorPassword, string! certificatePem) -> string!
+static InstalmentFlow.Payments.Mpesa.MpesaStatements.OrgPortal(string! valueAtFormat = "yyyy-MM-dd HH:mm:ss") -> InstalmentFlow.Payments.CsvStatementFormat!
+static InstalmentFlow.Payments.Mpesa.MpesaValidation.Accept() -> byte[]!
+static InstalmentFlow.Payments.Mpesa.MpesaValidation.ConfirmationReceived() -> byte[]!
+static InstalmentFlow.Payments.Mpesa.MpesaValidation.Parse(System.ReadOnlyMemory<byte> body) -> InstalmentFlow.Payments.Mpesa.MpesaValidationRequest!
+static InstalmentFlow.Payments.Mpesa.MpesaValidation.Reject(InstalmentFlow.Payments.Mpesa.MpesaRejection reason) -> byte[]!
+static InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.operator !=(InstalmentFlow.Payments.Mpesa.MpesaValidationRequest? left, InstalmentFlow.Payments.Mpesa.MpesaValidationRequest? right) -> bool
+static InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.operator ==(InstalmentFlow.Payments.Mpesa.MpesaValidationRequest? left, InstalmentFlow.Payments.Mpesa.MpesaValidationRequest? right) -> bool

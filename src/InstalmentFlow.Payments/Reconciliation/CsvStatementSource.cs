@@ -35,6 +35,12 @@ public sealed record CsvStatementFormat
     /// <summary>The column with the payer.</summary>
     public string? Payer { get; init; }
 
+    /// <summary>The column with each row's status; with it, only rows whose status is in <see cref="CompletedStatuses"/> count.</summary>
+    public string? Status { get; init; }
+
+    /// <summary>The statuses of rows that moved money, compared ignoring case. Default <c>Completed</c>.</summary>
+    public IReadOnlyList<string> CompletedStatuses { get; init; } = ["Completed"];
+
     /// <summary>
     /// The exact format of <see cref="ValueAt"/>, for example <c>yyyy-MM-dd HH:mm:ss</c>. Without an offset in the
     /// format, times are local to <see cref="TimeZone"/>.
@@ -49,6 +55,9 @@ public sealed record CsvStatementFormat
 
     /// <summary>Lines before the header row, for statements with a preamble. Default none.</summary>
     public int SkipLines { get; init; }
+
+    /// <summary>Finds the header row as the first row with a <see cref="TransactionId"/> column, for preambles of varying length.</summary>
+    public bool LocateHeader { get; init; }
 }
 
 /// <summary>
@@ -100,6 +109,11 @@ public sealed class CsvStatementSource : IStatementSource
     private static List<ProviderStatementLine> Parse(string provider, string providerAccount, string text, CsvStatementFormat format)
     {
         var rows = Rows(text, format.Delimiter).Skip(format.SkipLines).ToList();
+        if (format.LocateHeader)
+        {
+            var headerRow = rows.FindIndex(r => r.Fields.Any(f => string.Equals(f.Trim(), format.TransactionId.Trim(), StringComparison.OrdinalIgnoreCase)));
+            rows = headerRow < 0 ? [] : rows[headerRow..];
+        }
         if (rows.Count == 0)
         {
             throw Invalid(0, "The file has no header row.");
@@ -119,6 +133,7 @@ public sealed class CsvStatementSource : IStatementSource
         var linked = format.LinkedTransactionId is { } l ? Column(l, true) : -1;
         var reference = format.AccountReference is { } r ? Column(r, true) : -1;
         var payer = format.Payer is { } p ? Column(p, true) : -1;
+        var status = format.Status is { } st ? Column(st, true) : -1;
         var zone = TimeZoneInfo.FindSystemTimeZoneById(format.TimeZone);
 
         var lines = new List<ProviderStatementLine>();
@@ -130,6 +145,10 @@ public sealed class CsvStatementSource : IStatementSource
             }
 
             string Field(int index) => index >= 0 && index < row.Fields.Count ? row.Fields[index].Trim() : string.Empty;
+            if (status >= 0 && !format.CompletedStatuses.Contains(Field(status), StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
             var id = Field(transaction);
             if (id.Length == 0)
             {

@@ -4,7 +4,7 @@
 
 Customers in markets such as Kenya often pay small, irregular amounts through mobile money: KES 100 on Monday, 150 on Tuesday, 700 on Friday. InstalmentFlow records every confirmed payment exactly once and identifies which loan it belongs to. It allocates the money according to the lender's rules and keeps an immutable, double-entry history that can explain every shilling, including after reversals.
 
-> **Status: 0.2 preview.** The core engine works end to end: identification, allocation, reversals, charges, waivers, refunds, cancellation, as-of history and verification, in memory or on PostgreSQL with row-level security, append-only enforcement and a transactional outbox. The payments package (inbox, intents, routing, reconciliation and a simulated provider) is built and ships with 0.3; the M-Pesa and Airtel Money adapters (0.3, 0.4) come next; the API may still change before 1.0. See the [roadmap](docs/planning/06-implementation-roadmap.md).
+> **Status: 0.2 preview.** The core engine works end to end: identification, allocation, reversals, charges, waivers, refunds, cancellation, as-of history and verification, in memory or on PostgreSQL with row-level security, append-only enforcement and a transactional outbox. The payments package (inbox, intents, routing, reconciliation and a simulated provider) and the M-Pesa adapter are built and ship with 0.3, once the adapter is verified against the Daraja sandbox; Airtel Money (0.4) comes later; the API may still change before 1.0. See the [roadmap](docs/planning/06-implementation-roadmap.md).
 
 ## Quickstart
 

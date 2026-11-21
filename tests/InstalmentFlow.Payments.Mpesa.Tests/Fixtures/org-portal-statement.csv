@@ -1,0 +1,9 @@
+Account Holder:,ACME LENDING LTD
+Short Code:,600123
+Account:,Utility Account
+Time Period:,02-03-2026 - 02-03-2026
+
+Receipt No.,Completion Time,Initiation Time,Details,Transaction Status,Paid In,Withdrawn,Balance,Balance Confirmed,Reason Type,Other Party Info,Linked Transaction ID,A/C No.
+RKTQDM7W6S,2026-03-02 09:15:02,2026-03-02 09:15:00,"Pay Bill from 2547****149 - JOHN DOE Acc. LN-1",Completed,"1,500.00",,"49,197.00",true,Pay Bill Online,2547****149 - JOHN DOE,,LN-1
+RKTQDM7W6Y,2026-03-02 09:40:00,2026-03-02 09:40:00,"Pay Bill from 2547****149 - JOHN DOE Acc. LN-1",Failed,"300.00",,"49,197.00",true,Pay Bill Online,2547****149 - JOHN DOE,,LN-1
+RKTQDM7W6Z,2026-03-02 12:00:00,2026-03-02 12:00:00,Reversal of RKTQDM7W6S,Completed,,"-1,500.00","47,697.00",true,Reversal,2547****149 - JOHN DOE,RKTQDM7W6S,

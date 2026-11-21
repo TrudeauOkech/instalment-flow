@@ -1,8 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Empty until milestone M9; not published before then. -->
-    <IsPackable>false</IsPackable>
     <Description>Safaricom M-Pesa (Daraja) adapter for InstalmentFlow: C2B, STK push, transaction status and reconciliation.</Description>
   </PropertyGroup>
 

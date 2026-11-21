@@ -1,0 +1,11 @@
+{
+  "Result": {
+    "ResultType": 0,
+    "ResultCode": 8006,
+    "ResultDesc": "The security credential is locked.",
+    "OriginatorConversationID": "10571-7910404-2",
+    "ConversationID": "AG_20260302_00004a1c",
+    "TransactionID": "RKT0000000",
+    "ResultParameters": { "ResultParameter": { "Key": "CreditPartyName", "Value": "600123 - Acme Lending" } }
+  }
+}

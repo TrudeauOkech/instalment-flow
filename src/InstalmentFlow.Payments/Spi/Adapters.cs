@@ -84,8 +84,13 @@ public sealed class ProviderCallback
     /// <param name="kind">Which endpoint received it, for example <c>c2b-confirmation</c>; adapters interpret it.</param>
     /// <param name="body">The raw request body.</param>
     /// <param name="headers">Request headers the adapter needs; looked up ignoring case.</param>
-    public ProviderCallback(string provider, string kind, ReadOnlyMemory<byte> body, IReadOnlyDictionary<string, string>? headers = null)
+    /// <param name="providerAccount">
+    /// The merchant account the endpoint is for, when the callback itself does not say (an M-Pesa STK result, for
+    /// example); usually taken from the callback URL.
+    /// </param>
+    public ProviderCallback(string provider, string kind, ReadOnlyMemory<byte> body, IReadOnlyDictionary<string, string>? headers = null, string? providerAccount = null)
     {
+        ProviderAccount = providerAccount;
         ArgumentException.ThrowIfNullOrWhiteSpace(provider);
         ArgumentNullException.ThrowIfNull(kind);
         Provider = provider;
@@ -107,16 +112,20 @@ public sealed class ProviderCallback
 
     /// <summary>Request headers, looked up ignoring case.</summary>
     public IReadOnlyDictionary<string, string> Headers { get; }
+
+    /// <summary>The merchant account the endpoint is for, if the host knows it.</summary>
+    public string? ProviderAccount { get; }
 }
 
 /// <summary>The outcome of parsing a callback.</summary>
 public sealed record CallbackParseResult
 {
-    private CallbackParseResult(bool accepted, string? rejectionReason, IReadOnlyList<NormalisedPaymentEvent> events)
+    private CallbackParseResult(bool accepted, string? rejectionReason, IReadOnlyList<NormalisedPaymentEvent> events, string? holdReason = null)
     {
         Accepted = accepted;
         RejectionReason = rejectionReason;
         Events = events;
+        HoldReason = holdReason;
     }
 
     /// <summary>Whether the callback is authentic and well formed.</summary>
@@ -128,11 +137,28 @@ public sealed record CallbackParseResult
     /// <summary>The events the callback carries; an accepted callback may carry none (for example a test ping).</summary>
     public IReadOnlyList<NormalisedPaymentEvent> Events { get; }
 
+    /// <summary>
+    /// Why the events are held for a person instead of processed, for example an amount the provider can never send.
+    /// Held events are stored as <see cref="InboxStatus.Failed"/>; <see cref="IProviderInbox.RequeueAsync"/> releases them.
+    /// </summary>
+    public string? HoldReason { get; }
+
     /// <summary>Accepts the callback with its events.</summary>
     public static CallbackParseResult Accept(params IReadOnlyList<NormalisedPaymentEvent> events)
     {
         ArgumentNullException.ThrowIfNull(events);
         return new CallbackParseResult(true, null, [.. events]);
+    }
+
+    /// <summary>
+    /// Accepts an authentic callback whose content breaks a provider rule. Its events are stored, so the money is not
+    /// lost, but held for a person: never processed automatically and never corrected (for example by rounding).
+    /// </summary>
+    public static CallbackParseResult Hold(string reason, params IReadOnlyList<NormalisedPaymentEvent> events)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+        ArgumentNullException.ThrowIfNull(events);
+        return new CallbackParseResult(true, null, [.. events], reason);
     }
 
     /// <summary>Rejects the callback: it is not stored and nothing is recorded.</summary>
@@ -277,6 +303,42 @@ public sealed record ProviderStatementLine
 
     /// <summary>The credit this line reverses, for a reversal.</summary>
     public string? ReversedTransactionId { get; init; }
+}
+
+/// <summary>
+/// Secrets for one provider account, by name. The library never stores or logs them; <see cref="ToString"/> shows
+/// only the names.
+/// </summary>
+public sealed class ProviderCredentials
+{
+    private readonly Dictionary<string, string> _secrets;
+
+    /// <summary>Creates credentials from named secrets.</summary>
+    public ProviderCredentials(IReadOnlyDictionary<string, string> secrets)
+    {
+        ArgumentNullException.ThrowIfNull(secrets);
+        _secrets = new Dictionary<string, string>(secrets, StringComparer.Ordinal);
+    }
+
+    /// <summary>The secret called <paramref name="name"/>.</summary>
+    /// <exception cref="InvalidOperationException">It is missing or empty.</exception>
+    public string Require(string name) =>
+        _secrets.TryGetValue(name, out var value) && !string.IsNullOrEmpty(value)
+            ? value
+            : throw new InvalidOperationException($"The provider credential '{name}' is not configured.");
+
+    /// <summary>The secret called <paramref name="name"/>, or null.</summary>
+    public string? Find(string name) => _secrets.TryGetValue(name, out var value) && !string.IsNullOrEmpty(value) ? value : null;
+
+    /// <inheritdoc />
+    public override string ToString() => $"ProviderCredentials({string.Join(", ", _secrets.Keys.Order(StringComparer.Ordinal))})";
+}
+
+/// <summary>Supplies provider secrets per merchant account from the host's secret store (they differ per tenant).</summary>
+public interface IProviderCredentialSource
+{
+    /// <summary>The secrets for <paramref name="providerAccount"/> at <paramref name="provider"/>.</summary>
+    ValueTask<ProviderCredentials> GetAsync(string provider, string providerAccount, CancellationToken cancellationToken);
 }
 
 /// <summary>Protects raw provider payloads at rest, for example with the Data Protection API.</summary>

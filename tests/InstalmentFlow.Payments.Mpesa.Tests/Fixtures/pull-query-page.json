@@ -1,0 +1,13 @@
+{
+  "ResponseRefID": "2a1f3c4e-5b6d-4e7f-8091-a2b3c4d5e6f7",
+  "ResponseCode": "1000",
+  "ResponseMessage": "Success",
+  "Response": [
+    [
+      { "transactionId": "RKTQDM7W6S", "trxDate": "2026-03-02T09:15:00+0300", "msisdn": 254708374149, "sender": "UNKNOWN", "transactiontype": "c2b-pay-bill-debit", "billreference": "LN-1", "amount": "1500.0", "organizationname": "Acme Lending" },
+      { "transactionId": "RKTQDM7W6V", "trxDate": "2026-03-02 10:05:00", "msisdn": 254708374149, "sender": "UNKNOWN", "transactiontype": "c2b-pay-bill-debit", "billreference": "LN-1", "amount": 700, "organizationname": "Acme Lending" },
+      { "transactionId": "RKTQDM7W6W", "trxDate": "2026-03-02T11:00:00+03:00", "msisdn": 254708374149, "sender": "UNKNOWN", "transactiontype": "reversal", "billreference": "", "amount": "-700", "originalTransactionId": "RKTQDM7W6V", "organizationname": "Acme Lending" },
+      { "transactionId": "RKTQDM7W6X", "trxDate": "2026-03-02T11:30:00+03:00", "msisdn": 254708374149, "sender": "UNKNOWN", "transactiontype": "reversal", "billreference": "", "amount": "-100", "organizationname": "Acme Lending" }
+    ]
+  ]
+}

@@ -48,6 +48,8 @@ jobs:
           else
             # Windows runners cannot run Linux containers: the PostgreSQL store's tests run on the Linux legs.
             dotnet test --no-build -c Release --project tests/InstalmentFlow.Tests
+            dotnet test --no-build -c Release --project tests/InstalmentFlow.Payments.Tests
+            dotnet test --no-build -c Release --project tests/InstalmentFlow.Payments.Mpesa.Tests
             dotnet test --no-build -c Release --project tests/InstalmentFlow.ArchitectureTests
           fi
         env:

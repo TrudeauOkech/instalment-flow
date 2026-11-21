@@ -224,6 +224,8 @@ Adapters implement only the interfaces their provider actually supports. `Provid
 
 ### 7.2 Capability matrix
 
+> M9 rechecked the M-Pesa column: see [docs/integrations/mpesa.md](../integrations/mpesa.md) for the current status of each item. Among the differences: a recent source reports that C2B v2 sends a hashed, not masked, MSISDN in production; and the STK query returns no receipt.
+
 *Verified* means confirmed against a mirror of Safaricom's Daraja v3 documentation or multiple independent sources. *Verify* means it must be confirmed against the official portal and with the provider's account team before implementation. Each adapter milestone starts with a **verification spike**.
 
 | Capability | M-Pesa (Daraja) | Airtel Money (Open API) |

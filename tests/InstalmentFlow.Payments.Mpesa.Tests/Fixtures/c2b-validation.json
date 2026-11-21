@@ -1,0 +1,10 @@
+{
+  "TransactionType": "Pay Bill",
+  "TransID": "RKTQDM7W6U",
+  "TransTime": "20260302111500",
+  "TransAmount": "900.00",
+  "BusinessShortCode": "600123",
+  "BillRefNumber": "LN-1",
+  "MSISDN": "2547 ***** 149",
+  "FirstName": "JOHN"
+}

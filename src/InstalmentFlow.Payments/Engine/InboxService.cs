@@ -24,7 +24,7 @@ internal sealed class InboxService(PaymentsContext context) : IProviderInbox
                 throw new InvalidOperationException($"Adapter '{adapter.Provider}' produced an event for provider '{paymentEvent.Provider}'.");
             }
 
-            if (await EnqueueAsync(paymentEvent, InboxOrigin.Callback, callback.Body, cancellationToken).ConfigureAwait(false))
+            if (await EnqueueAsync(paymentEvent, InboxOrigin.Callback, callback.Body, cancellationToken, parsed.HoldReason).ConfigureAwait(false))
             {
                 stored++;
             }
@@ -35,13 +35,13 @@ internal sealed class InboxService(PaymentsContext context) : IProviderInbox
     }
 
     /// <summary>Stores an event once per deduplication key; false if it was already stored.</summary>
-    internal async Task<bool> EnqueueAsync(NormalisedPaymentEvent paymentEvent, InboxOrigin origin, ReadOnlyMemory<byte> raw, CancellationToken cancellationToken)
+    internal async Task<bool> EnqueueAsync(NormalisedPaymentEvent paymentEvent, InboxOrigin origin, ReadOnlyMemory<byte> raw, CancellationToken cancellationToken, string? holdReason = null)
     {
         var payload = context.Settings.Protector is { } protector ? protector.Protect(raw.Span) : raw.ToArray();
         var now = context.Now;
         var entry = new InboxEntry(
             Guid.CreateVersion7(now), paymentEvent.Provider, paymentEvent.DedupeKey, origin, paymentEvent, payload, now,
-            InboxStatus.Pending, 0, now, null, null, null, null, null);
+            holdReason is null ? InboxStatus.Pending : InboxStatus.Failed, 0, now, null, null, holdReason is null ? null : $"Held: {holdReason}", null, null);
         return await context.Store.TryAddInboxAsync(entry, cancellationToken).ConfigureAwait(false);
     }
 

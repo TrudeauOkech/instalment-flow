@@ -327,7 +327,36 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
   - simulator-driven: duplicate, delayed (hours), missing, out-of-order callbacks (reversal before payment);
   - timeout-then-success.
 
-### M9 — M-Pesa adapter → **0.3.0** (L)
+### M9 — M-Pesa adapter → **0.3.0** (L) — ✅ built 2026-11-21; sandbox verification pending before release
+
+> **Spike:** the official Daraja portal could not be read (it renders in the browser and needs an account). So the
+> adapter follows what independent sources agree on, and accepts each variant they disagree on. Each item's confidence
+> is recorded in [docs/integrations/mpesa.md](../integrations/mpesa.md). Findings that changed the design:
+> - STK results carry no shortcode, so the endpoint passes it;
+> - STK has no merchant reference, so a push whose reply was lost cannot be matched to its intent (the payment is still recorded, as unidentified);
+> - the STK query returns no receipt;
+> - C2B v2 payer numbers may be hashed rather than masked.
+>
+> **Delivered** (`InstalmentFlow.Payments.Mpesa`):
+> - **Tokens:** an OAuth token cache per consumer key, refreshed early, with a single retry on an expired token.
+> - **STK:** push requests, refused before sending if they are not whole shillings, have a reference over 12 characters, or the phone number is invalid. Daraja client errors count as refused, and server errors or timeouts as ambiguous. The STK query reads payment as pending until a receipt arrives.
+> - **C2B:** URL registration; confirmation parsing, which reads strings or numbers, converts Nairobi time and drops payer names; validation parsing and replies (`C2B00011`–`13`).
+> - **Transaction Status:** requests with an RSA security credential, and result parsing for a single parameter or an array.
+> - **Pull Transactions:** registration, and paged reading as an `IStatementSource`, handling the sandbox's spaced keys, `1001` sent with HTTP 500, and dates with or without an offset. Only reversals that name their payment are used.
+> - **Org-portal statements:** a preset for the generic CSV importer. It finds the header row and keeps only completed rows.
+> - **Payments package:** per-shortcode credentials (`IProviderCredentialSource`); `ProviderCallback.ProviderAccount`; `CallbackParseResult.Hold`, so a fractional amount waits in the inbox for a person and is never rounded.
+> - **Sample 04:** sandbox runs, recording Daraja's responses as fixtures.
+>
+> **Tests:** 49 tests on an in-process fake Daraja, using 19 fixtures whose provenance is listed in their README. An in-process HTTP handler replaces WireMock.Net, because these tests only need to check requests and responses. They cover:
+> - every documented payload variant;
+> - fuzzing: missing fields, wrong types, a 70 KB body, deep nesting and 2,000 random or mutated payloads, none of which throw;
+> - a token expiring mid-flight;
+> - end-to-end flows through the inbox, intents and reconciliation (Pull Transactions and the org-portal CSV).
+>
+> 4 manual mutation checks, all killed.
+>
+> **Before release (acceptance):** run sample 04 against a sandbox app, replace the `documented` fixtures with recorded ones, and update mpesa.md and doc 03 §7.2. Callbacks need the M10 endpoints, or any public listener.
+
 - **Pre-work (spike, S):**
   - verify against the official Daraja portal: current API versions (STK, C2B v2, Transaction Status, Pull), callback IP ranges, retry behaviour, statement export formats, and sandbox limits;
   - record real sandbox payloads as contract fixtures.

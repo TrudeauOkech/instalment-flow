@@ -17,6 +17,14 @@ All notable changes to this project are documented here. The format follows
   - PostgreSQL: `InstalmentFlowPostgres.CreatePaymentsAsync` and the `PaymentsSchema` migration (doc 05 §8). Intents and discrepancies are under row-level security. The EF package now checks that it, the core and the payments package are the same version.
 - `IInstalmentQueries.ListPaymentsAsync(PaymentQuery)`: the payments from one source, within a value-time window.
 
+- M9 M-Pesa adapter, `InstalmentFlow.Payments.Mpesa` (built against documented payloads; sandbox verification is pending, see [docs/integrations/mpesa.md](docs/integrations/mpesa.md)):
+  - `MpesaAdapter`: C2B confirmation, STK result and Transaction Status result parsing; STK push and query; Pull Transactions as an `IStatementSource`; C2B and Pull registration; sandbox C2B simulation. It never initiates reversals or B2C (ADR-010).
+  - OAuth tokens cached per consumer key, refreshed early, and retried once when they expire mid-flight.
+  - Whole shillings only: a fractional amount in a callback is held in the inbox, and a fractional collection is refused before sending.
+  - `MpesaValidation` for synchronous C2B validation, `MpesaSecurityCredential`, and `MpesaStatements.OrgPortal()` for portal statement exports.
+  - Sample 04 runs against the Daraja sandbox and records its responses.
+- Payments package: `IProviderCredentialSource` and `ProviderCredentials` (secrets are never shown); `ProviderCallback.ProviderAccount`; `CallbackParseResult.Hold`, which stores events as failed for a person; and `CsvStatementFormat.Status`, `CompletedStatuses` and `LocateHeader`.
+
 ### Changed
 - The public API of 0.2.0-preview.1 is recorded in `PublicAPI.Shipped.txt`.
 

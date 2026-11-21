@@ -1,0 +1,27 @@
+{
+  "Result": {
+    "ResultType": 0,
+    "ResultCode": 0,
+    "ResultDesc": "The service request is processed successfully.",
+    "OriginatorConversationID": "10571-7910404-1",
+    "ConversationID": "AG_20260302_000049d8f7f3f9d6b7c2",
+    "TransactionID": "RKT0000000",
+    "ResultParameters": {
+      "ResultParameter": [
+        { "Key": "DebitPartyName", "Value": "254708374149 - John Doe" },
+        { "Key": "CreditPartyName", "Value": "600123 - Acme Lending" },
+        { "Key": "OriginatorConversationID", "Value": "10571-7910404-1" },
+        { "Key": "InitiatedTime", "Value": 20260302091500 },
+        { "Key": "DebitAccountType", "Value": "MMF Account For Customer" },
+        { "Key": "TransactionReason" },
+        { "Key": "ReasonType", "Value": "Pay Bill Online" },
+        { "Key": "TransactionStatus", "Value": "Completed" },
+        { "Key": "FinalisedTime", "Value": 20260302091502 },
+        { "Key": "Amount", "Value": 1500 },
+        { "Key": "ConversationID", "Value": "AG_20260302_000049d8f7f3f9d6b7c2" },
+        { "Key": "ReceiptNo", "Value": "RKTQDM7W6S" }
+      ]
+    },
+    "ReferenceData": { "ReferenceItem": { "Key": "Occasion" } }
+  }
+}

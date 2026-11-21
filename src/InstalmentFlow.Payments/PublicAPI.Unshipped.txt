@@ -4,6 +4,7 @@ InstalmentFlow.Payments.CallbackParseResult.<Clone>$() -> InstalmentFlow.Payment
 InstalmentFlow.Payments.CallbackParseResult.Accepted.get -> bool
 InstalmentFlow.Payments.CallbackParseResult.Equals(InstalmentFlow.Payments.CallbackParseResult? other) -> bool
 InstalmentFlow.Payments.CallbackParseResult.Events.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.Payments.NormalisedPaymentEvent!>!
+InstalmentFlow.Payments.CallbackParseResult.HoldReason.get -> string?
 InstalmentFlow.Payments.CallbackParseResult.RejectionReason.get -> string?
 InstalmentFlow.Payments.CollectionRequest
 InstalmentFlow.Payments.CollectionRequest.<Clone>$() -> InstalmentFlow.Payments.CollectionRequest!
@@ -25,6 +26,8 @@ InstalmentFlow.Payments.CsvStatementFormat
 InstalmentFlow.Payments.CsvStatementFormat.<Clone>$() -> InstalmentFlow.Payments.CsvStatementFormat!
 InstalmentFlow.Payments.CsvStatementFormat.AccountReference.get -> string?
 InstalmentFlow.Payments.CsvStatementFormat.AccountReference.init -> void
+InstalmentFlow.Payments.CsvStatementFormat.CompletedStatuses.get -> System.Collections.Generic.IReadOnlyList<string!>!
+InstalmentFlow.Payments.CsvStatementFormat.CompletedStatuses.init -> void
 InstalmentFlow.Payments.CsvStatementFormat.CsvStatementFormat() -> void
 InstalmentFlow.Payments.CsvStatementFormat.Currency.get -> InstalmentFlow.Currency!
 InstalmentFlow.Payments.CsvStatementFormat.Currency.init -> void
@@ -39,6 +42,8 @@ InstalmentFlow.Payments.CsvStatementFormat.Payer.get -> string?
 InstalmentFlow.Payments.CsvStatementFormat.Payer.init -> void
 InstalmentFlow.Payments.CsvStatementFormat.SkipLines.get -> int
 InstalmentFlow.Payments.CsvStatementFormat.SkipLines.init -> void
+InstalmentFlow.Payments.CsvStatementFormat.Status.get -> string?
+InstalmentFlow.Payments.CsvStatementFormat.Status.init -> void
 InstalmentFlow.Payments.CsvStatementFormat.TimeZone.get -> string!
 InstalmentFlow.Payments.CsvStatementFormat.TimeZone.init -> void
 InstalmentFlow.Payments.CsvStatementFormat.TransactionId.get -> string!
@@ -105,6 +110,8 @@ InstalmentFlow.Payments.IPaymentProviderAdapter
 InstalmentFlow.Payments.IPaymentProviderAdapter.Capabilities.get -> InstalmentFlow.Payments.ProviderCapabilities
 InstalmentFlow.Payments.IPaymentProviderAdapter.ParseCallbackAsync(InstalmentFlow.Payments.ProviderCallback! callback, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<InstalmentFlow.Payments.CallbackParseResult!>
 InstalmentFlow.Payments.IPaymentProviderAdapter.Provider.get -> string!
+InstalmentFlow.Payments.IProviderCredentialSource
+InstalmentFlow.Payments.IProviderCredentialSource.GetAsync(string! provider, string! providerAccount, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<InstalmentFlow.Payments.ProviderCredentials!>
 InstalmentFlow.Payments.IProviderInbox
 InstalmentFlow.Payments.IProviderInbox.ListAsync(InstalmentFlow.Payments.InboxStatus status, int max = 100, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<InstalmentFlow.Payments.InboxEntryView!>!>!
 InstalmentFlow.Payments.IProviderInbox.ProcessPendingAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.Payments.InboxProcessingReport!>!
@@ -361,7 +368,8 @@ InstalmentFlow.Payments.ProviderCallback.Body.get -> System.ReadOnlyMemory<byte>
 InstalmentFlow.Payments.ProviderCallback.Headers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
 InstalmentFlow.Payments.ProviderCallback.Kind.get -> string!
 InstalmentFlow.Payments.ProviderCallback.Provider.get -> string!
-InstalmentFlow.Payments.ProviderCallback.ProviderCallback(string! provider, string! kind, System.ReadOnlyMemory<byte> body, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? headers = null) -> void
+InstalmentFlow.Payments.ProviderCallback.ProviderAccount.get -> string?
+InstalmentFlow.Payments.ProviderCallback.ProviderCallback(string! provider, string! kind, System.ReadOnlyMemory<byte> body, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? headers = null, string? providerAccount = null) -> void
 InstalmentFlow.Payments.ProviderCapabilities
 InstalmentFlow.Payments.ProviderCapabilities.AuthenticatedCallbacks = 32 -> InstalmentFlow.Payments.ProviderCapabilities
 InstalmentFlow.Payments.ProviderCapabilities.CustomerInitiatedCallbacks = 1 -> InstalmentFlow.Payments.ProviderCapabilities
@@ -370,6 +378,10 @@ InstalmentFlow.Payments.ProviderCapabilities.None = 0 -> InstalmentFlow.Payments
 InstalmentFlow.Payments.ProviderCapabilities.StatementSource = 8 -> InstalmentFlow.Payments.ProviderCapabilities
 InstalmentFlow.Payments.ProviderCapabilities.StatusQuery = 4 -> InstalmentFlow.Payments.ProviderCapabilities
 InstalmentFlow.Payments.ProviderCapabilities.ValidationHook = 16 -> InstalmentFlow.Payments.ProviderCapabilities
+InstalmentFlow.Payments.ProviderCredentials
+InstalmentFlow.Payments.ProviderCredentials.Find(string! name) -> string?
+InstalmentFlow.Payments.ProviderCredentials.ProviderCredentials(System.Collections.Generic.IReadOnlyDictionary<string!, string!>! secrets) -> void
+InstalmentFlow.Payments.ProviderCredentials.Require(string! name) -> string!
 InstalmentFlow.Payments.ProviderStatementLine
 InstalmentFlow.Payments.ProviderStatementLine.<Clone>$() -> InstalmentFlow.Payments.ProviderStatementLine!
 InstalmentFlow.Payments.ProviderStatementLine.AccountReference.get -> string?
@@ -636,6 +648,7 @@ override InstalmentFlow.Payments.PaymentIntentView.ToString() -> string!
 override InstalmentFlow.Payments.ProviderAccountMapping.Equals(object? obj) -> bool
 override InstalmentFlow.Payments.ProviderAccountMapping.GetHashCode() -> int
 override InstalmentFlow.Payments.ProviderAccountMapping.ToString() -> string!
+override InstalmentFlow.Payments.ProviderCredentials.ToString() -> string!
 override InstalmentFlow.Payments.ProviderStatementLine.Equals(object? obj) -> bool
 override InstalmentFlow.Payments.ProviderStatementLine.GetHashCode() -> int
 override InstalmentFlow.Payments.ProviderStatementLine.ToString() -> string!
@@ -664,6 +677,7 @@ override InstalmentFlow.Payments.StatusQueryResult.Equals(object? obj) -> bool
 override InstalmentFlow.Payments.StatusQueryResult.GetHashCode() -> int
 override InstalmentFlow.Payments.StatusQueryResult.ToString() -> string!
 static InstalmentFlow.Payments.CallbackParseResult.Accept(params System.Collections.Generic.IReadOnlyList<InstalmentFlow.Payments.NormalisedPaymentEvent!>! events) -> InstalmentFlow.Payments.CallbackParseResult!
+static InstalmentFlow.Payments.CallbackParseResult.Hold(string! reason, params System.Collections.Generic.IReadOnlyList<InstalmentFlow.Payments.NormalisedPaymentEvent!>! events) -> InstalmentFlow.Payments.CallbackParseResult!
 static InstalmentFlow.Payments.CallbackParseResult.Reject(string! reason) -> InstalmentFlow.Payments.CallbackParseResult!
 static InstalmentFlow.Payments.CallbackParseResult.operator !=(InstalmentFlow.Payments.CallbackParseResult? left, InstalmentFlow.Payments.CallbackParseResult? right) -> bool
 static InstalmentFlow.Payments.CallbackParseResult.operator ==(InstalmentFlow.Payments.CallbackParseResult? left, InstalmentFlow.Payments.CallbackParseResult? right) -> bool
@@ -722,3 +736,5 @@ static InstalmentFlow.Payments.StatusQueryResult.Pending.get -> InstalmentFlow.P
 static InstalmentFlow.Payments.StatusQueryResult.Succeeded(string! transactionId, InstalmentFlow.Money! amount, System.DateTimeOffset valueAt) -> InstalmentFlow.Payments.StatusQueryResult!
 static InstalmentFlow.Payments.StatusQueryResult.operator !=(InstalmentFlow.Payments.StatusQueryResult? left, InstalmentFlow.Payments.StatusQueryResult? right) -> bool
 static InstalmentFlow.Payments.StatusQueryResult.operator ==(InstalmentFlow.Payments.StatusQueryResult? left, InstalmentFlow.Payments.StatusQueryResult? right) -> bool
+InstalmentFlow.Payments.CsvStatementFormat.LocateHeader.get -> bool
+InstalmentFlow.Payments.CsvStatementFormat.LocateHeader.init -> void

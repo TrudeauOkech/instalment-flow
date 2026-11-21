@@ -1,0 +1,13 @@
+{
+  "TransactionType": "Pay Bill",
+  "TransID": "RKTQDM7W6T",
+  "TransTime": 20260302101500,
+  "TransAmount": 250,
+  "BusinessShortCode": 600123,
+  "BillRefNumber": " ln-1 ",
+  "InvoiceNumber": "INV-9",
+  "OrgAccountBalance": "49447.00",
+  "ThirdPartyTransID": "",
+  "MSISDN": "2d8b0e7a4f3c1b6e9a5d2f8c7b4e1a3d6f9c2b5e8a1d4f7c0b3e6a9d2f5c8b1e",
+  "FirstName": "JANE"
+}
