@@ -29,6 +29,9 @@ internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, Concurr
     /// <summary>Test hook: runs after a commit's statements and before its transaction commits (failure injection).</summary>
     internal Func<Session, CancellationToken, Task>? BeforeCommit { get; set; }
 
+    /// <summary>Test hook: runs after a command's reversal-reference lookup, to widen a race window on purpose.</summary>
+    internal Func<CancellationToken, Task>? AfterReversalLookup { get; set; }
+
     public IAsyncDisposable? EnterCommandScope(TenantId tenantId) => CommandScope.Enter(dataSource, tenantId);
 
     /// <summary>Runs <paramref name="work"/> in the current command scope's session, or in a short transaction of its own.</summary>
@@ -42,7 +45,7 @@ internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, Concurr
             return await work(session, db).ConfigureAwait(false);
         }
 
-        var own = await Session.BeginAsync(dataSource, tenant, ct).ConfigureAwait(false);
+        var own = await Session.BeginAsync(dataSource, tenant, ct, snapshot: !commit).ConfigureAwait(false);
         await using var ownScope = own.ConfigureAwait(false);
         var context = own.Context();
         await using var contextScope = context.ConfigureAwait(false);
@@ -120,6 +123,8 @@ internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, Concurr
             var account = await LoadAccountRowsAsync(db, tenantId.Value, accountId.Value, cancellationToken).ConfigureAwait(false);
             if (account is not null)
             {
+                await RequireUntornAsync(db.Accounts.Where(a => a.TenantId == tenantId.Value && a.AccountId == accountId.Value).Select(a => a.Version),
+                    account.Version, accountId, cancellationToken).ConfigureAwait(false);
                 session.LoadedAccounts[account.Id] = account;
             }
 
@@ -161,6 +166,12 @@ internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, Concurr
             }
 
             var pool = await LoadPoolAsync(db, tenantId.Value, source, cancellationToken).ConfigureAwait(false);
+            if (pool.Version != CustomerAccount.NewVersion)
+            {
+                await RequireUntornAsync(db.Pools.Where(p => p.TenantId == tenantId.Value && p.Source == source).Select(p => p.Version),
+                    pool.Version, default, cancellationToken).ConfigureAwait(false);
+            }
+
             session.LoadedPools[source] = pool;
             return pool;
         }, cancellationToken).ConfigureAwait(false);
@@ -170,6 +181,19 @@ internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, Concurr
         var row = await db.Pools.SingleOrDefaultAsync(p => p.TenantId == tenant && p.Source == source, ct).ConfigureAwait(false);
         var lots = await db.FundsLots.Where(l => l.TenantId == tenant && l.PoolSource == source).OrderBy(l => l.Ordinal).ToListAsync(ct).ConfigureAwait(false);
         return new UnidentifiedFunds(tenant, source, row?.Version ?? CustomerAccount.NewVersion, [.. lots.Select(Mapping.ToLot)]);
+    }
+
+    /// <summary>
+    /// An aggregate is read with several statements, each of which sees the latest commit (READ COMMITTED). Every
+    /// commit bumps the aggregate's version, so an unchanged version after the last statement proves the rows form
+    /// one state; otherwise the attempt is retried rather than planned from a torn read.
+    /// </summary>
+    private static async Task RequireUntornAsync(IQueryable<long> version, long loaded, AccountId accountId, CancellationToken ct)
+    {
+        if (await version.SingleOrDefaultAsync(ct).ConfigureAwait(false) != loaded)
+        {
+            throw new ConcurrencyConflictException(accountId, loaded);
+        }
     }
 
     private static async Task LockAsync(Session session, string table, string column, Guid id, CancellationToken ct)
@@ -276,12 +300,27 @@ internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, Concurr
                 .Select(Mapping.ToReversal).ToList(), cancellationToken).ConfigureAwait(false);
 
     public async ValueTask<ReversalLookup?> FindReversalAsync(TenantId tenantId, ExternalReference reference, CancellationToken cancellationToken) =>
-        await InTenantAsync(tenantId, async (_, db) =>
+        await InTenantAsync(tenantId, async (session, db) =>
         {
             var tenant = tenantId.Value;
+            if (CommandScope.Current is not null)
+            {
+                // Concurrent deliveries of one reversal queue here until the first commits, then see it and report a
+                // duplicate, instead of planning against the payment it already reversed. Held until the attempt ends.
+                var command = new NpgsqlCommand("select pg_advisory_xact_lock(hashtextextended(@k, 0))", session.Connection, session.Transaction);
+                await using var commandScope = command.ConfigureAwait(false);
+                command.Parameters.AddWithValue("k", $"reversal|{tenant}|{reference.Source}|{reference.Value}");
+                await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             var reserved = await db.ReversalReferences.SingleOrDefaultAsync(r => r.TenantId == tenant && r.Source == reference.Source && r.Value == reference.Value, cancellationToken).ConfigureAwait(false);
             if (reserved is null)
             {
+                if (AfterReversalLookup is { } hook)
+                {
+                    await hook(cancellationToken).ConfigureAwait(false);
+                }
+
                 return null;
             }
 

@@ -78,6 +78,43 @@ public sealed class StoreBehaviourTests
     }
 
     [Fact]
+    public async Task A_reversal_delivered_twice_concurrently_is_a_duplicate_even_when_the_other_commits_mid_plan()
+    {
+        // Seeded has 700 paid by TX1 and 100 reversed. The first delivery of RV9 stalls just after finding no
+        // reversal RV9; meanwhile a second delivery of RV9 tries to reverse the remaining 600. Read committed alone
+        // would let the second commit inside that window, so the first would then load a fully reversed payment and
+        // fail I-8 instead of reporting a duplicate. The reference lock makes the second wait for the first instead.
+        var (_, factory) = await Seeded.CreateAsync();
+        var flow = factory.ForTenant(Seeded.Tenant);
+        var store = (PostgresStore)factory.LedgerStore;
+        var stalled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var stalls = 0;
+        store.AfterReversalLookup = async ct =>
+        {
+            if (Interlocked.Increment(ref stalls) == 1)
+            {
+                stalled.SetResult();
+                await Task.Delay(TimeSpan.FromSeconds(1), ct);   // the second delivery runs (or waits) meanwhile
+            }
+        };
+
+        ReversePaymentRequest Delivery(string key) => new()
+        {
+            IdempotencyKey = key, Payment = PaymentRef.BySource(new ExternalReference("mpesa:600123", "TX1")),
+            ReversalReference = new ExternalReference("mpesa:600123", "RV9"), Amount = Money.Kes(600m), Reason = "chargeback",
+        };
+
+        var first = Task.Run(() => flow.Payments.ReverseAsync(Delivery("rv9-a"), Ct), Ct);
+        await stalled.Task;
+        var second = await flow.Payments.ReverseAsync(Delivery("rv9-b"), Ct);
+        var results = new[] { await first, second };
+
+        Assert.Single(results, r => r.Outcome == ReversalOutcome.Reversed);
+        Assert.Single(results, r => r.Outcome == ReversalOutcome.Duplicate);
+        Assert.True((await flow.Queries.VerifyAsync(VerifyScope.Tenant, Ct)).Passed);
+    }
+
+    [Fact]
     public async Task Results_replay_after_a_restart()
     {
         var (db, factory) = await Seeded.CreateAsync();

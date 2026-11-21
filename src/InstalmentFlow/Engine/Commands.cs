@@ -89,14 +89,15 @@ internal sealed class CommandRunner(TenantContext context)
                 return Replay(existing, commandType, hash, onReplay);
             }
 
-            var planned = await plan(tenant, cancellationToken).ConfigureAwait(false);
-            var commit = planned.Commit with
-            {
-                Idempotency = new IdempotencyRecord(key, commandType, hash, planned.Result, tenant.Clock.UtcNow),
-            };
-
             try
             {
+                // A store may detect a conflict while loading (a read torn by a concurrent commit), not only at commit.
+                var planned = await plan(tenant, cancellationToken).ConfigureAwait(false);
+                var commit = planned.Commit with
+                {
+                    Idempotency = new IdempotencyRecord(key, commandType, hash, planned.Result, tenant.Clock.UtcNow),
+                };
+
                 await context.Store.CommitAsync(commit, cancellationToken).ConfigureAwait(false);
                 return planned.Result;
             }
