@@ -10,7 +10,13 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
     <PackageVersion Include="MinVer" Version="8.0.0" />
   </ItemGroup>
+  <ItemGroup Label="PostgreSQL store (InstalmentFlow.EntityFrameworkCore only)">
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.15" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.4" />
+  </ItemGroup>
   <ItemGroup Label="Testing">
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.17.0" />
     <PackageVersion Include="xunit.v3" Version="4.0.2" />
     <PackageVersion Include="CsCheck" Version="5.0.1" />
   </ItemGroup>

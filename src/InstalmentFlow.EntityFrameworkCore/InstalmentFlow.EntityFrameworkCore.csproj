@@ -1,13 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Empty until milestone M7; not published before then. -->
-    <IsPackable>false</IsPackable>
     <Description>PostgreSQL persistence for InstalmentFlow via EF Core: optimistic concurrency, row-level security, append-only enforcement and a transactional outbox.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\InstalmentFlow\InstalmentFlow.csproj" />
-    <ProjectReference Include="..\InstalmentFlow.Payments\InstalmentFlow.Payments.csproj" />
+    <!-- The payments package (inbox, intents, provider routing tables) is referenced again when it has content (M8). -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
   </ItemGroup>
 </Project>

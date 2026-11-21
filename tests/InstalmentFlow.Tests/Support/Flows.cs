@@ -8,7 +8,7 @@ internal sealed class Flows
 
     public Flows(Func<TenantPolicy, TenantPolicy>? policy = null, Action<InstalmentFlowBuilder>? configure = null)
     {
-        Factory = InstalmentFlowFactory.CreateInMemory(b =>
+        Factory = TestEngine.Create(b =>
         {
             b.UseTimeProvider(Time).UseConcurrencyRetries(100);
             configure?.Invoke(b);
@@ -25,7 +25,7 @@ internal sealed class Flows
 
     public static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    public Storage.LedgerSnapshot Snapshot => Factory.InMemoryStore!.Snapshot(Tenant);
+    public Storage.LedgerSnapshot Snapshot => Factory.Snapshot(Tenant);
 
     public void AssertInvariants() => Invariants.AssertHold(Factory, Tenant);
 

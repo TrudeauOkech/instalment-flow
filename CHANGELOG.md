@@ -6,6 +6,20 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- M7 PostgreSQL store, `InstalmentFlow.EntityFrameworkCore` (0.2.0-preview):
+  - `InstalmentFlowPostgres.CreateFactoryAsync`, `MigrateAsync` (migrations and role grants, run explicitly by the schema owner), `GenerateMigrationScript` (idempotent SQL) and `Enlist` (commands join a host-owned transaction through savepoints).
+  - The schema of doc 05, as built (doc 05 §8): composite tenant-first keys and foreign keys, `numeric(19,4)` money, append-only and no-truncate triggers on facts, a deferred balance check on the journal (I-1), and row-level security on every table, forced even for the owner and failing closed without the tenant setting.
+  - Optimistic commits with version checks, writing only changed projection rows; `ConcurrencyMode.PessimisticAccountLock`; database refusals mapped to the engine's exceptions (`Duplicate`, `IF1002`, `IF1006`, `IF1007`, `IF2004`…).
+  - Transactional outbox and `OutboxDispatcher`: `FOR UPDATE SKIP LOCKED` with leases, at-least-once delivery and per-account ordering; `IIntegrationEventPublisher` and `IntegrationEvent` in the core.
+  - SQL-based `VerifyAsync` (I-1, I-5, I-6, I-8, I-10, I-11, I-12, I-17, I-19, I-22).
+  - A schema-version check (missing or newer migrations), and a check that the store and core packages are the same version (ADR-017).
+  - The whole core suite runs against PostgreSQL with `IF_STORE=postgres` (Testcontainers); CI runs it, and the store's own tests, on the Linux legs.
+
+### Changed
+- `ILedgerStore` gained command scopes and store-provided verification; commands back off before a retry, not after a failed attempt.
+- All `DateTimeOffset` values are stored in UTC, so hosts may pass any offset.
+
+### Added
 - M6 queries, history and verification (0.1.0-preview):
   - `AsOf` on `GetAccountAsync`, `GetObligationAsync` and `GetScheduleAsync`: past states are reconstructed by folding the facts of the journal transactions recorded up to the cut-off (`AsOf.Date` = end of a business date, `AsOf.At` = an instant; a `DateOnly` converts implicitly). A past query is unaffected by later commands.
   - `TracePaymentAsync`: receipt, assignment, allocations, unwinds, reversals, deficits, refunds and exceptions, oldest first.

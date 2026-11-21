@@ -165,7 +165,7 @@ public sealed class HistoryTests
     [Fact]
     public void Property_random_histories_fold_to_their_projections_and_reproduce_every_past_state()
     {
-        var iterations = int.TryParse(Environment.GetEnvironmentVariable("IF_HISTORIES"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : 150;
+        var iterations = int.TryParse(Environment.GetEnvironmentVariable("IF_HISTORIES"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var n) ? n : TestEngine.Iterations(150);
         var command = Gen.Select(Gen.Int[0, 11], Gen.Int[1, 600], Gen.Int[0, 9], (kind, amount, pick) => (kind, amount, pick));
         command.Array[1, 25].Sample(commands => RunHistory(commands), iter: iterations);
     }
@@ -258,7 +258,7 @@ public sealed class HistoryTests
 
     private static void AssertFoldMatchesProjection(Flows f, AccountId customer)
     {
-        var store = f.Factory.InMemoryStore!;
+        var store = f.Factory.LedgerStore;
         var current = store.LoadAccountAsync(Flows.Tenant, customer, Ct).AsTask().GetAwaiter().GetResult()!;
         var history = store.LoadHistoryAsync(Flows.Tenant, customer, Ct).AsTask().GetAwaiter().GetResult();
         var folded = HistoryFold.At(current, history, f.Time.Now);
@@ -408,7 +408,15 @@ public sealed class HistoryTests
         var tampered = new JournalTransaction(new JournalTxId(Guid.CreateVersion7()), Flows.Tenant, JournalKind.FundsAllocated, customer, "tamper", s_today, f.Time.Now,
             [new LedgerLine(LedgerAccounts.Unapplied(customer, Currency.KES), Currency.KES, 50m, 0m, LedgerSourceType.Allocation, Guid.NewGuid()),
              new LedgerLine("obl:x:principal", Currency.KES, 0m, 40m, LedgerSourceType.Allocation, Guid.NewGuid())]);
-        await f.Factory.InMemoryStore!.CommitAsync(new Commit { Tenant = Flows.Tenant, Journal = tampered }, Ct);
+        var tamper = new Commit { Tenant = Flows.Tenant, Journal = tampered };
+        if (TestEngine.IsPostgres)
+        {
+            // PostgreSQL refuses the unbalanced transaction at commit (deferred trigger, doc 05 §4): defence in depth.
+            await Assert.ThrowsAnyAsync<Exception>(() => f.Factory.LedgerStore.CommitAsync(tamper, Ct).AsTask());
+            return;
+        }
+
+        await f.Factory.LedgerStore.CommitAsync(tamper, Ct);
 
         var broken = await f.Flow.Queries.VerifyAsync(VerifyScope.Tenant, Ct);
         Assert.False(broken.Passed);

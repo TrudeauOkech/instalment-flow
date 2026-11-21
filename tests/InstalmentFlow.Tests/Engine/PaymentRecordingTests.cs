@@ -15,7 +15,7 @@ public sealed class PaymentRecordingTests
 
     public PaymentRecordingTests()
     {
-        _factory = InstalmentFlowFactory.CreateInMemory(b => b
+        _factory = TestEngine.Create(b => b
             .UseTimeProvider(_time)
             .UsePaymentReferenceResolver(_resolver)
             .AddTenant(Tenant, Currency.KES, "Africa/Nairobi", p => p with { PaymentReference = new ReferenceFormat(@"^LN\d{6}$") })
@@ -74,7 +74,7 @@ public sealed class PaymentRecordingTests
 
         Assert.Equal(19, results.Count(r => r.Outcome == RecordOutcome.Duplicate));
         Assert.Single(results.Select(r => r.PaymentId).Distinct());
-        Assert.Single(_factory.InMemoryStore!.Snapshot(Tenant).Payments);
+        Assert.Single(_factory.Snapshot(Tenant).Payments);
         Invariants.AssertHold(_factory, Tenant);
     }
 
@@ -308,7 +308,7 @@ public sealed class PaymentRecordingTests
     {
         // 20 simultaneous payments for one customer is far beyond real contention; allow enough retries that the
         // test cannot fail by chance.
-        var factory = InstalmentFlowFactory.CreateInMemory(b => b
+        var factory = TestEngine.Create(b => b
             .UseTimeProvider(_time)
             .UseConcurrencyRetries(100)
             .AddTenant(Tenant, Currency.KES, "Africa/Nairobi", p => p with { PaymentReference = new ReferenceFormat(@"^LN\d{6}$") }));
@@ -337,7 +337,7 @@ public sealed class PaymentRecordingTests
 
         commandGen.Array[1, 30].Sample(commands =>
         {
-            var factory = InstalmentFlowFactory.CreateInMemory(b => b
+            var factory = TestEngine.Create(b => b
                 .UseTimeProvider(_time)
                 .AddTenant(Tenant, Currency.KES, "Africa/Nairobi", p => p with { PaymentReference = new ReferenceFormat(@"^LN\d{6}$") }));
             var flow = factory.ForTenant(Tenant);
@@ -374,12 +374,12 @@ public sealed class PaymentRecordingTests
                 }
             }
 
-            var snapshot = factory.InMemoryStore!.Snapshot(Tenant);
+            var snapshot = factory.Snapshot(Tenant);
             Assert.Equal(recorded.Count, snapshot.Payments.Length);
             Assert.Equal(recorded.Values.Sum(), snapshot.Payments.Sum(p => p.Amount.Amount));
             var violations = InstalmentFlow.Verification.LedgerVerifier.Verify(snapshot);
             Assert.True(violations.Count == 0, string.Join('\n', violations));
-        }, iter: 200);
+        }, iter: TestEngine.Iterations(200));
     }
 
     // ----- Helpers -----

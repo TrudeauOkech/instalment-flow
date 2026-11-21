@@ -2087,3 +2087,27 @@ virtual InstalmentFlow.InstalmentFlowRequest.PrintMembers(System.Text.StringBuil
 ~override InstalmentFlow.RefundId.Equals(object obj) -> bool
 ~override InstalmentFlow.ReversalId.Equals(object obj) -> bool
 ~override InstalmentFlow.WaiverId.Equals(object obj) -> bool
+InstalmentFlow.IIntegrationEventPublisher
+InstalmentFlow.IIntegrationEventPublisher.PublishAsync(InstalmentFlow.IntegrationEvent! integrationEvent, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+InstalmentFlow.IntegrationEvent
+InstalmentFlow.IntegrationEvent.<Clone>$() -> InstalmentFlow.IntegrationEvent!
+InstalmentFlow.IntegrationEvent.AccountId.get -> InstalmentFlow.AccountId?
+InstalmentFlow.IntegrationEvent.AccountId.init -> void
+InstalmentFlow.IntegrationEvent.Data.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+InstalmentFlow.IntegrationEvent.Data.init -> void
+InstalmentFlow.IntegrationEvent.Deconstruct(out System.Guid EventId, out string! Type, out InstalmentFlow.TenantId! Tenant, out InstalmentFlow.AccountId? AccountId, out System.DateTimeOffset OccurredAt, out System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Data) -> void
+InstalmentFlow.IntegrationEvent.Equals(InstalmentFlow.IntegrationEvent? other) -> bool
+InstalmentFlow.IntegrationEvent.EventId.get -> System.Guid
+InstalmentFlow.IntegrationEvent.EventId.init -> void
+InstalmentFlow.IntegrationEvent.IntegrationEvent(System.Guid EventId, string! Type, InstalmentFlow.TenantId! Tenant, InstalmentFlow.AccountId? AccountId, System.DateTimeOffset OccurredAt, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! Data) -> void
+InstalmentFlow.IntegrationEvent.OccurredAt.get -> System.DateTimeOffset
+InstalmentFlow.IntegrationEvent.OccurredAt.init -> void
+InstalmentFlow.IntegrationEvent.Tenant.get -> InstalmentFlow.TenantId!
+InstalmentFlow.IntegrationEvent.Tenant.init -> void
+InstalmentFlow.IntegrationEvent.Type.get -> string!
+InstalmentFlow.IntegrationEvent.Type.init -> void
+override InstalmentFlow.IntegrationEvent.Equals(object? obj) -> bool
+override InstalmentFlow.IntegrationEvent.GetHashCode() -> int
+override InstalmentFlow.IntegrationEvent.ToString() -> string!
+static InstalmentFlow.IntegrationEvent.operator !=(InstalmentFlow.IntegrationEvent? left, InstalmentFlow.IntegrationEvent? right) -> bool
+static InstalmentFlow.IntegrationEvent.operator ==(InstalmentFlow.IntegrationEvent? left, InstalmentFlow.IntegrationEvent? right) -> bool

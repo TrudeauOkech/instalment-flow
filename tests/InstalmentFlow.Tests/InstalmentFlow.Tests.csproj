@@ -2,11 +2,18 @@
 
   <ItemGroup>
     <PackageReference Include="CsCheck" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\InstalmentFlow\InstalmentFlow.csproj" />
     <ProjectReference Include="..\..\src\InstalmentFlow.Testing\InstalmentFlow.Testing.csproj" />
+    <ProjectReference Include="..\..\src\InstalmentFlow.EntityFrameworkCore\InstalmentFlow.EntityFrameworkCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The PostgreSQL test server, shared with the store's own tests: the whole suite can run against PostgreSQL (IF_STORE=postgres). -->
+    <Compile Include="..\InstalmentFlow.EntityFrameworkCore.Tests\Support\PostgresServer.cs" Link="Support\PostgresServer.cs" />
   </ItemGroup>
 
 </Project>

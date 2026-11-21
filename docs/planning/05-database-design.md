@@ -313,6 +313,38 @@ A tenant option `ConcurrencyMode.PessimisticAccountLock` takes `FOR UPDATE` on t
 
 ## 7. Migrations and compatibility
 
-- EF Core migrations are shipped in the package and applied with an explicit host call (`await app.Services.MigrateInstalmentFlowAsync()`) or exported as an idempotent SQL script. **Migrations never auto-run silently.**
+- EF Core migrations are shipped in the package and applied with an explicit host call (`await InstalmentFlowPostgres.MigrateAsync(ownerConnectionString, …)`) or exported as an idempotent SQL script. **Migrations never auto-run silently.**
 - Migrations are forward-only. A destructive change needs a major version and a documented data migration.
 - A schema version table exists so the library refuses to run against a newer schema than it understands.
+
+## 8. As built in 0.2
+
+The schema follows this document, with these differences found while building it:
+
+- **Funds lots are keyed by payment** (`funds_lots (tenant_id, payment_id)`), since every payment has exactly one lot. A
+  lot is held either by an account (`account_id`) or by one source's unidentified funds (`pool_source`); assigning
+  unidentified funds moves the row. `unidentified_pools (tenant_id, source, version)` carries the pool aggregate's
+  version (ADR-003).
+- **Allocations reference the payment**, not a separate lot ID. Facts recorded in order (allocations, allocation
+  reversals, payment reversals) carry their `position` within the commit. Recording order is
+  `(journal_transactions.seq, position)`, which LIFO unwinding uses; an identity column cannot provide it, because
+  EF Core reorders the inserts of one `SaveChanges`.
+- **Projection tables are those of the aggregate**: `obligations`, `obligation_originated_components`,
+  `plan_versions`, `instalments` and `instalment_components` (with `charged`). Per-obligation component balances are
+  computed from instalment components instead of being a separate `obligation_component_balances` table.
+- **Extra tables**: `payment_assignments`, `pending_reversals` (reversal before payment, deleted when applied),
+  `reversal_references` (one per provider reversal reference, recorded or parked), `charge_reversals`, `waivers`
+  (lines of waivers and write-offs) and `refunds` (portions as jsonb).
+- **Tenant setting** `instalment_flow.tenant_id` is set with `set_config(…, true)` at the start of every transaction.
+  The outbox also has a `dispatcher` policy for sessions that set `instalment_flow.dispatcher`; only the dispatcher
+  role has grants on `outbox`.
+- **Grants**: the application role can select and insert on every table, update only projection and work tables, and
+  delete only `pending_reversals`. Facts also have append-only and no-truncate triggers, which stop even the owner.
+- **Concurrency**: optimistic by default; `ConcurrencyMode.PessimisticAccountLock` is a store option, not a tenant
+  policy. Every command attempt runs in one transaction. Inside a host transaction (`InstalmentFlowPostgres.Enlist`),
+  each attempt is a savepoint.
+- **Verification**: `VerifyAsync` runs the invariant checks as SQL aggregates (`SqlVerifier`), so it does not load the
+  tenant into memory.
+- **Not yet built**: range partitioning of `ledger_entries`, a configurable schema name (it is `instalment_flow`), and the
+  payments-package tables (`provider_inbox`, `payment_intents`, reconciliation, `tenant_provider_accounts`), which come
+  with M8.

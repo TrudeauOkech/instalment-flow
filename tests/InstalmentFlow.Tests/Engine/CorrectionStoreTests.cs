@@ -118,7 +118,7 @@ public sealed class CorrectionStoreTests
         f.AssertInvariants();
     }
 
-    private static InMemoryStore Store(Flows f) => f.Factory.InMemoryStore!;
+    private static ILedgerStore Store(Flows f) => f.Factory.LedgerStore;
 
     private static PendingReversal Pending(string paymentTransId, string? reversalRef) =>
         new(new ReversalId(Guid.CreateVersion7()), Flows.Source(paymentTransId),
