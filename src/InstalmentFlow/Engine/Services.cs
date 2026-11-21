@@ -224,13 +224,13 @@ internal sealed class PlansService(TenantContext context) : IPlans
                 .Select(o => new Component(o.Key, o.Amount))];
 }
 
-internal sealed class QueriesService(TenantContext context) : IInstalmentQueries
+internal sealed partial class QueriesService(TenantContext context) : IInstalmentQueries
 {
-    public async Task<AccountSummary> GetAccountAsync(AccountRef account, DateOnly? asOfDate = null, CancellationToken cancellationToken = default)
+    public async Task<AccountSummary> GetAccountAsync(AccountRef account, AsOf? asOf = null, CancellationToken cancellationToken = default)
     {
-        await context.LoadAsync(cancellationToken).ConfigureAwait(false);
+        var tenant = await context.LoadAsync(cancellationToken).ConfigureAwait(false);
         var id = await context.ResolveAsync(account, cancellationToken).ConfigureAwait(false);
-        var loaded = await context.LoadAccountAsync(id, cancellationToken).ConfigureAwait(false);
+        var (loaded, _) = await AccountAtAsync(tenant, id, asOf, cancellationToken).ConfigureAwait(false);
         return new AccountSummary(
             loaded.Id,
             loaded.ExternalId,
@@ -241,10 +241,10 @@ internal sealed class QueriesService(TenantContext context) : IInstalmentQueries
                 new ObligationSummary(o.Id, o.ExternalId, o.PaymentReference, o.Status, ViewMapper.Outstanding(o)))]);
     }
 
-    public async Task<ObligationView> GetObligationAsync(ObligationRef obligation, DateOnly? asOfDate = null, CancellationToken cancellationToken = default)
+    public async Task<ObligationView> GetObligationAsync(ObligationRef obligation, AsOf? asOf = null, CancellationToken cancellationToken = default)
     {
-        var (tenant, found) = await LoadObligationAsync(obligation, cancellationToken).ConfigureAwait(false);
-        return ViewMapper.ToView(found, asOfDate ?? tenant.Clock.Today);
+        var (found, date) = await LoadObligationAsync(obligation, asOf, cancellationToken).ConfigureAwait(false);
+        return ViewMapper.ToView(found, date);
     }
 
     public async Task<PaymentView> GetPaymentAsync(PaymentRef payment, CancellationToken cancellationToken = default)
@@ -253,6 +253,22 @@ internal sealed class QueriesService(TenantContext context) : IInstalmentQueries
         await context.LoadAsync(cancellationToken).ConfigureAwait(false);
         var record = await PaymentLookup.FindAsync(context, payment, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("Payment", payment.ToString());
+        return await PaymentViewAsync(record, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<ScheduleView> GetScheduleAsync(ObligationRef obligation, AsOf? asOf = null, CancellationToken cancellationToken = default)
+    {
+        var (found, date) = await LoadObligationAsync(obligation, asOf, cancellationToken).ConfigureAwait(false);
+        return new ScheduleView(
+            found.Id,
+            found.ActivePlan?.Version,
+            [.. found.Plans.OrderBy(p => p.Version).Select(p => new PlanVersionView(
+                p.Version, p.Status, p.Grace, p.Generator, p.CreatedAt, p.EndedAt, p.EndReason,
+                [.. p.Instalments.Select(i => ViewMapper.ToView(i, date, p.Grace))]))]);
+    }
+
+    private async Task<PaymentView> PaymentViewAsync(PaymentRecord record, CancellationToken cancellationToken)
+    {
         var holding = await PaymentLookup.HoldingAsync(context, record, cancellationToken).ConfigureAwait(false);
         var allocations = await context.Store.ListAllocationsAsync(context.TenantId, record.Id, cancellationToken).ConfigureAwait(false);
         var reversals = await context.Store.ListPaymentReversalsAsync(context.TenantId, record.Id, cancellationToken).ConfigureAwait(false);
@@ -270,24 +286,38 @@ internal sealed class QueriesService(TenantContext context) : IInstalmentQueries
             record.ExceptionId, record.Metadata);
     }
 
-    public async Task<ScheduleView> GetScheduleAsync(ObligationRef obligation, DateOnly? asOfDate = null, CancellationToken cancellationToken = default)
-    {
-        var (tenant, found) = await LoadObligationAsync(obligation, cancellationToken).ConfigureAwait(false);
-        var asOf = asOfDate ?? tenant.Clock.Today;
-        return new ScheduleView(
-            found.Id,
-            found.ActivePlan?.Version,
-            [.. found.Plans.OrderBy(p => p.Version).Select(p => new PlanVersionView(
-                p.Version, p.Status, p.Grace, p.Generator, p.CreatedAt, p.EndedAt, p.EndReason,
-                [.. p.Instalments.Select(i => ViewMapper.ToView(i, asOf, p.Grace))]))]);
-    }
-
-    private async Task<(TenantSnapshot Tenant, Obligation Obligation)> LoadObligationAsync(ObligationRef reference, CancellationToken cancellationToken)
+    private async Task<(Obligation Obligation, DateOnly Date)> LoadObligationAsync(ObligationRef reference, AsOf? asOf, CancellationToken cancellationToken)
     {
         var tenant = await context.LoadAsync(cancellationToken).ConfigureAwait(false);
         var location = await context.ResolveAsync(reference, tenant, cancellationToken).ConfigureAwait(false);
-        var account = await context.LoadAccountAsync(location.AccountId, cancellationToken).ConfigureAwait(false);
-        return (tenant, account.GetObligation(location.ObligationId));
+        var (account, date) = await AccountAtAsync(tenant, location.AccountId, asOf, cancellationToken).ConfigureAwait(false);
+        var obligation = account.Obligations.SingleOrDefault(o => o.Id == location.ObligationId)
+            ?? throw new NotFoundException("Obligation", $"{reference} as of {asOf}");
+        return (obligation, date);
+    }
+
+    /// <summary>
+    /// The account as of <paramref name="asOf"/> and the business date to evaluate it for. A cut-off at or after now
+    /// is the current state; an earlier one is reconstructed from the account's facts (<see cref="HistoryFold"/>).
+    /// </summary>
+    private async Task<(CustomerAccount Account, DateOnly Date)> AccountAtAsync(TenantSnapshot tenant, AccountId id, AsOf? asOf, CancellationToken cancellationToken)
+    {
+        var current = await context.LoadAccountAsync(id, cancellationToken).ConfigureAwait(false);
+        var (cut, date) = asOf switch
+        {
+            null => (tenant.Clock.UtcNow, tenant.Clock.Today),
+            { BusinessDate: { } d } => (tenant.Clock.EndOfDayExclusive(d).AddTicks(-1), d),
+            { Instant: { } at } => (at, tenant.Clock.ToBusinessDate(at)),
+            _ => throw new ArgumentException("An as-of needs a date or an instant.", nameof(asOf)),
+        };
+
+        if (cut >= tenant.Clock.UtcNow)
+        {
+            return (current, date);
+        }
+
+        var history = await context.Store.LoadHistoryAsync(context.TenantId, id, cancellationToken).ConfigureAwait(false);
+        return (HistoryFold.At(current, history, cut), date);
     }
 }
 

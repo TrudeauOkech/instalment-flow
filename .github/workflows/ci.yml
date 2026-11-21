@@ -45,6 +45,24 @@ jobs:
         env:
           DOTNET_ROLL_FORWARD: ${{ matrix.runtime == '11.0' && 'LatestMajor' || 'Minor' }}
 
+      - name: Run samples
+        shell: bash
+        run: |
+          for sample in samples/*/; do
+            [ -f "$sample"/*.csproj ] || continue
+            echo "::group::$sample"
+            dotnet run --project "$sample" --no-build -c Release
+            echo "::endgroup::"
+          done
+        env:
+          DOTNET_ROLL_FORWARD: ${{ matrix.runtime == '11.0' && 'LatestMajor' || 'Minor' }}
+
+      - name: Random histories (10^5, I-10)
+        if: matrix.os == 'ubuntu-latest' && matrix.runtime == '10.0'
+        run: dotnet test --no-build -c Release --project tests/InstalmentFlow.Tests -- --filter-method "*Property_random_histories*"
+        env:
+          IF_HISTORIES: 100000
+
       - name: Pack
         if: matrix.os == 'ubuntu-latest' && matrix.runtime == '10.0'
         run: dotnet pack --no-build -c Release -o artifacts
@@ -55,3 +73,24 @@ jobs:
           name: packages
           path: artifacts/*
           if-no-files-found: error
+
+  publish:
+    name: Publish to NuGet
+    needs: build-test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment: nuget            # requires approval and holds the NUGET_API_KEY secret
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: packages
+          path: artifacts
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Push packages
+        run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}

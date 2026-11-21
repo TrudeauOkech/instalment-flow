@@ -190,7 +190,7 @@ public interface IInstalmentQueries
     Task<ScheduleView>        GetScheduleAsync(ObligationRef o, AsOf? asOf = null, CancellationToken ct = default); // incl. superseded versions
     Task<PaymentTrace>        TracePaymentAsync(PaymentRef p, CancellationToken ct = default);   // receipt → lot → allocations → reversals
     IAsyncEnumerable<StatementLine>      GetStatementAsync(AccountRef a, DateOnly from, DateOnly to, CancellationToken ct = default);
-    IAsyncEnumerable<JournalTransaction> ReadJournalAsync(JournalCursor from, CancellationToken ct = default);     // GL export
+    IAsyncEnumerable<JournalTransactionView> ReadJournalAsync(JournalCursor from, CancellationToken ct = default); // GL export
     Task<VerificationReport>  VerifyAsync(VerifyScope scope, CancellationToken ct = default);
 }
 ```
