@@ -1,6 +1,7 @@
 using System.Data.Common;
 using InstalmentFlow.EntityFrameworkCore.Persistence;
 using InstalmentFlow.EntityFrameworkCore.Schema;
+using InstalmentFlow.Payments;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -83,7 +84,7 @@ public static class InstalmentFlowPostgres
         await using var dbScope = db.ConfigureAwait(false);
         await db.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
 
-        var grants = (options?.ApplicationRole is { } app ? SchemaSql.GrantApplication(app) : string.Empty)
+        var grants = (options?.ApplicationRole is { } app ? SchemaSql.GrantApplication(app) + PaymentsSchemaSql.GrantApplication(app) : string.Empty)
             + (options?.DispatcherRole is { } dispatcher ? SchemaSql.GrantDispatcher(dispatcher) : string.Empty);
         if (grants.Length > 0)
         {
@@ -97,6 +98,28 @@ public static class InstalmentFlowPostgres
         using var db = new InstalmentFlowDbContext(new DbContextOptionsBuilder<InstalmentFlowDbContext>()
             .UseNpgsql(o => o.MigrationsHistoryTable(HistoryTable, InstalmentFlowDbContext.Schema)).Options);
         return db.GetService<IMigrator>().GenerateScript(options: MigrationsSqlGenerationOptions.Idempotent);
+    }
+
+    /// <summary>
+    /// Creates payment provider integration (<see cref="InstalmentFlowPayments"/>) with its routing, inbox, intents and
+    /// reconciliation in PostgreSQL, on top of <paramref name="flows"/> (normally from <see cref="CreateFactoryAsync"/>
+    /// with the same options).
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The database schema is missing, older or newer than this version expects.</exception>
+    public static async Task<InstalmentFlowPayments> CreatePaymentsAsync(
+        PostgresStoreOptions options,
+        InstalmentFlowFactory flows,
+        Action<PaymentsBuilder> configure,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentException.ThrowIfNullOrWhiteSpace(options.ConnectionString);
+        ArgumentNullException.ThrowIfNull(flows);
+        ArgumentNullException.ThrowIfNull(configure);
+        EnsureLockstepVersions();
+        var dataSource = NpgsqlDataSource.Create(options.ConnectionString);
+        await EnsureSchemaAsync(dataSource, cancellationToken).ConfigureAwait(false);
+        return InstalmentFlowPayments.Create(flows, new PostgresPaymentsStore(dataSource), configure);
     }
 
     /// <summary>
@@ -128,11 +151,14 @@ public static class InstalmentFlowPostgres
             return plus < 0 ? informational : informational[..plus];
         }
 
-        var core = Version(typeof(InstalmentFlowFactory).Assembly);
         var store = Version(typeof(InstalmentFlowPostgres).Assembly);
-        if (!string.Equals(core, store, StringComparison.Ordinal))
+        foreach (var (name, assembly) in new[] { ("InstalmentFlow", typeof(InstalmentFlowFactory).Assembly), ("InstalmentFlow.Payments", typeof(InstalmentFlowPayments).Assembly) })
         {
-            throw new InvalidOperationException($"InstalmentFlow.EntityFrameworkCore {store} needs InstalmentFlow {store}, but {core} is loaded. Use the same version of both packages.");
+            var version = Version(assembly);
+            if (!string.Equals(version, store, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"InstalmentFlow.EntityFrameworkCore {store} needs {name} {store}, but {version} is loaded. Use the same version of every InstalmentFlow package.");
+            }
         }
     }
 

@@ -351,6 +351,26 @@ The schema follows this document, with these differences found while building it
   REPEATABLE READ, one snapshot. A host transaction passed to `Enlist` should be READ COMMITTED, the PostgreSQL default.
 - **Verification**: `VerifyAsync` runs the invariant checks as SQL aggregates (`SqlVerifier`), so it does not load the
   tenant into memory.
-- **Not yet built**: range partitioning of `ledger_entries`, a configurable schema name (it is `instalment_flow`), and the
-  payments-package tables (`provider_inbox`, `payment_intents`, reconciliation, `tenant_provider_accounts`), which come
-  with M8.
+- **Not yet built**: range partitioning of `ledger_entries` and a configurable schema name (it is `instalment_flow`).
+
+### Payments tables (0.3, ADR-018)
+
+Added by the second migration, `PaymentsSchema`:
+
+- `tenant_provider_accounts (provider, provider_account) → tenant_id`, as above.
+- `provider_inbox` as above, plus the normalised event (`event jsonb`), its `kind` and `origin` (callback, statement or
+  status query), `next_attempt_at` and `lease_until` for retries and claims, and the routed `tenant_id`. Processors
+  claim rows with `FOR UPDATE SKIP LOCKED` and a lease. Unique on `(provider, dedupe_key)`.
+- `payment_intents (tenant_id, intent_id)`: the intent, its state, the provider correlation ID (unique per tenant and
+  provider), the confirmed receipt and payment, and a version for optimistic updates. Unique on
+  `(tenant_id, idempotency_key)`.
+- `intent_checks (intent_id, tenant_id, next_check_at)`: when each open intent is next checked. It holds no intent
+  data, so the resolver can scan it for every tenant.
+- `reconciliation_runs`: one row per run: provider account, window (the next run's cursor) and counts per
+  classification.
+- `reconciliation_discrepancies (tenant_id, discrepancy_id)`: a discrepancy and its resolution, unique on
+  `(tenant_id, provider, provider_account, transaction_id, kind)`, so a run never raises one twice. Doc 03's
+  `reconciliation_items` became this: matched lines are reported to the caller, not stored.
+
+`payment_intents` and `reconciliation_discrepancies` have forced row-level security like every tenant table. The other
+four are written before routing or read by cross-tenant workers, and hold no ledger data.

@@ -15,6 +15,18 @@ internal sealed class InstalmentFlowDbContext(DbContextOptions<InstalmentFlowDbC
 
     public DbSet<TenantRow> Tenants => Set<TenantRow>();
 
+    public DbSet<ProviderAccountRow> ProviderAccounts => Set<ProviderAccountRow>();
+
+    public DbSet<InboxRow> Inbox => Set<InboxRow>();
+
+    public DbSet<IntentRow> Intents => Set<IntentRow>();
+
+    public DbSet<IntentCheckRow> IntentChecks => Set<IntentCheckRow>();
+
+    public DbSet<ReconciliationRunRow> ReconciliationRuns => Set<ReconciliationRunRow>();
+
+    public DbSet<DiscrepancyRow> Discrepancies => Set<DiscrepancyRow>();
+
     public DbSet<PolicyVersionRow> PolicyVersions => Set<PolicyVersionRow>();
 
     public DbSet<AccountRow> Accounts => Set<AccountRow>();
@@ -336,6 +348,8 @@ internal sealed class InstalmentFlowDbContext(DbContextOptions<InstalmentFlowDbC
             e.Property(x => x.Payload).HasColumnType("jsonb");
             Tenant(e);
         });
+
+        PaymentsModel.Configure(modelBuilder);
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
         {

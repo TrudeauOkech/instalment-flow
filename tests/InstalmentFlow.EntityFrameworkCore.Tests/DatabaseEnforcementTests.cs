@@ -53,7 +53,7 @@ public sealed class DatabaseEnforcementTests
     {
         var (db, _) = await Seeded.CreateAsync();
 
-        foreach (var table in Schema.SchemaSql.AppendOnlyTables.Concat(Schema.SchemaSql.MutableTables))
+        foreach (var table in Schema.SchemaSql.AppendOnlyTables.Concat(Schema.SchemaSql.MutableTables).Concat(Schema.PaymentsSchemaSql.TenantTables))
         {
             Assert.Equal(0L, await Sql.ScalarAsync<long>(db.Application, $"select count(*) from instalment_flow.{table}"));
         }

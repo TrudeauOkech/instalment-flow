@@ -244,6 +244,25 @@ internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, Concurr
             await db.Payments.SingleOrDefaultAsync(p => p.TenantId == tenantId.Value && p.Source == source.Source && p.ExternalRef == source.Value, cancellationToken).ConfigureAwait(false) is { } row
                 ? Mapping.ToPayment(row) : null, cancellationToken).ConfigureAwait(false);
 
+    public async ValueTask<IReadOnlyList<PaymentRecord>> ListPaymentsAsync(TenantId tenantId, string source, DateTimeOffset? from, DateTimeOffset? to, CancellationToken cancellationToken) =>
+        await InTenantAsync(tenantId, async (_, db) =>
+        {
+            var rows = db.Payments.Where(p => p.TenantId == tenantId.Value && p.Source == source);
+            if (from is { } start)
+            {
+                var utc = start.ToUniversalTime();
+                rows = rows.Where(p => p.ValueAt >= utc);
+            }
+
+            if (to is { } end)
+            {
+                var utc = end.ToUniversalTime();
+                rows = rows.Where(p => p.ValueAt < utc);
+            }
+
+            return (IReadOnlyList<PaymentRecord>)[.. (await rows.OrderBy(p => p.ValueAt).ThenBy(p => p.PaymentId).ToListAsync(cancellationToken).ConfigureAwait(false)).Select(Mapping.ToPayment)];
+        }, cancellationToken).ConfigureAwait(false);
+
     public async ValueTask<PaymentAssignment?> GetAssignmentAsync(TenantId tenantId, PaymentId paymentId, CancellationToken cancellationToken) =>
         await InTenantAsync(tenantId, async (_, db) =>
             await db.Assignments.SingleOrDefaultAsync(a => a.TenantId == tenantId.Value && a.PaymentId == paymentId.Value, cancellationToken).ConfigureAwait(false) is { } row

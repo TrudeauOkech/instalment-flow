@@ -1,1 +1,61 @@
 #nullable enable
+InstalmentFlow.Testing.CustomerSteps
+InstalmentFlow.Testing.CustomerSteps.Loan(string! paymentReference, InstalmentFlow.Testing.Plan! plan) -> InstalmentFlow.Testing.CustomerSteps!
+InstalmentFlow.Testing.GivenSteps
+InstalmentFlow.Testing.GivenSteps.Customer(string! externalId) -> InstalmentFlow.Testing.CustomerSteps!
+InstalmentFlow.Testing.GivenSteps.Resolver(System.Action<InstalmentFlow.Testing.ResolverSteps!>! map) -> InstalmentFlow.Testing.GivenSteps!
+InstalmentFlow.Testing.Plan
+InstalmentFlow.Testing.Plan.Total.get -> decimal
+InstalmentFlow.Testing.ResolverSteps
+InstalmentFlow.Testing.ResolverSteps.Map(string! raw, params string![]! paymentReferences) -> InstalmentFlow.Testing.ResolverSteps!
+InstalmentFlow.Testing.Scenario
+InstalmentFlow.Testing.ScenarioAssertionException
+InstalmentFlow.Testing.ScenarioAssertionException.ScenarioAssertionException() -> void
+InstalmentFlow.Testing.ScenarioAssertionException.ScenarioAssertionException(string! message) -> void
+InstalmentFlow.Testing.ScenarioAssertionException.ScenarioAssertionException(string! message, System.Exception! innerException) -> void
+InstalmentFlow.Testing.ScenarioBuilder
+InstalmentFlow.Testing.ScenarioBuilder.Given(System.Action<InstalmentFlow.Testing.GivenSteps!>! describe) -> InstalmentFlow.Testing.ScenarioBuilder!
+InstalmentFlow.Testing.ScenarioBuilder.RunAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.Testing.ScenarioRun!>!
+InstalmentFlow.Testing.ScenarioBuilder.Then(System.Action<InstalmentFlow.Testing.ThenContext!>! check) -> InstalmentFlow.Testing.ScenarioBuilder!
+InstalmentFlow.Testing.ScenarioBuilder.When(System.Action<InstalmentFlow.Testing.WhenSteps!>! describe) -> InstalmentFlow.Testing.ScenarioBuilder!
+InstalmentFlow.Testing.ScenarioClock
+InstalmentFlow.Testing.ScenarioClock.Advance(System.TimeSpan by) -> void
+InstalmentFlow.Testing.ScenarioClock.Today.get -> System.DateOnly
+InstalmentFlow.Testing.ScenarioRun
+InstalmentFlow.Testing.ScenarioRun.Clock.get -> InstalmentFlow.Testing.ScenarioClock!
+InstalmentFlow.Testing.ScenarioRun.Currency.get -> InstalmentFlow.Currency!
+InstalmentFlow.Testing.ScenarioRun.Flow.get -> InstalmentFlow.IInstalmentFlow!
+InstalmentFlow.Testing.ScenarioRun.ShouldSatisfyAllInvariantsAsync() -> System.Threading.Tasks.Task!
+InstalmentFlow.Testing.Should
+InstalmentFlow.Testing.ThenContext
+InstalmentFlow.Testing.ThenContext.Account(string! customer) -> InstalmentFlow.AccountSummary!
+InstalmentFlow.Testing.ThenContext.Charge(string! name) -> InstalmentFlow.ChargeResult!
+InstalmentFlow.Testing.ThenContext.Flow.get -> InstalmentFlow.IInstalmentFlow!
+InstalmentFlow.Testing.ThenContext.Loan(string! paymentReference) -> InstalmentFlow.ObligationView!
+InstalmentFlow.Testing.ThenContext.OpenException(string! transId) -> InstalmentFlow.PaymentExceptionView!
+InstalmentFlow.Testing.ThenContext.Payment(string! transId) -> InstalmentFlow.RecordPaymentResult!
+InstalmentFlow.Testing.ThenContext.Refund(string! name) -> InstalmentFlow.RefundView!
+InstalmentFlow.Testing.ThenContext.Reversal(string! transId) -> InstalmentFlow.ReversalResult!
+InstalmentFlow.Testing.ThenContext.Unapplied(string! customer) -> InstalmentFlow.Money!
+InstalmentFlow.Testing.WhenSteps
+InstalmentFlow.Testing.WhenSteps.AllocateHeldFunds(string! customer, string? toLoan = null) -> InstalmentFlow.Testing.WhenSteps!
+InstalmentFlow.Testing.WhenSteps.Charge(string! name, string! loan, InstalmentFlow.ChargeType type, decimal amount, string? chargeCode = null, InstalmentFlow.ChargeDue? due = null) -> InstalmentFlow.Testing.WhenSteps!
+InstalmentFlow.Testing.WhenSteps.CustomerPayment(string! customer, decimal amount, string! transId, string! source = "mpesa:600123") -> InstalmentFlow.Testing.WhenSteps!
+InstalmentFlow.Testing.WhenSteps.DaysPass(int days) -> InstalmentFlow.Testing.WhenSteps!
+InstalmentFlow.Testing.WhenSteps.Do(System.Func<InstalmentFlow.IInstalmentFlow!, System.Threading.Tasks.Task!>! action) -> InstalmentFlow.Testing.WhenSteps!
+InstalmentFlow.Testing.WhenSteps.PaybillPayment(decimal amount, string! billRef, string! transId, string! source = "mpesa:600123") -> InstalmentFlow.Testing.WhenSteps!
+InstalmentFlow.Testing.WhenSteps.PaybillPaymentDelivered(int times, decimal amount, string! billRef, string! transId, string! source = "mpesa:600123") -> InstalmentFlow.Testing.WhenSteps!
+InstalmentFlow.Testing.WhenSteps.Refund(string! name, string! customer, decimal amount) -> InstalmentFlow.Testing.WhenSteps!
+InstalmentFlow.Testing.WhenSteps.RefundCompleted(string! name, InstalmentFlow.RefundCompletion completion) -> InstalmentFlow.Testing.WhenSteps!
+InstalmentFlow.Testing.WhenSteps.Reversal(string! transId, decimal? amount = null, string? reversalRef = null, string! source = "mpesa:600123") -> InstalmentFlow.Testing.WhenSteps!
+InstalmentFlow.Testing.WhenSteps.Waive(string! loan, InstalmentFlow.ComponentKey! component, decimal amount, string! reason = "Scenario waiver") -> InstalmentFlow.Testing.WhenSteps!
+const InstalmentFlow.Testing.Scenario.DefaultSource = "mpesa:600123" -> string!
+override InstalmentFlow.Testing.ScenarioClock.GetUtcNow() -> System.DateTimeOffset
+static InstalmentFlow.Testing.Plan.Daily(decimal instalment, int count, int firstDueInDays = 0) -> InstalmentFlow.Testing.Plan!
+static InstalmentFlow.Testing.Plan.Instalments(params decimal[]! amounts) -> InstalmentFlow.Testing.Plan!
+static InstalmentFlow.Testing.Plan.Monthly(decimal instalment, int count, int firstDueInDays = 0) -> InstalmentFlow.Testing.Plan!
+static InstalmentFlow.Testing.Plan.Once(decimal amount, int dueInDays = 0) -> InstalmentFlow.Testing.Plan!
+static InstalmentFlow.Testing.Plan.Weekly(decimal instalment, int count, int firstDueInDays = 0) -> InstalmentFlow.Testing.Plan!
+static InstalmentFlow.Testing.Scenario.InMemory(string! tenant = "test", string! currency = "KES", string! timeZone = "Africa/Nairobi", System.DateOnly? today = null, System.Func<InstalmentFlow.TenantPolicy!, InstalmentFlow.TenantPolicy!>? policy = null) -> InstalmentFlow.Testing.ScenarioBuilder!
+static InstalmentFlow.Testing.Should.ShouldBe<T>(this T actual, T expected) -> T
+static InstalmentFlow.Testing.Should.ShouldSatisfyAllInvariantsAsync(this InstalmentFlow.IInstalmentFlow! flow, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!

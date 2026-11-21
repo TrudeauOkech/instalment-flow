@@ -112,6 +112,19 @@ public sealed record PaymentTarget
     }
 }
 
+/// <summary>Selects recorded payments by source and by when the money moved.</summary>
+public sealed record PaymentQuery
+{
+    /// <summary>The source, for example <c>mpesa:600123</c>.</summary>
+    public required string Source { get; init; }
+
+    /// <summary>Only payments whose value time is at or after this instant.</summary>
+    public DateTimeOffset? From { get; init; }
+
+    /// <summary>Only payments whose value time is before this instant.</summary>
+    public DateTimeOffset? To { get; init; }
+}
+
 /// <summary>Records a confirmed incoming payment.</summary>
 public sealed record RecordPaymentRequest : InstalmentFlowRequest
 {

@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\InstalmentFlow\InstalmentFlow.csproj" />
-    <!-- The payments package (inbox, intents, provider routing tables) is referenced again when it has content (M8). -->
+    <ProjectReference Include="..\InstalmentFlow.Payments\InstalmentFlow.Payments.csproj" />
   </ItemGroup>
 
   <ItemGroup>

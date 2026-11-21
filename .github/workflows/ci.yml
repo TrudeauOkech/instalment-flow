@@ -53,9 +53,11 @@ jobs:
         env:
           DOTNET_ROLL_FORWARD: ${{ matrix.runtime == '11.0' && 'LatestMajor' || 'Minor' }}
 
-      - name: Core suite against PostgreSQL
+      - name: Core and payments suites against PostgreSQL
         if: matrix.os == 'ubuntu-latest'
-        run: dotnet test --no-build -c Release --project tests/InstalmentFlow.Tests
+        run: |
+          dotnet test --no-build -c Release --project tests/InstalmentFlow.Tests
+          dotnet test --no-build -c Release --project tests/InstalmentFlow.Payments.Tests
         env:
           IF_STORE: postgres
           DOTNET_ROLL_FORWARD: ${{ matrix.runtime == '11.0' && 'LatestMajor' || 'Minor' }}

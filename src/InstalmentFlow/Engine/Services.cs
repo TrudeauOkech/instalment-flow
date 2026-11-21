@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Collections.Immutable;
 using InstalmentFlow.Domain;
 using InstalmentFlow.Ledger;
@@ -254,6 +255,18 @@ internal sealed partial class QueriesService(TenantContext context) : IInstalmen
         var record = await PaymentLookup.FindAsync(context, payment, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("Payment", payment.ToString());
         return await PaymentViewAsync(record, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async IAsyncEnumerable<PaymentView> ListPaymentsAsync(PaymentQuery query, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentException.ThrowIfNullOrWhiteSpace(query.Source);
+        await context.LoadAsync(cancellationToken).ConfigureAwait(false);
+        var records = await context.Store.ListPaymentsAsync(context.TenantId, query.Source, query.From, query.To, cancellationToken).ConfigureAwait(false);
+        foreach (var record in records)
+        {
+            yield return await PaymentViewAsync(record, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     public async Task<ScheduleView> GetScheduleAsync(ObligationRef obligation, AsOf? asOf = null, CancellationToken cancellationToken = default)

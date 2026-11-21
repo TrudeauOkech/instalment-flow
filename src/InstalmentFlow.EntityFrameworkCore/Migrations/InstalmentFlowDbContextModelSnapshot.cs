@@ -406,6 +406,77 @@ namespace InstalmentFlow.EntityFrameworkCore.Migrations
                         });
                 });
 
+            modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.DiscrepancyRow", b =>
+                {
+                    b.Property<string>("TenantId")
+                        .HasColumnType("text")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("DiscrepancyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("discrepancy_id");
+
+                    b.Property<string>("Currency")
+                        .HasColumnType("text")
+                        .HasColumnName("currency");
+
+                    b.Property<DateTimeOffset>("DetectedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("detected_at");
+
+                    b.Property<decimal?>("EngineAmount")
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("engine_amount");
+
+                    b.Property<short>("Kind")
+                        .HasColumnType("smallint")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid?>("PaymentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("payment_id");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderAccount")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("provider_account");
+
+                    b.Property<string>("Resolution")
+                        .HasColumnType("text")
+                        .HasColumnName("resolution");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("run_id");
+
+                    b.Property<decimal?>("StatementAmount")
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("statement_amount");
+
+                    b.Property<string>("TransactionId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("transaction_id");
+
+                    b.HasKey("TenantId", "DiscrepancyId")
+                        .HasName("pk_reconciliation_discrepancies");
+
+                    b.HasIndex("TenantId", "Provider", "ProviderAccount", "TransactionId", "Kind")
+                        .IsUnique()
+                        .HasDatabaseName("ux_reconciliation_discrepancies_line");
+
+                    b.ToTable("reconciliation_discrepancies", "instalment_flow");
+                });
+
             modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.ExceptionResolutionRow", b =>
                 {
                     b.Property<string>("TenantId")
@@ -558,6 +629,91 @@ namespace InstalmentFlow.EntityFrameworkCore.Migrations
                     b.ToTable("idempotency_keys", "instalment_flow");
                 });
 
+            modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.InboxRow", b =>
+                {
+                    b.Property<Guid>("InboxId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("inbox_id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<string>("DedupeKey")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("dedupe_key");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("text")
+                        .HasColumnName("error");
+
+                    b.Property<string>("Event")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("event");
+
+                    b.Property<short>("Kind")
+                        .HasColumnType("smallint")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTimeOffset?>("LeaseUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("lease_until");
+
+                    b.Property<DateTimeOffset>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<short>("Origin")
+                        .HasColumnType("smallint")
+                        .HasColumnName("origin");
+
+                    b.Property<Guid?>("PaymentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("payment_id");
+
+                    b.Property<DateTimeOffset?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processed_at");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("provider");
+
+                    b.Property<byte[]>("RawPayload")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("raw_payload");
+
+                    b.Property<DateTimeOffset>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("received_at");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
+
+                    b.Property<string>("TenantId")
+                        .HasColumnType("text")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("InboxId")
+                        .HasName("pk_provider_inbox");
+
+                    b.HasIndex("NextAttemptAt", "ReceivedAt")
+                        .HasDatabaseName("ix_provider_inbox_pending")
+                        .HasFilter("status = 0");
+
+                    b.HasIndex("Provider", "DedupeKey")
+                        .IsUnique()
+                        .HasDatabaseName("ux_provider_inbox_dedupe");
+
+                    b.ToTable("provider_inbox", "instalment_flow");
+                });
+
             modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.InstalmentComponentRow", b =>
                 {
                     b.Property<string>("TenantId")
@@ -646,6 +802,157 @@ namespace InstalmentFlow.EntityFrameworkCore.Migrations
                         .HasName("pk_instalments");
 
                     b.ToTable("instalments", "instalment_flow");
+                });
+
+            modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.IntentCheckRow", b =>
+                {
+                    b.Property<Guid>("IntentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("intent_id");
+
+                    b.Property<DateTimeOffset>("NextCheckAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_check_at");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("IntentId")
+                        .HasName("pk_intent_checks");
+
+                    b.HasIndex("NextCheckAt")
+                        .HasDatabaseName("ix_intent_checks_next_check_at");
+
+                    b.ToTable("intent_checks", "instalment_flow");
+                });
+
+            modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.IntentRow", b =>
+                {
+                    b.Property<string>("TenantId")
+                        .HasColumnType("text")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("IntentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("intent_id");
+
+                    b.Property<Guid?>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<string>("AccountReference")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("account_reference");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(19,4)")
+                        .HasColumnName("amount");
+
+                    b.Property<string>("CorrelationId")
+                        .HasColumnType("text")
+                        .HasColumnName("correlation_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("currency");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("FailureReason")
+                        .HasColumnType("text")
+                        .HasColumnName("failure_reason");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("fingerprint");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("idempotency_key");
+
+                    b.Property<DateTimeOffset?>("NextCheckAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_check_at");
+
+                    b.Property<Guid?>("ObligationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("obligation_id");
+
+                    b.Property<string>("Payer")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("payer");
+
+                    b.Property<Guid?>("PaymentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("payment_id");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderAccount")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("provider_account");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
+
+                    b.Property<int>("StatusChecks")
+                        .HasColumnType("integer")
+                        .HasColumnName("status_checks");
+
+                    b.Property<short>("TargetKind")
+                        .HasColumnType("smallint")
+                        .HasColumnName("target_kind");
+
+                    b.Property<string>("TransactionId")
+                        .HasColumnType("text")
+                        .HasColumnName("transaction_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("TenantId", "IntentId")
+                        .HasName("pk_payment_intents");
+
+                    b.HasIndex("TenantId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ux_payment_intents_key");
+
+                    b.HasIndex("TenantId", "Provider", "CorrelationId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_payment_intents_correlation");
+
+                    b.ToTable("payment_intents", "instalment_flow", t =>
+                        {
+                            t.HasCheckConstraint("ck_payment_intents_amount", "amount > 0");
+                        });
                 });
 
             modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.JournalTransactionRow", b =>
@@ -1276,6 +1583,104 @@ namespace InstalmentFlow.EntityFrameworkCore.Migrations
                     b.ToTable("unidentified_pools", "instalment_flow");
                 });
 
+            modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.ProviderAccountRow", b =>
+                {
+                    b.Property<string>("Provider")
+                        .HasColumnType("text")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderAccount")
+                        .HasColumnType("text")
+                        .HasColumnName("provider_account");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Provider", "ProviderAccount")
+                        .HasName("pk_tenant_provider_accounts");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_tenant_provider_accounts_tenant_id");
+
+                    b.ToTable("tenant_provider_accounts", "instalment_flow");
+                });
+
+            modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.ReconciliationRunRow", b =>
+                {
+                    b.Property<Guid>("RunId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("run_id");
+
+                    b.Property<int>("AmountMismatches")
+                        .HasColumnType("integer")
+                        .HasColumnName("amount_mismatches");
+
+                    b.Property<DateTimeOffset>("FinishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("finished_at");
+
+                    b.Property<int>("Lines")
+                        .HasColumnType("integer")
+                        .HasColumnName("lines");
+
+                    b.Property<int>("Matched")
+                        .HasColumnType("integer")
+                        .HasColumnName("matched");
+
+                    b.Property<int>("MissingAtProvider")
+                        .HasColumnType("integer")
+                        .HasColumnName("missing_at_provider");
+
+                    b.Property<int>("MissingInEngine")
+                        .HasColumnType("integer")
+                        .HasColumnName("missing_in_engine");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderAccount")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("provider_account");
+
+                    b.Property<int>("ReversedAtProvider")
+                        .HasColumnType("integer")
+                        .HasColumnName("reversed_at_provider");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<int>("Unroutable")
+                        .HasColumnType("integer")
+                        .HasColumnName("unroutable");
+
+                    b.Property<DateTimeOffset>("WindowEnd")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("window_end");
+
+                    b.Property<DateTimeOffset>("WindowStart")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("window_start");
+
+                    b.HasKey("RunId")
+                        .HasName("pk_reconciliation_runs");
+
+                    b.HasIndex("Provider", "ProviderAccount", "WindowEnd")
+                        .HasDatabaseName("ix_reconciliation_runs_provider_provider_account_window_end");
+
+                    b.ToTable("reconciliation_runs", "instalment_flow");
+                });
+
             modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.RefundRow", b =>
                 {
                     b.Property<string>("TenantId")
@@ -1600,6 +2005,16 @@ namespace InstalmentFlow.EntityFrameworkCore.Migrations
                         .HasConstraintName("fk_charges_obligations_obligation_id");
                 });
 
+            modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.DiscrepancyRow", b =>
+                {
+                    b.HasOne("InstalmentFlow.EntityFrameworkCore.Schema.TenantRow", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_reconciliation_discrepancies_tenants");
+                });
+
             modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.ExceptionResolutionRow", b =>
                 {
                     b.HasOne("InstalmentFlow.EntityFrameworkCore.Schema.PaymentExceptionRow", null)
@@ -1654,6 +2069,16 @@ namespace InstalmentFlow.EntityFrameworkCore.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_instalments_plan_versions_obligation_id_plan_version");
+                });
+
+            modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.IntentRow", b =>
+                {
+                    b.HasOne("InstalmentFlow.EntityFrameworkCore.Schema.TenantRow", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_payment_intents_tenants");
                 });
 
             modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.JournalTransactionRow", b =>
@@ -1781,6 +2206,16 @@ namespace InstalmentFlow.EntityFrameworkCore.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_unidentified_pools_tenants");
+                });
+
+            modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.ProviderAccountRow", b =>
+                {
+                    b.HasOne("InstalmentFlow.EntityFrameworkCore.Schema.TenantRow", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_tenant_provider_accounts_tenants");
                 });
 
             modelBuilder.Entity("InstalmentFlow.EntityFrameworkCore.Schema.RefundRow", b =>

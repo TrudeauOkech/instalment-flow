@@ -21,3 +21,4 @@ Format: lightweight MADR. An ADR is never edited after it is accepted, except fo
 | [015](ADR-015-licence.md) | Apache-2.0 with DCO | Accepted | D10 |
 | [016](ADR-016-provider-integration.md) | Provider-agnostic core; simulator first, then M-Pesa, then Airtel | Accepted | Q3 |
 | [017](ADR-017-internal-storage-ports.md) | Storage ports stay internal; store packages ship in lockstep with the core | Accepted | M7 |
+| [018](ADR-018-payments-inbox-and-reconciliation.md) | Payments: derived deduplication keys, one inbox path, cross-tenant work tables | Accepted | M8 |

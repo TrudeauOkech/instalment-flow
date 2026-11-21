@@ -1,1 +1,57 @@
 #nullable enable
+InstalmentFlow.EntityFrameworkCore.ConcurrencyMode
+InstalmentFlow.EntityFrameworkCore.ConcurrencyMode.Optimistic = 0 -> InstalmentFlow.EntityFrameworkCore.ConcurrencyMode
+InstalmentFlow.EntityFrameworkCore.ConcurrencyMode.PessimisticAccountLock = 1 -> InstalmentFlow.EntityFrameworkCore.ConcurrencyMode
+InstalmentFlow.EntityFrameworkCore.InstalmentFlowPostgres
+InstalmentFlow.EntityFrameworkCore.MigrationOptions
+InstalmentFlow.EntityFrameworkCore.MigrationOptions.<Clone>$() -> InstalmentFlow.EntityFrameworkCore.MigrationOptions!
+InstalmentFlow.EntityFrameworkCore.MigrationOptions.ApplicationRole.get -> string?
+InstalmentFlow.EntityFrameworkCore.MigrationOptions.ApplicationRole.init -> void
+InstalmentFlow.EntityFrameworkCore.MigrationOptions.DispatcherRole.get -> string?
+InstalmentFlow.EntityFrameworkCore.MigrationOptions.DispatcherRole.init -> void
+InstalmentFlow.EntityFrameworkCore.MigrationOptions.Equals(InstalmentFlow.EntityFrameworkCore.MigrationOptions? other) -> bool
+InstalmentFlow.EntityFrameworkCore.MigrationOptions.MigrationOptions() -> void
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcher
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcher.DispatchAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcher.DisposeAsync() -> System.Threading.Tasks.ValueTask
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcher.OutboxDispatcher(string! connectionString, InstalmentFlow.IIntegrationEventPublisher! publisher, InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions? options = null, System.TimeProvider? timeProvider = null) -> void
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcher.RunAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.<Clone>$() -> InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions!
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.BatchSize.get -> int
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.BatchSize.init -> void
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.Equals(InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions? other) -> bool
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.Lease.get -> System.TimeSpan
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.Lease.init -> void
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.MaxBackoff.get -> System.TimeSpan
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.MaxBackoff.init -> void
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.OutboxDispatcherOptions() -> void
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.PollInterval.get -> System.TimeSpan
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.PollInterval.init -> void
+InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions
+InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.<Clone>$() -> InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions!
+InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.ConcurrencyMode.get -> InstalmentFlow.EntityFrameworkCore.ConcurrencyMode
+InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.ConcurrencyMode.init -> void
+InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.ConnectionString.get -> string!
+InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.ConnectionString.init -> void
+InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.Equals(InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions? other) -> bool
+InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.PostgresStoreOptions() -> void
+override InstalmentFlow.EntityFrameworkCore.MigrationOptions.Equals(object? obj) -> bool
+override InstalmentFlow.EntityFrameworkCore.MigrationOptions.GetHashCode() -> int
+override InstalmentFlow.EntityFrameworkCore.MigrationOptions.ToString() -> string!
+override InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.Equals(object? obj) -> bool
+override InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.GetHashCode() -> int
+override InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.ToString() -> string!
+override InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.Equals(object? obj) -> bool
+override InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.GetHashCode() -> int
+override InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.ToString() -> string!
+static InstalmentFlow.EntityFrameworkCore.InstalmentFlowPostgres.CreateFactoryAsync(InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions! options, System.Action<InstalmentFlow.InstalmentFlowBuilder!>? configure = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.InstalmentFlowFactory!>!
+static InstalmentFlow.EntityFrameworkCore.InstalmentFlowPostgres.Enlist(System.Data.Common.DbTransaction! transaction) -> System.IDisposable!
+static InstalmentFlow.EntityFrameworkCore.InstalmentFlowPostgres.GenerateMigrationScript() -> string!
+static InstalmentFlow.EntityFrameworkCore.InstalmentFlowPostgres.MigrateAsync(string! ownerConnectionString, InstalmentFlow.EntityFrameworkCore.MigrationOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+static InstalmentFlow.EntityFrameworkCore.MigrationOptions.operator !=(InstalmentFlow.EntityFrameworkCore.MigrationOptions? left, InstalmentFlow.EntityFrameworkCore.MigrationOptions? right) -> bool
+static InstalmentFlow.EntityFrameworkCore.MigrationOptions.operator ==(InstalmentFlow.EntityFrameworkCore.MigrationOptions? left, InstalmentFlow.EntityFrameworkCore.MigrationOptions? right) -> bool
+static InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.operator !=(InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions? left, InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions? right) -> bool
+static InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.operator ==(InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions? left, InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions? right) -> bool
+static InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.operator !=(InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions? left, InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions? right) -> bool
+static InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.operator ==(InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions? left, InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions? right) -> bool

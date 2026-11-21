@@ -109,6 +109,9 @@ internal interface ILedgerStore
 
     ValueTask<PaymentRecord?> FindPaymentAsync(TenantId tenantId, ExternalReference source, CancellationToken cancellationToken);
 
+    /// <summary>Payments from <paramref name="source"/> with a value time in [from, to), ordered by value time.</summary>
+    ValueTask<IReadOnlyList<PaymentRecord>> ListPaymentsAsync(TenantId tenantId, string source, DateTimeOffset? from, DateTimeOffset? to, CancellationToken cancellationToken);
+
     ValueTask<PaymentAssignment?> GetAssignmentAsync(TenantId tenantId, PaymentId paymentId, CancellationToken cancellationToken);
 
     ValueTask<PaymentExceptionRecord?> GetExceptionAsync(TenantId tenantId, PaymentExceptionId exceptionId, CancellationToken cancellationToken);
@@ -279,6 +282,11 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
         var data = State(tenantId).Data;
         return ValueTask.FromResult(data.PaymentsBySource.TryGetValue(source, out var id) ? data.Payments[id] : null);
     }
+
+    public ValueTask<IReadOnlyList<PaymentRecord>> ListPaymentsAsync(TenantId tenantId, string source, DateTimeOffset? from, DateTimeOffset? to, CancellationToken cancellationToken) =>
+        ValueTask.FromResult<IReadOnlyList<PaymentRecord>>([.. State(tenantId).Data.Payments.Values
+            .Where(p => p.Source.Source == source && (from is null || p.ValueAt >= from) && (to is null || p.ValueAt < to))
+            .OrderBy(p => p.ValueAt).ThenBy(p => p.Id.Value)]);
 
     public ValueTask<PaymentAssignment?> GetAssignmentAsync(TenantId tenantId, PaymentId paymentId, CancellationToken cancellationToken) =>
         ValueTask.FromResult(State(tenantId).Data.Assignments.GetValueOrDefault(paymentId));

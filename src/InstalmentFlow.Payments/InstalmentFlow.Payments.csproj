@@ -1,12 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Empty until milestone M8; not published before then. -->
-    <IsPackable>false</IsPackable>
     <Description>Payment provider integration for InstalmentFlow: adapter SPI, idempotent inbox, payment intents, tenant routing, reconciliation and a simulated provider.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\InstalmentFlow\InstalmentFlow.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="InstalmentFlow.EntityFrameworkCore" />
+    <InternalsVisibleTo Include="InstalmentFlow.EntityFrameworkCore.Tests" />
   </ItemGroup>
 </Project>

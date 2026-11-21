@@ -103,6 +103,12 @@ public interface IInstalmentQueries
     /// <summary>A recorded payment.</summary>
     Task<PaymentView> GetPaymentAsync(PaymentRef payment, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The payments recorded from one source, for example <c>mpesa:600123</c>, ordered by when the money moved.
+    /// Reconciliation uses it to find payments the provider's statement does not show.
+    /// </summary>
+    IAsyncEnumerable<PaymentView> ListPaymentsAsync(PaymentQuery query, CancellationToken cancellationToken = default);
+
     /// <summary>Every plan version of an obligation, including superseded and cancelled ones.</summary>
     Task<ScheduleView> GetScheduleAsync(ObligationRef obligation, AsOf? asOf = null, CancellationToken cancellationToken = default);
 

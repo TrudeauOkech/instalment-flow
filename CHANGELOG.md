@@ -5,6 +5,21 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- M8 payments core, `InstalmentFlow.Payments` (ADR-018):
+  - Adapter interfaces with capability flags: `IPaymentProviderAdapter`, `ICollectionInitiator`, `ITransactionStatusQuery`, `IStatementSource`, plus `IPayloadProtector`. A provider must implement exactly the capabilities it declares; this is checked at start-up.
+  - `NormalisedPaymentEvent` (payment received, payment reversed, collection succeeded or failed), with deduplication keys derived from the event.
+  - The provider inbox: `ReceiveAsync` authenticates, normalises and stores each event once, before processing. `ProcessPendingAsync` routes each event to its tenant and hands it to the core, with leases, back-off, a failed state and `RequeueAsync`. Rule violations fail at once.
+  - Tenant routing: `Routing.MapAsync` maps a provider account to exactly one tenant (`IF6004`). `ITenantRouter` handles shared accounts.
+  - Payment intents: `ForTenant(t).Intents.InitiateAsync` stores the intent before calling the provider. A timeout makes it ambiguous, never failed, and the same key never initiates twice (`IF6003`). `IntentResolver.ResolveDueAsync` checks status with back-off (by merchant reference when the timeout lost the provider's ID) and expires intents after their time to live; a late confirmation still counts.
+  - Reconciliation: `Reconciliation.RunAsync` classifies lines as `Matched`, `MissingInEngine` (ingested through the inbox), `MissingAtProvider`, `AmountMismatch`, `ReversedAtProvider` (a discrepancy, or reversed when the tenant uses `AutoReverse`) or `Unroutable`. Runs continue from a cursor with an overlap. Discrepancies are raised once and resolved by a person. `CsvStatementSource` imports RFC 4180 statement files with configurable columns and time zones (`IF6005`).
+  - `SimulatedProvider` (ADR-016): paybill and push flows, status queries and a statement, with HMAC-signed callbacks. Faults are set per transaction: duplicate, delay, drop, reorder, timeout-then-success, amount mismatch and statement-only reversal. See [the simulator guide](docs/integrations/simulator.md).
+  - PostgreSQL: `InstalmentFlowPostgres.CreatePaymentsAsync` and the `PaymentsSchema` migration (doc 05 §8). Intents and discrepancies are under row-level security. The EF package now checks that it, the core and the payments package are the same version.
+- `IInstalmentQueries.ListPaymentsAsync(PaymentQuery)`: the payments from one source, within a value-time window.
+
+### Changed
+- The public API of 0.2.0-preview.1 is recorded in `PublicAPI.Shipped.txt`.
+
 ## [0.2.0-preview.1] - 2026-11-21
 
 ### Added

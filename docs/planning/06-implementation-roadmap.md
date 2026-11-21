@@ -280,7 +280,34 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
   - outbox per-account ordering;
   - migration up-and-down smoke test on an empty database.
 
-### M8 — Payments core: inbox, intents, tenant routing, simulator, reconciliation (M)
+### M8 — Payments core: inbox, intents, tenant routing, simulator, reconciliation (M) — ✅ done 2026-11-21
+
+> **Delivered:** `InstalmentFlow.Payments`, in memory and on PostgreSQL (ADR-018, doc 05 §8):
+> - **Adapters and events:** the adapter interfaces with capability flags, checked at start-up, and `NormalisedPaymentEvent` with deduplication keys derived from the event.
+> - **Inbox:** stores each event before processing, once per key. The processor has leases, back-off, a failed state and requeue.
+> - **Routing:** provider-account routing, plus `ITenantRouter` for shared accounts.
+> - **Intents:** stored before the provider is called; a timeout is ambiguous, never failed. The resolver queries status by correlation ID or merchant reference, and intents expire after a time to live.
+> - **Reconciliation:** runs with a cursor, discrepancies raised once, a per-tenant `ReversedAtProvider` policy and a CSV statement importer.
+> - **Simulator:** `SimulatedProvider` with every fault ADR-016 lists.
+> - **Core:** one addition, `ListPaymentsAsync`.
+>
+> **Acceptance:**
+> - A dropped callback plus a statement line ingests the payment once; a late callback after that is a duplicate.
+> - An ambiguous intent never initiates twice, even with ten concurrent requests on one key.
+> - A `MissingAtProvider` line raises one discrepancy and changes nothing.
+>
+> **Tests:** 70 payments tests, all passing in memory. 48 of them run on PostgreSQL, where the randomised test runs 3 seeds instead of 25. They cover:
+> - duplicate, delayed (5 h), dropped, reordered (reversal before payment) and forged callbacks;
+> - timeout-then-success, with and without the callback;
+> - declined, refused, unanswered (back-off, then expiry) and late-confirmed intents;
+> - routing and setup;
+> - the CSV importer;
+> - parallel processors.
+>
+> A randomised test mixes faults on 5 to 20 payments per seed: every payment ends up recorded exactly once, and the ledger verifies. 7 manual mutation checks: 6 killed, and 1 survivor that turned out to be equivalent to the original code. The suite is 354 tests in memory, and the core suite (240) still passes on PostgreSQL.
+>
+> **Not yet:** metrics and tracing (doc 03 §8); hosted workers and the callback endpoints, which come with `InstalmentFlow.AspNetCore` (M10); and inbox payload retention.
+
 - **Features:**
   - `InstalmentFlow.Payments`:
     - adapter SPI and capability flags;
