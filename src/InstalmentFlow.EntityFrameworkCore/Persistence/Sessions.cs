@@ -40,7 +40,13 @@ internal sealed class Session : IAsyncDisposable
     /// <summary>Unidentified funds as loaded in this session.</summary>
     public Dictionary<string, UnidentifiedFunds> LoadedPools { get; } = new(StringComparer.Ordinal);
 
-    public static async Task<Session> BeginAsync(NpgsqlDataSource dataSource, TenantId tenant, CancellationToken ct)
+    /// <summary>
+    /// Begins a session. Command attempts run at READ COMMITTED: the commit-time race guards must see rows that
+    /// concurrent commands committed after the attempt began. A store-owned read outside a command
+    /// (<paramref name="snapshot"/>) runs at REPEATABLE READ, so a query or Verify spanning many tables reads one
+    /// consistent state.
+    /// </summary>
+    public static async Task<Session> BeginAsync(NpgsqlDataSource dataSource, TenantId tenant, CancellationToken ct, bool snapshot = false)
     {
         if (HostTransaction.Current is { } host)
         {
@@ -54,7 +60,7 @@ internal sealed class Session : IAsyncDisposable
         var connection = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
         try
         {
-            var transaction = await connection.BeginTransactionAsync(ct).ConfigureAwait(false);
+            var transaction = await connection.BeginTransactionAsync(snapshot ? System.Data.IsolationLevel.RepeatableRead : System.Data.IsolationLevel.ReadCommitted, ct).ConfigureAwait(false);
             var session = new Session(connection, transaction, null, true, tenant);
             await session.SetTenantAsync(ct).ConfigureAwait(false);
             return session;

@@ -103,6 +103,8 @@ public static class InstalmentFlowPostgres
     /// Makes InstalmentFlow commands on this async flow join <paramref name="transaction"/>, a transaction the host
     /// owns, for example its <c>DbContext</c>'s (<c>db.Database.CurrentTransaction.GetDbTransaction()</c>). Each
     /// command attempt runs in a savepoint; nothing is committed until the host commits. Dispose the result to stop.
+    /// The transaction should be READ COMMITTED (the PostgreSQL default): the engine's race guards read rows that
+    /// concurrent commands committed after it began.
     /// </summary>
     /// <exception cref="ArgumentException">The transaction is not an open Npgsql transaction.</exception>
     public static IDisposable Enlist(DbTransaction transaction) => HostTransaction.Enter(transaction);

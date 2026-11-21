@@ -343,6 +343,12 @@ The schema follows this document, with these differences found while building it
 - **Concurrency**: optimistic by default; `ConcurrencyMode.PessimisticAccountLock` is a store option, not a tenant
   policy. Every command attempt runs in one transaction. Inside a host transaction (`InstalmentFlowPostgres.Enlist`),
   each attempt is a savepoint.
+- **Isolation**: command attempts run at READ COMMITTED, because the commit-time guard for the reversal-before-payment
+  race must see rows other commands committed after the attempt began. The engine plans from several reads, so two
+  rules keep them consistent: an aggregate's version is read again after its rows (a changed version means a torn read,
+  and the attempt retries), and a reversal-reference lookup takes an advisory lock, so concurrent deliveries of one
+  reversal queue and the later ones report a duplicate. Reads outside a command (queries, `VerifyAsync`) run at
+  REPEATABLE READ, one snapshot. A host transaction passed to `Enlist` should be READ COMMITTED, the PostgreSQL default.
 - **Verification**: `VerifyAsync` runs the invariant checks as SQL aggregates (`SqlVerifier`), so it does not load the
   tenant into memory.
 - **Not yet built**: range partitioning of `ledger_entries`, a configurable schema name (it is `instalment_flow`), and the
