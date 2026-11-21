@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <title>InstalmentFlow social preview</title>
+  <rect width="1280" height="640" fill="#0F3D3E"/>
+  <g transform="translate(120 192)">
+    <g fill="none" stroke-width="26" transform="rotate(-90 128 128)">
+      <circle cx="128" cy="128" r="72" stroke="#1E5A5B" stroke-dasharray="66 9.4"/>
+      <circle cx="128" cy="128" r="72" stroke="#2DD4BF" stroke-dasharray="66 9.4 66 9.4 66 9.4 33 300"/>
+    </g>
+    <circle cx="128" cy="128" r="34" fill="#FBBF24"/>
+    <path d="M116 128 l9 9 l17 -19" fill="none" stroke="#0F3D3E" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" fill="#F8FAFC">
+    <text x="440" y="300" font-size="88" font-weight="700">InstalmentFlow</text>
+    <text x="442" y="362" font-size="34" fill="#99F6E4">Flexible loan repayments for .NET</text>
+    <text x="442" y="412" font-size="26" fill="#CBD5E1">Every mobile-money payment recorded once, allocated by your rules,</text>
+    <text x="442" y="448" font-size="26" fill="#CBD5E1">explained by an append-only double-entry ledger.</text>
+  </g>
+</svg>

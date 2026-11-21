@@ -1,3 +1,5 @@
+<img src="https://raw.githubusercontent.com/TrudeauOkech/instalment-flow/main/docs/assets/logo-256.png" alt="InstalmentFlow logo: a repayment schedule as a ring, partly paid" width="96" align="right">
+
 # InstalmentFlow
 
 [![CI](https://github.com/TrudeauOkech/instalment-flow/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/TrudeauOkech/instalment-flow/actions/workflows/ci.yml)

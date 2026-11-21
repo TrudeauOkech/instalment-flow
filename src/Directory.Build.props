@@ -9,6 +9,7 @@
     <Copyright>Copyright (c) InstalmentFlow contributors</Copyright>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
     <PackageTags>instalments;repayments;payment-allocation;ledger;lending;asset-financing;mpesa;fintech</PackageTags>
     <RepositoryUrl>https://github.com/TrudeauOkech/instalment-flow</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -24,6 +25,7 @@
 
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)../README.md" Pack="true" PackagePath="/" Visible="false" />
+    <None Include="$(MSBuildThisFileDirectory)../docs/assets/icon.png" Pack="true" PackagePath="/" Visible="false" />
     <!-- Public API tracking (NFR-10): every public change must be recorded in these files. -->
     <AdditionalFiles Include="PublicAPI.Shipped.txt" />
     <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
