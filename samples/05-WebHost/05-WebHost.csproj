@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\InstalmentFlow.Payments\InstalmentFlow.Payments.csproj" />
+    <ProjectReference Include="..\..\src\InstalmentFlow.AspNetCore\InstalmentFlow.AspNetCore.csproj" />
+  </ItemGroup>
+
+</Project>

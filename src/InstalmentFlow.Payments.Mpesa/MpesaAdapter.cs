@@ -11,7 +11,7 @@ namespace InstalmentFlow.Payments.Mpesa;
 /// Transactions as a statement. It never starts reversals or payouts (ADR-010). Amounts are whole shillings: a
 /// fractional amount is held for a person, never rounded.
 /// </summary>
-public sealed class MpesaAdapter : IPaymentProviderAdapter, ICollectionInitiator, ITransactionStatusQuery, IStatementSource
+public sealed class MpesaAdapter : IPaymentProviderAdapter, ICollectionInitiator, ITransactionStatusQuery, IStatementSource, IProviderReplies, IPaymentValidation
 {
     /// <summary>The callback kind of a C2B confirmation.</summary>
     public const string C2BConfirmation = "c2b-confirmation";
@@ -21,6 +21,9 @@ public sealed class MpesaAdapter : IPaymentProviderAdapter, ICollectionInitiator
 
     /// <summary>The callback kind of a Transaction Status result.</summary>
     public const string TransactionStatusResult = "transaction-status";
+
+    /// <summary>The callback kind of a Transaction Status time-out notice; acknowledged, nothing is learnt.</summary>
+    public const string TransactionStatusTimeout = "transaction-status-timeout";
 
     private const string StillProcessing = "500.001.1001";
     private const int PullPageLimit = 1_000;
@@ -72,6 +75,7 @@ public sealed class MpesaAdapter : IPaymentProviderAdapter, ICollectionInitiator
                 C2BConfirmation => Confirmation(json.RootElement, callback.ProviderAccount),
                 StkResult => Stk(json.RootElement, callback.ProviderAccount),
                 TransactionStatusResult => Status(json.RootElement, callback.ProviderAccount),
+                TransactionStatusTimeout => CallbackParseResult.Accept(),
                 _ => CallbackParseResult.Reject($"Unknown M-Pesa callback kind '{callback.Kind}'."),
             });
         }
@@ -84,6 +88,46 @@ public sealed class MpesaAdapter : IPaymentProviderAdapter, ICollectionInitiator
             return Result(CallbackParseResult.Reject($"The callback has an invalid value: {ex.Message}"));
         }
     }
+
+    /// <summary>
+    /// Daraja's acknowledgement. A stored or duplicate callback is acknowledged with result code 0; a rejected one with
+    /// HTTP 400 and no detail, so a forger learns nothing.
+    /// </summary>
+    public ProviderReply Acknowledge(ProviderCallback callback, InboxReceipt receipt)
+    {
+        ArgumentNullException.ThrowIfNull(receipt);
+        return receipt.Outcome == InboxReceiptOutcome.Rejected
+            ? ProviderReply.Json(400, """{"ResultCode":"1","ResultDesc":"Rejected"}""")
+            : new ProviderReply(200, "application/json", MpesaValidation.ConfirmationReceived());
+    }
+
+    /// <inheritdoc />
+    public PaymentValidationRequest? ParseValidation(ProviderCallback callback)
+    {
+        ArgumentNullException.ThrowIfNull(callback);
+        if (callback.Body.Length > _options.MaxCallbackBytes)
+        {
+            return null;
+        }
+
+        try
+        {
+            var request = MpesaValidation.Parse(callback.Body);
+            return new PaymentValidationRequest(request.ShortCode, request.TransactionId, request.Amount, request.AccountReference);
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+    }
+
+    /// <inheritdoc />
+    public ProviderReply Reply(ValidationDecision decision) => new(200, "application/json", decision switch
+    {
+        ValidationDecision.RejectUnknownReference => MpesaValidation.Reject(MpesaRejection.InvalidAccountNumber),
+        ValidationDecision.RejectAmount => MpesaValidation.Reject(MpesaRejection.InvalidAmount),
+        _ => MpesaValidation.Accept(),
+    });
 
     // ----- Collections (STK push) -----
 

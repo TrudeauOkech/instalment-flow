@@ -107,7 +107,10 @@ internal sealed record IntentRow
     public required long Version { get; set; }
 }
 
-/// <summary>When each open intent is next checked: IDs and times only, so the resolver can scan every tenant without reading their data.</summary>
+/// <summary>
+/// When each open intent is next checked, with its state and age: no amounts, payers or references, so the resolver
+/// and health checks can scan every tenant without reading their data.
+/// </summary>
 internal sealed record IntentCheckRow
 {
     public required Guid IntentId { get; set; }
@@ -115,6 +118,10 @@ internal sealed record IntentCheckRow
     public required string TenantId { get; set; }
 
     public required DateTimeOffset NextCheckAt { get; set; }
+
+    public required short Status { get; set; }
+
+    public required DateTimeOffset CreatedAt { get; set; }
 }
 
 internal sealed record ReconciliationRunRow

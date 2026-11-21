@@ -71,20 +71,26 @@ Console.WriteLine($"Outstanding {loan.Outstanding}, paid through {loan.PaidThrou
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddInstalmentFlow()
-    .UseEntityFrameworkCore(db => db.UseNpgsql(builder.Configuration.GetConnectionString("Ledger")))
-    .UseTenantContext<ClaimsTenantContext>()                 // API requests: tenant from the caller's identity
-    .AddPayments(p => p
-        .UseProviderCredentials<KeyVaultCredentialSource>()  // per-tenant secrets come from the host's store
-        .AddMpesa()                                          // provider account → tenant routing is in tenant config
-        .AddReconciliation(r => r.Every = TimeSpan.FromHours(1))
-        .AddSimulator(builder.Environment.IsDevelopment()))  // explicit; refused in Production by default
-    .AddOutboxPublisher<MyEventPublisher>();
+var store = new PostgresStoreOptions { ConnectionString = builder.Configuration.GetConnectionString("Ledger")! };
+var mpesa = new MpesaAdapter(new HttpClient(), new KeyVaultCredentialSource(), mpesaOptions);   // per-shortcode secrets from the host's store
+await using var dispatcher = new OutboxDispatcher(builder.Configuration.GetConnectionString("Dispatcher")!, new MyEventPublisher());
 
-var app = builder.Build();
-await app.Services.MigrateInstalmentFlowAsync();             // explicit, never silent
-app.MapInstalmentFlowCallbacks("/hooks/{secret}")             // tenant resolved from shortcode → tenant mapping
-   .RequireMpesaSourceIps();
+builder.Services.AddInstalmentFlow(o =>                       // as built in 0.3 (M10)
+{
+    o.UseEngine((sp, ct) => InstalmentFlowPostgres.CreateFactoryAsync(store, b => b.AddTenant("acme-ke", Currency.KES, "Africa/Nairobi"), ct));
+    o.UsePayments((sp, flows, ct) => InstalmentFlowPostgres.CreatePaymentsAsync(store, flows, p => p.AddProvider(mpesa), ct));
+    o.Callbacks.PathSecret = builder.Configuration["Hooks:Secret"];
+    o.Callbacks.AllowedNetworks["mpesa"] = safaricomNetworks;    // the host supplies Safaricom's published ranges
+    o.Workers.ReconcileAccounts.Add(("mpesa", "600123"));        // Pull Transactions every hour
+    o.Workers.Add("outbox", TimeSpan.FromSeconds(1), (sp, ct) => dispatcher.DispatchAsync(ct));
+    o.Health.MeasureOutboxLag = (sp, ct) => dispatcher.GetLagAsync(ct);
+});
+builder.Services.UseTenantContext<ClaimsTenantContext>();     // API requests: tenant from the caller's identity
+builder.Services.AddHealthChecks().AddInstalmentFlowChecks();
+
+var app = builder.Build();                                    // migrations: InstalmentFlowPostgres.MigrateAsync, run by the schema owner, never silently
+app.UseExceptionHandler();                                    // engine errors become ProblemDetails with an errorCode
+app.MapInstalmentFlowCallbacks("/hooks/{secret}");            // tenant resolved from the shortcode → tenant mapping
 app.MapPost("/loans/{reference}/charges", PostLateFee);       // the host's own API
 app.Run();
 

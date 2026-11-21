@@ -98,3 +98,7 @@ static InstalmentFlow.Payments.Mpesa.MpesaValidation.Parse(System.ReadOnlyMemory
 static InstalmentFlow.Payments.Mpesa.MpesaValidation.Reject(InstalmentFlow.Payments.Mpesa.MpesaRejection reason) -> byte[]!
 static InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.operator !=(InstalmentFlow.Payments.Mpesa.MpesaValidationRequest? left, InstalmentFlow.Payments.Mpesa.MpesaValidationRequest? right) -> bool
 static InstalmentFlow.Payments.Mpesa.MpesaValidationRequest.operator ==(InstalmentFlow.Payments.Mpesa.MpesaValidationRequest? left, InstalmentFlow.Payments.Mpesa.MpesaValidationRequest? right) -> bool
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.Acknowledge(InstalmentFlow.Payments.ProviderCallback! callback, InstalmentFlow.Payments.InboxReceipt! receipt) -> InstalmentFlow.Payments.ProviderReply!
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.ParseValidation(InstalmentFlow.Payments.ProviderCallback! callback) -> InstalmentFlow.Payments.PaymentValidationRequest?
+InstalmentFlow.Payments.Mpesa.MpesaAdapter.Reply(InstalmentFlow.Payments.ValidationDecision decision) -> InstalmentFlow.Payments.ProviderReply!
+const InstalmentFlow.Payments.Mpesa.MpesaAdapter.TransactionStatusTimeout = "transaction-status-timeout" -> string!

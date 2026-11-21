@@ -350,3 +350,50 @@ public interface IPayloadProtector
     /// <summary>Restores a protected payload.</summary>
     byte[] Unprotect(ReadOnlySpan<byte> protectedPayload);
 }
+
+/// <summary>An HTTP answer to a provider.</summary>
+/// <param name="StatusCode">The HTTP status.</param>
+/// <param name="ContentType">The body's media type.</param>
+/// <param name="Body">The body.</param>
+public sealed record ProviderReply(int StatusCode, string ContentType, ReadOnlyMemory<byte> Body)
+{
+    /// <summary>A JSON reply.</summary>
+    public static ProviderReply Json(int statusCode, string json) => new(statusCode, "application/json", System.Text.Encoding.UTF8.GetBytes(json));
+}
+
+/// <summary>How a provider expects its callbacks to be acknowledged. Adapters without it get a plain JSON 200 or 400.</summary>
+public interface IProviderReplies
+{
+    /// <summary>The answer to a callback once the inbox has stored (or rejected) it.</summary>
+    ProviderReply Acknowledge(ProviderCallback callback, InboxReceipt receipt);
+}
+
+/// <summary>A provider's request to approve a payment before it completes (for example M-Pesa C2B validation).</summary>
+/// <param name="ProviderAccount">The merchant account paid.</param>
+/// <param name="TransactionId">The receipt the payment will have.</param>
+/// <param name="Amount">The amount.</param>
+/// <param name="AccountReference">The reference the payer entered.</param>
+public sealed record PaymentValidationRequest(string ProviderAccount, string TransactionId, Money Amount, string? AccountReference);
+
+/// <summary>The answer to a validation request.</summary>
+public enum ValidationDecision
+{
+    /// <summary>Let the payment through (the default: a recorded unidentified payment beats refused money, ADR-002).</summary>
+    Accept = 0,
+
+    /// <summary>Refuse it: the reference identifies nothing payable.</summary>
+    RejectUnknownReference = 1,
+
+    /// <summary>Refuse it: the amount is not acceptable.</summary>
+    RejectAmount = 2,
+}
+
+/// <summary>Synchronous payment validation, for providers that ask before completing a payment.</summary>
+public interface IPaymentValidation
+{
+    /// <summary>Reads a validation request, or null if it is malformed.</summary>
+    PaymentValidationRequest? ParseValidation(ProviderCallback callback);
+
+    /// <summary>The provider's form of a decision.</summary>
+    ProviderReply Reply(ValidationDecision decision);
+}

@@ -95,6 +95,30 @@ public sealed class OutboxDispatcher : IAsyncDisposable
     /// <inheritdoc />
     public ValueTask DisposeAsync() => _dataSource.DisposeAsync();
 
+    /// <summary>How long the oldest undelivered event has waited, or null when nothing is waiting; for health checks.</summary>
+    public async Task<TimeSpan?> GetLagAsync(CancellationToken cancellationToken = default)
+    {
+        var connection = await _dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var connectionScope = connection.ConfigureAwait(false);
+        var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await using var transactionScope = transaction.ConfigureAwait(false);
+        await DispatcherModeAsync(connection, transaction, cancellationToken).ConfigureAwait(false);
+        var command = new NpgsqlCommand($"select min(occurred_at) from {S}.outbox where status = 0", connection, transaction);
+        await using var commandScope = command.ConfigureAwait(false);
+        DateTimeOffset? oldest = null;
+        var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        await using (reader.ConfigureAwait(false))
+        {
+            if (await reader.ReadAsync(cancellationToken).ConfigureAwait(false) && !await reader.IsDBNullAsync(0, cancellationToken).ConfigureAwait(false))
+            {
+                oldest = await reader.GetFieldValueAsync<DateTimeOffset>(0, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return oldest is { } at ? _time.GetUtcNow() - at : null;
+    }
+
     private async Task<List<Claimed>> ClaimAsync(CancellationToken ct)
     {
         var now = _time.GetUtcNow();

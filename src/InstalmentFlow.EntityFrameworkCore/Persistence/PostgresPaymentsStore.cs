@@ -177,6 +177,25 @@ internal sealed class PostgresPaymentsStore(NpgsqlDataSource dataSource) : IPaym
             .ExecuteUpdateAsync(d => d.SetProperty(x => x.ResolvedAt, at.ToUniversalTime()).SetProperty(x => x.Resolution, resolution), cancellationToken).ConfigureAwait(false) > 0,
             cancellationToken).ConfigureAwait(false);
 
+    public async ValueTask<PaymentsHealth> GetHealthAsync(CancellationToken cancellationToken) =>
+        await RunAsync(null, async db =>
+        {
+            var pending = db.Inbox.Where(e => e.Status == (short)InboxStatus.Pending);
+            var ambiguous = db.IntentChecks.Where(c => c.Status == (short)PaymentIntentStatus.Ambiguous || c.Status == (short)PaymentIntentStatus.Created);
+            var runs = await db.ReconciliationRuns.GroupBy(r => new { r.Provider, r.ProviderAccount })
+                .Select(g => new { g.Key.Provider, g.Key.ProviderAccount, End = g.Max(r => r.WindowEnd), Finished = g.Max(r => r.FinishedAt) })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            return new PaymentsHealth(
+                await pending.CountAsync(cancellationToken).ConfigureAwait(false),
+                await pending.MinAsync(e => (DateTimeOffset?)e.ReceivedAt, cancellationToken).ConfigureAwait(false),
+                await db.Inbox.CountAsync(e => e.Status == (short)InboxStatus.Failed, cancellationToken).ConfigureAwait(false),
+                await db.IntentChecks.CountAsync(cancellationToken).ConfigureAwait(false),
+                await ambiguous.CountAsync(cancellationToken).ConfigureAwait(false),
+                await ambiguous.MinAsync(c => (DateTimeOffset?)c.CreatedAt, cancellationToken).ConfigureAwait(false),
+                [.. runs.OrderBy(r => r.Provider, StringComparer.Ordinal).ThenBy(r => r.ProviderAccount, StringComparer.Ordinal)
+                    .Select(r => new ReconciliationStatus(r.Provider, r.ProviderAccount, r.End, r.Finished))]);
+        }, cancellationToken).ConfigureAwait(false);
+
     // ----- Transactions -----
 
     /// <summary>Runs <paramref name="work"/> in its own transaction; with a tenant, scoped to it like the ledger store.</summary>
@@ -250,7 +269,9 @@ internal sealed class PostgresPaymentsStore(NpgsqlDataSource dataSource) : IPaym
         r.UpdatedAt, r.ExpiresAt, r.NextCheckAt, r.StatusChecks, r.Version);
 
     private static IntentCheckRow? Check(IntentRecord i) =>
-        !i.IsTerminal && i.NextCheckAt is { } next ? new IntentCheckRow { IntentId = i.Id, TenantId = i.Tenant.Value, NextCheckAt = next } : null;
+        !i.IsTerminal && i.NextCheckAt is { } next
+            ? new IntentCheckRow { IntentId = i.Id, TenantId = i.Tenant.Value, NextCheckAt = next, Status = (short)i.Status, CreatedAt = i.CreatedAt }
+            : null;
 
     private static DiscrepancyRecord ToDiscrepancy(DiscrepancyRow d) => new(
         TenantId.FromString(d.TenantId), d.DiscrepancyId, d.RunId, d.Provider, d.ProviderAccount, (DiscrepancyKind)d.Kind, d.TransactionId,

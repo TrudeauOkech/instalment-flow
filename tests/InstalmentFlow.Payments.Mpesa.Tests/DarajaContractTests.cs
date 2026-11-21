@@ -30,7 +30,7 @@ public sealed class DarajaContractTests
         Assert.Equal(Convert.ToBase64String(Encoding.UTF8.GetBytes("600123" + TestCredentials.Passkey + "20260302090000")), Field("Password"));
         Assert.Equal(("CustomerPayBillOnline", "400", "254708374149", "254708374149", "600123"),
             (Field("TransactionType"), Field("Amount"), Field("PartyA"), Field("PhoneNumber"), Field("PartyB")));
-        Assert.Equal(("LN-1", "https://pay.example.test/hooks/s3cret/stk/600123", "Loan repaymen"), (Field("AccountReference"), Field("CallBackURL"), Field("TransactionDesc")));
+        Assert.Equal(("LN-1", "https://pay.example.test/hooks/s3cret/mpesa/stk/600123", "Loan repaymen"), (Field("AccountReference"), Field("CallBackURL"), Field("TransactionDesc")));
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public sealed class DarajaContractTests
         using var key = h.Credentials.Certificate.GetRSAPrivateKey()!;
         var decrypted = Encoding.UTF8.GetString(key.Decrypt(Convert.FromBase64String(sent.GetProperty("SecurityCredential").GetString()!), RSAEncryptionPadding.Pkcs1));
         Assert.Equal(TestCredentials.InitiatorPassword, decrypted);
-        Assert.Equal(("TransactionStatusQuery", "RKTQDM7W6S", "https://pay.example.test/hooks/s3cret/status/600123"),
+        Assert.Equal(("TransactionStatusQuery", "RKTQDM7W6S", "https://pay.example.test/hooks/s3cret/mpesa/transaction-status/600123"),
             (sent.GetProperty("CommandID").GetString(), sent.GetProperty("TransactionID").GetString(), sent.GetProperty("ResultURL").GetString()));
     }
 

@@ -1,10 +1,14 @@
 # InstalmentFlow
 
+[![CI](https://github.com/TrudeauOkech/instalment-flow/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/TrudeauOkech/instalment-flow/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/vpre/InstalmentFlow?label=NuGet)](https://www.nuget.org/packages/InstalmentFlow)
+[![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue)](LICENSE)
+
 **An open-source, multi-tenant .NET library for managing flexible loan repayments, partial payments, instalment schedules and payment allocation.**
 
 Customers in markets such as Kenya often pay small, irregular amounts through mobile money: KES 100 on Monday, 150 on Tuesday, 700 on Friday. InstalmentFlow records every confirmed payment exactly once and identifies which loan it belongs to. It allocates the money according to the lender's rules and keeps an immutable, double-entry history that can explain every shilling, including after reversals.
 
-> **Status: 0.2 preview.** The core engine works end to end: identification, allocation, reversals, charges, waivers, refunds, cancellation, as-of history and verification, in memory or on PostgreSQL with row-level security, append-only enforcement and a transactional outbox. The payments package (inbox, intents, routing, reconciliation and a simulated provider) and the M-Pesa adapter are built and ship with 0.3, once the adapter is verified against the Daraja sandbox; Airtel Money (0.4) comes later; the API may still change before 1.0. See the [roadmap](docs/planning/06-implementation-roadmap.md).
+> **Status: 0.2 preview.** The core engine works end to end: identification, allocation, reversals, charges, waivers, refunds, cancellation, as-of history and verification, in memory or on PostgreSQL with row-level security, append-only enforcement and a transactional outbox. The payments package (inbox, intents, routing, reconciliation and a simulated provider), the M-Pesa adapter and the ASP.NET Core integration are built and ship with 0.3, once the adapter is verified against the Daraja sandbox; Airtel Money (0.4) comes later; the API may still change before 1.0. See the [roadmap](docs/planning/06-implementation-roadmap.md).
 
 ## Quickstart
 
@@ -64,6 +68,7 @@ dotnet build -c Release
 dotnet test -c Release                                           # needs Docker for the PostgreSQL store's tests
 IF_STORE=postgres dotnet test -c Release --project tests/InstalmentFlow.Tests   # the whole core suite on PostgreSQL
 IF_STORE=postgres dotnet test -c Release --project tests/InstalmentFlow.Payments.Tests   # the payments suite on PostgreSQL
+dotnet run --project samples/05-WebHost -- --serve     # an ASP.NET Core host with the simulator on port 5080
 ```
 
 ## Contributing

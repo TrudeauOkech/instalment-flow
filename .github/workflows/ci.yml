@@ -50,6 +50,7 @@ jobs:
             dotnet test --no-build -c Release --project tests/InstalmentFlow.Tests
             dotnet test --no-build -c Release --project tests/InstalmentFlow.Payments.Tests
             dotnet test --no-build -c Release --project tests/InstalmentFlow.Payments.Mpesa.Tests
+            dotnet test --no-build -c Release --project tests/InstalmentFlow.AspNetCore.Tests
             dotnet test --no-build -c Release --project tests/InstalmentFlow.ArchitectureTests
           fi
         env:
@@ -100,9 +101,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: nuget            # requires approval; holds the NUGET_USER secret (nuget.org profile name)
     permissions:
-      contents: read
+      contents: write             # create the GitHub Release
       id-token: write             # Trusted Publishing: exchange the workflow's OIDC token for a short-lived key
     steps:
+      - uses: actions/checkout@v7   # for CHANGELOG.md
+
       - uses: actions/download-artifact@v7
         with:
           name: packages
@@ -122,3 +125,14 @@ jobs:
         run: dotnet nuget push "artifacts/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
         env:
           NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+
+      - name: GitHub Release
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # The release notes are the tag's CHANGELOG section.
+          awk -v heading="## [$version]" 'index($0, heading) == 1 { found = 1; next } /^## \[/ { if (found) exit } found' CHANGELOG.md > notes.md
+          prerelease=$([[ "$version" == *-* ]] && echo --prerelease || true)
+          gh release create "$GITHUB_REF_NAME" artifacts/*.nupkg --verify-tag --title "$version" --notes-file notes.md $prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -59,7 +59,7 @@ Sources read:
 ## Consequences for the design
 
 - **STK callbacks need their account from the endpoint.** The callback has no shortcode, so the host's endpoint passes
-  it (`ProviderCallback.ProviderAccount`), normally from the callback URL (`…/stk/{shortCode}`), as M10's endpoints will.
+  it (`ProviderCallback.ProviderAccount`), normally from the callback URL. `MapInstalmentFlowCallbacks` routes `…/mpesa/stk/{shortCode}` this way.
 - **A push whose reply was lost cannot be matched to its intent.** STK has no merchant reference, so if the request
   timed out before Safaricom answered, nothing ties the later callback to the intent. The payment is still recorded:
   without an account reference it becomes unidentified funds with an exception (ADR-009), and the intent expires.
@@ -81,9 +81,9 @@ var mpesa = new MpesaAdapter(httpClient, credentials, new MpesaOptions
         new MpesaAccount
         {
             ShortCode = "600123",
-            StkCallbackUrl = new Uri("https://pay.example.com/hooks/k3y/stk/600123"),
-            ResultUrl = new Uri("https://pay.example.com/hooks/k3y/status/600123"),
-            QueueTimeoutUrl = new Uri("https://pay.example.com/hooks/k3y/status-timeout/600123"),
+            StkCallbackUrl = new Uri("https://pay.example.com/hooks/k3y/mpesa/stk/600123"),
+            ResultUrl = new Uri("https://pay.example.com/hooks/k3y/mpesa/transaction-status/600123"),
+            QueueTimeoutUrl = new Uri("https://pay.example.com/hooks/k3y/mpesa/transaction-status-timeout/600123"),
         },
     },
 });
@@ -101,9 +101,18 @@ Callback kinds, passed as `ProviderCallback.Kind`:
 - `c2b-confirmation`
 - `stk` (with `ProviderAccount`)
 - `transaction-status`
+- `transaction-status-timeout` (acknowledged; nothing is recorded)
 
-C2B validation is synchronous and never enters the inbox: parse the request with `MpesaValidation.Parse`, check the
-reference, and answer with `MpesaValidation.Accept()` or `MpesaValidation.Reject(code)` within the deadline.
+C2B validation is synchronous and never enters the inbox. `MapInstalmentFlowCallbacks` answers it at
+`…/mpesa/validate`, within `Callbacks.ValidationBudget` (5 s), accepting unless the tenant opted into
+`RejectUnknownReferences`. Without ASP.NET Core, use `MpesaValidation.Parse` and `MpesaValidation.Accept()` or `Reject(code)`.
+
+Endpoint paths under `MapInstalmentFlowCallbacks("/hooks/{secret}")`:
+- C2B confirmation: `/hooks/{secret}/mpesa/c2b-confirmation`
+- C2B validation: `/hooks/{secret}/mpesa/validate`
+- STK results: `/hooks/{secret}/mpesa/stk/{shortCode}`
+- Transaction Status results: `/hooks/{secret}/mpesa/transaction-status/{shortCode}`
+- Transaction Status time-outs: `/hooks/{secret}/mpesa/transaction-status-timeout/{shortCode}`
 
 ## Before release
 

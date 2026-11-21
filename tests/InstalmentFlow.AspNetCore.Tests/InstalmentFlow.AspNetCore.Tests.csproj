@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\InstalmentFlow\InstalmentFlow.csproj" />
+    <ProjectReference Include="..\..\src\InstalmentFlow.Payments\InstalmentFlow.Payments.csproj" />
+    <ProjectReference Include="..\..\src\InstalmentFlow.Payments.Mpesa\InstalmentFlow.Payments.Mpesa.csproj" />
+    <ProjectReference Include="..\..\src\InstalmentFlow.AspNetCore\InstalmentFlow.AspNetCore.csproj" />
+  </ItemGroup>
+
+</Project>

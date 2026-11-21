@@ -56,6 +56,9 @@ internal interface IPaymentsStore
     ValueTask<IReadOnlyList<DiscrepancyRecord>> ListDiscrepanciesAsync(TenantId tenant, bool openOnly, CancellationToken cancellationToken);
 
     ValueTask<bool> ResolveDiscrepancyAsync(TenantId tenant, Guid discrepancyId, DateTimeOffset at, string resolution, CancellationToken cancellationToken);
+
+    /// <summary>Counts across tenants, from data that holds no tenant details.</summary>
+    ValueTask<PaymentsHealth> GetHealthAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>The payments store for tests and single-process hosts: everything in memory, behind one lock.</summary>
@@ -274,6 +277,22 @@ internal sealed class InMemoryPaymentsStore : IPaymentsStore
         {
             return ValueTask.FromResult<IReadOnlyList<DiscrepancyRecord>>(
                 [.. _discrepancies.Values.Where(d => d.Tenant == tenant && (!openOnly || d.ResolvedAt is null)).OrderBy(d => d.DetectedAt).ThenBy(d => d.Id)]);
+        }
+    }
+
+    public ValueTask<PaymentsHealth> GetHealthAsync(CancellationToken cancellationToken)
+    {
+        lock (_lock)
+        {
+            var pending = _inbox.Values.Where(e => e.Status == InboxStatus.Pending).ToList();
+            var open = _intents.Values.Where(i => !i.IsTerminal).ToList();
+            var ambiguous = open.Where(i => i.Status is PaymentIntentStatus.Ambiguous or PaymentIntentStatus.Created).ToList();
+            return ValueTask.FromResult(new PaymentsHealth(
+                pending.Count, pending.Count == 0 ? null : pending.Min(e => e.ReceivedAt), _inbox.Values.Count(e => e.Status == InboxStatus.Failed),
+                open.Count, ambiguous.Count, ambiguous.Count == 0 ? null : ambiguous.Min(i => i.CreatedAt),
+                [.. _runs.GroupBy(r => (r.Provider, r.ProviderAccount)).Select(g => g.MaxBy(r => r.To)!)
+                    .OrderBy(r => r.Provider, StringComparer.Ordinal).ThenBy(r => r.ProviderAccount, StringComparer.Ordinal)
+                    .Select(r => new ReconciliationStatus(r.Provider, r.ProviderAccount, r.To, r.FinishedAt))]));
         }
     }
 

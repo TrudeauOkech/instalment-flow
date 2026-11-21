@@ -375,7 +375,21 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
 - **Acceptance:** sandbox end-to-end through sample 04 (STK and C2B simulate); contract tests pass on recorded payloads.
 - **Tests:** WireMock.Net contract tests; payload fuzzing (missing fields, wrong types, huge bodies); a token-expiry mid-flight test.
 
-### M10 — ASP.NET Core integration (S)
+### M10 — ASP.NET Core integration (S) — ✅ done 2026-11-21
+
+> **Delivered:** `InstalmentFlow.AspNetCore`. It references only the core and payments packages (ADR-013), so PostgreSQL, M-Pesa and the outbox dispatcher come in through delegates and payments-package interfaces:
+> - **Set-up:** `AddInstalmentFlow` creates the engine and payments at start-up. `IInstalmentFlow` is scoped to the request's tenant through `ITenantContext` (claims or route).
+> - **Callbacks:** `MapInstalmentFlowCallbacks` checks a constant-time path secret, then the IP allowlist, then a body limit, and acknowledges each callback once stored, in the provider's own format.
+> - **Validation:** answered within a 5 s budget, accepting by default; tenants can opt in to refusing unknown references.
+> - **Simulator endpoints:** refused in Production unless the host overrides it.
+> - **Errors and health:** `ProblemDetails` with `errorCode`. Health checks cover inbox backlog and failures, ambiguous intents, reconciliation age and outbox lag; `PaymentsHealth` comes from the store's cross-tenant counts.
+> - **Workers:** background workers, including host-supplied work.
+> - **Sample 05:** a web host that runs against itself.
+>
+> **Acceptance:** 20 tests on a real ASP.NET Core test server (`TestServer`, the engine behind `WebApplicationFactory`) cover each endpoint. They include 25 concurrent duplicate posts, which are all acknowledged and stored once. They also cover: a wrong secret, a forged signature, oversized bodies with and without `Content-Length`, allowed and refused networks (including IPv4-mapped IPv6), M-Pesa acknowledgements, validation defaults, opt-in and the time budget, tenant contexts, `ProblemDetails`, health states, the simulator's Production guard, and workers. Stable over repeated runs.
+>
+> **Not yet:** a DI `MigrateInstalmentFlowAsync` helper. Migrations stay an explicit `InstalmentFlowPostgres.MigrateAsync` call, because the ASP.NET Core package cannot reference the EF package. A sample inside an existing loan system's `DbContext` (with `Enlist`) moves to the documentation milestone.
+
 - **Features:**
   - `MapInstalmentFlowCallbacks`, with tenant resolution from the provider account;
   - `ITenantContext` implementations (claims, route);

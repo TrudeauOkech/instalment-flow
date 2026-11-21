@@ -811,9 +811,17 @@ namespace InstalmentFlow.EntityFrameworkCore.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("intent_id");
 
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
                     b.Property<DateTimeOffset>("NextCheckAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("next_check_at");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
 
                     b.Property<string>("TenantId")
                         .IsRequired()

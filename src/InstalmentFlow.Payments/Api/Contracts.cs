@@ -432,3 +432,27 @@ public sealed class ReconciliationOptions
     /// <summary>What to do about reversals only the statement shows, unless a tenant overrides it.</summary>
     public ReversedAtProviderPolicy ReversedAtProvider { get; set; } = ReversedAtProviderPolicy.RaiseDiscrepancy;
 }
+
+/// <summary>When a provider account was last reconciled.</summary>
+/// <param name="Provider">The provider.</param>
+/// <param name="ProviderAccount">The merchant account.</param>
+/// <param name="ReconciledUpTo">The end of the last run's window.</param>
+/// <param name="FinishedAt">When the last run finished.</param>
+public sealed record ReconciliationStatus(string Provider, string ProviderAccount, DateTimeOffset ReconciledUpTo, DateTimeOffset FinishedAt);
+
+/// <summary>What needs attention in the payments package, across tenants: the inputs of health checks.</summary>
+/// <param name="PendingInbox">Inbox entries waiting to be processed.</param>
+/// <param name="OldestPendingReceivedAt">When the oldest of them was received.</param>
+/// <param name="FailedInbox">Inbox entries given up on or held for a person.</param>
+/// <param name="OpenIntents">Intents not yet confirmed, failed or expired.</param>
+/// <param name="AmbiguousIntents">Intents whose outcome is not known.</param>
+/// <param name="OldestAmbiguousCreatedAt">When the oldest ambiguous intent was created.</param>
+/// <param name="Reconciliations">The last run per provider account.</param>
+public sealed record PaymentsHealth(
+    int PendingInbox,
+    DateTimeOffset? OldestPendingReceivedAt,
+    int FailedInbox,
+    int OpenIntents,
+    int AmbiguousIntents,
+    DateTimeOffset? OldestAmbiguousCreatedAt,
+    IReadOnlyList<ReconciliationStatus> Reconciliations);

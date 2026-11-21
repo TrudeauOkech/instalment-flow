@@ -25,8 +25,20 @@ All notable changes to this project are documented here. The format follows
   - Sample 04 runs against the Daraja sandbox and records its responses.
 - Payments package: `IProviderCredentialSource` and `ProviderCredentials` (secrets are never shown); `ProviderCallback.ProviderAccount`; `CallbackParseResult.Hold`, which stores events as failed for a person; and `CsvStatementFormat.Status`, `CompletedStatuses` and `LocateHeader`.
 
+- M10 ASP.NET Core integration, `InstalmentFlow.AspNetCore`:
+  - `AddInstalmentFlow`: the engine and payments, created once at start-up (in memory, or PostgreSQL through `UseEngine` and `UsePayments`). Each request gets an `IInstalmentFlow` for its tenant from an `ITenantContext` (`ClaimsTenantContext`, `RouteTenantContext`; `UseTenantContext<T>`); a request with no tenant gets 403.
+  - `MapInstalmentFlowCallbacks("/hooks/{secret}")`: provider callbacks, answered once the inbox has stored them, with the provider's acknowledgement format (`IProviderReplies`). Requests are checked in order: a constant-time path secret (404), a source-IP allowlist per provider (403) and a body limit (413). An optional `{account}` segment covers callbacks that do not name their account (M-Pesa STK).
+  - Payment validation at `/{provider}/validate`, within `ValidationBudget` (5 s). It accepts by default; tenants in `RejectUnknownReferences` refuse references that match no active obligation (`IPaymentValidation`).
+  - `MapInstalmentFlowSimulator`: endpoints to pay, answer pushes, deliver and list, refused in `Production` unless `allowInProduction`.
+  - Engine errors become `ProblemDetails` with an `errorCode`: 404 not found, 409 conflicts and key reuse, 422 rule violations.
+  - Health checks (`AddInstalmentFlowChecks`): inbox backlog and failed entries, ambiguous intents, reconciliation age of the reconciled accounts, and outbox lag (`OutboxDispatcher.GetLagAsync`).
+  - Background workers for inbox processing, intent resolution, reconciliation and host work such as the outbox dispatcher. A failed pass is logged and retried on schedule.
+  - Sample 05, an ASP.NET Core host that runs against itself.
+- Payments package: `InstalmentFlowPayments.GetHealthAsync`, `FindProvider`, `RouteAsync` and `Flows`; `ProviderReply`, `IProviderReplies`, `IPaymentValidation`, `PaymentValidationRequest` and `ValidationDecision`. The M-Pesa adapter implements Daraja's acknowledgements and C2B validation through them.
+
 ### Changed
 - The public API of 0.2.0-preview.1 is recorded in `PublicAPI.Shipped.txt`.
+- The unreleased `PaymentsSchema` migration now also records each open intent's state and age in `intent_checks`, for health checks.
 
 ## [0.2.0-preview.1] - 2026-11-21
 

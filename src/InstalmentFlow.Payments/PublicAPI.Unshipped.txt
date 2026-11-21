@@ -738,3 +738,93 @@ static InstalmentFlow.Payments.StatusQueryResult.operator !=(InstalmentFlow.Paym
 static InstalmentFlow.Payments.StatusQueryResult.operator ==(InstalmentFlow.Payments.StatusQueryResult? left, InstalmentFlow.Payments.StatusQueryResult? right) -> bool
 InstalmentFlow.Payments.CsvStatementFormat.LocateHeader.get -> bool
 InstalmentFlow.Payments.CsvStatementFormat.LocateHeader.init -> void
+InstalmentFlow.Payments.IPaymentValidation
+InstalmentFlow.Payments.IPaymentValidation.ParseValidation(InstalmentFlow.Payments.ProviderCallback! callback) -> InstalmentFlow.Payments.PaymentValidationRequest?
+InstalmentFlow.Payments.IPaymentValidation.Reply(InstalmentFlow.Payments.ValidationDecision decision) -> InstalmentFlow.Payments.ProviderReply!
+InstalmentFlow.Payments.IProviderReplies
+InstalmentFlow.Payments.IProviderReplies.Acknowledge(InstalmentFlow.Payments.ProviderCallback! callback, InstalmentFlow.Payments.InboxReceipt! receipt) -> InstalmentFlow.Payments.ProviderReply!
+InstalmentFlow.Payments.InstalmentFlowPayments.FindProvider(string! provider) -> InstalmentFlow.Payments.IPaymentProviderAdapter?
+InstalmentFlow.Payments.InstalmentFlowPayments.Flows.get -> InstalmentFlow.InstalmentFlowFactory!
+InstalmentFlow.Payments.InstalmentFlowPayments.GetHealthAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.Payments.PaymentsHealth!>!
+InstalmentFlow.Payments.InstalmentFlowPayments.RouteAsync(InstalmentFlow.Payments.NormalisedPaymentEvent! paymentEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.TenantId?>!
+InstalmentFlow.Payments.PaymentValidationRequest
+InstalmentFlow.Payments.PaymentValidationRequest.<Clone>$() -> InstalmentFlow.Payments.PaymentValidationRequest!
+InstalmentFlow.Payments.PaymentValidationRequest.AccountReference.get -> string?
+InstalmentFlow.Payments.PaymentValidationRequest.AccountReference.init -> void
+InstalmentFlow.Payments.PaymentValidationRequest.Amount.get -> InstalmentFlow.Money!
+InstalmentFlow.Payments.PaymentValidationRequest.Amount.init -> void
+InstalmentFlow.Payments.PaymentValidationRequest.Deconstruct(out string! ProviderAccount, out string! TransactionId, out InstalmentFlow.Money! Amount, out string? AccountReference) -> void
+InstalmentFlow.Payments.PaymentValidationRequest.Equals(InstalmentFlow.Payments.PaymentValidationRequest? other) -> bool
+InstalmentFlow.Payments.PaymentValidationRequest.PaymentValidationRequest(string! ProviderAccount, string! TransactionId, InstalmentFlow.Money! Amount, string? AccountReference) -> void
+InstalmentFlow.Payments.PaymentValidationRequest.ProviderAccount.get -> string!
+InstalmentFlow.Payments.PaymentValidationRequest.ProviderAccount.init -> void
+InstalmentFlow.Payments.PaymentValidationRequest.TransactionId.get -> string!
+InstalmentFlow.Payments.PaymentValidationRequest.TransactionId.init -> void
+InstalmentFlow.Payments.PaymentsHealth
+InstalmentFlow.Payments.PaymentsHealth.<Clone>$() -> InstalmentFlow.Payments.PaymentsHealth!
+InstalmentFlow.Payments.PaymentsHealth.AmbiguousIntents.get -> int
+InstalmentFlow.Payments.PaymentsHealth.AmbiguousIntents.init -> void
+InstalmentFlow.Payments.PaymentsHealth.Deconstruct(out int PendingInbox, out System.DateTimeOffset? OldestPendingReceivedAt, out int FailedInbox, out int OpenIntents, out int AmbiguousIntents, out System.DateTimeOffset? OldestAmbiguousCreatedAt, out System.Collections.Generic.IReadOnlyList<InstalmentFlow.Payments.ReconciliationStatus!>! Reconciliations) -> void
+InstalmentFlow.Payments.PaymentsHealth.Equals(InstalmentFlow.Payments.PaymentsHealth? other) -> bool
+InstalmentFlow.Payments.PaymentsHealth.FailedInbox.get -> int
+InstalmentFlow.Payments.PaymentsHealth.FailedInbox.init -> void
+InstalmentFlow.Payments.PaymentsHealth.OldestAmbiguousCreatedAt.get -> System.DateTimeOffset?
+InstalmentFlow.Payments.PaymentsHealth.OldestAmbiguousCreatedAt.init -> void
+InstalmentFlow.Payments.PaymentsHealth.OldestPendingReceivedAt.get -> System.DateTimeOffset?
+InstalmentFlow.Payments.PaymentsHealth.OldestPendingReceivedAt.init -> void
+InstalmentFlow.Payments.PaymentsHealth.OpenIntents.get -> int
+InstalmentFlow.Payments.PaymentsHealth.OpenIntents.init -> void
+InstalmentFlow.Payments.PaymentsHealth.PaymentsHealth(int PendingInbox, System.DateTimeOffset? OldestPendingReceivedAt, int FailedInbox, int OpenIntents, int AmbiguousIntents, System.DateTimeOffset? OldestAmbiguousCreatedAt, System.Collections.Generic.IReadOnlyList<InstalmentFlow.Payments.ReconciliationStatus!>! Reconciliations) -> void
+InstalmentFlow.Payments.PaymentsHealth.PendingInbox.get -> int
+InstalmentFlow.Payments.PaymentsHealth.PendingInbox.init -> void
+InstalmentFlow.Payments.PaymentsHealth.Reconciliations.get -> System.Collections.Generic.IReadOnlyList<InstalmentFlow.Payments.ReconciliationStatus!>!
+InstalmentFlow.Payments.PaymentsHealth.Reconciliations.init -> void
+InstalmentFlow.Payments.ProviderReply
+InstalmentFlow.Payments.ProviderReply.<Clone>$() -> InstalmentFlow.Payments.ProviderReply!
+InstalmentFlow.Payments.ProviderReply.Body.get -> System.ReadOnlyMemory<byte>
+InstalmentFlow.Payments.ProviderReply.Body.init -> void
+InstalmentFlow.Payments.ProviderReply.ContentType.get -> string!
+InstalmentFlow.Payments.ProviderReply.ContentType.init -> void
+InstalmentFlow.Payments.ProviderReply.Deconstruct(out int StatusCode, out string! ContentType, out System.ReadOnlyMemory<byte> Body) -> void
+InstalmentFlow.Payments.ProviderReply.Equals(InstalmentFlow.Payments.ProviderReply? other) -> bool
+InstalmentFlow.Payments.ProviderReply.ProviderReply(int StatusCode, string! ContentType, System.ReadOnlyMemory<byte> Body) -> void
+InstalmentFlow.Payments.ProviderReply.StatusCode.get -> int
+InstalmentFlow.Payments.ProviderReply.StatusCode.init -> void
+InstalmentFlow.Payments.ReconciliationStatus
+InstalmentFlow.Payments.ReconciliationStatus.<Clone>$() -> InstalmentFlow.Payments.ReconciliationStatus!
+InstalmentFlow.Payments.ReconciliationStatus.Deconstruct(out string! Provider, out string! ProviderAccount, out System.DateTimeOffset ReconciledUpTo, out System.DateTimeOffset FinishedAt) -> void
+InstalmentFlow.Payments.ReconciliationStatus.Equals(InstalmentFlow.Payments.ReconciliationStatus? other) -> bool
+InstalmentFlow.Payments.ReconciliationStatus.FinishedAt.get -> System.DateTimeOffset
+InstalmentFlow.Payments.ReconciliationStatus.FinishedAt.init -> void
+InstalmentFlow.Payments.ReconciliationStatus.Provider.get -> string!
+InstalmentFlow.Payments.ReconciliationStatus.Provider.init -> void
+InstalmentFlow.Payments.ReconciliationStatus.ProviderAccount.get -> string!
+InstalmentFlow.Payments.ReconciliationStatus.ProviderAccount.init -> void
+InstalmentFlow.Payments.ReconciliationStatus.ReconciledUpTo.get -> System.DateTimeOffset
+InstalmentFlow.Payments.ReconciliationStatus.ReconciledUpTo.init -> void
+InstalmentFlow.Payments.ReconciliationStatus.ReconciliationStatus(string! Provider, string! ProviderAccount, System.DateTimeOffset ReconciledUpTo, System.DateTimeOffset FinishedAt) -> void
+InstalmentFlow.Payments.ValidationDecision
+InstalmentFlow.Payments.ValidationDecision.Accept = 0 -> InstalmentFlow.Payments.ValidationDecision
+InstalmentFlow.Payments.ValidationDecision.RejectAmount = 2 -> InstalmentFlow.Payments.ValidationDecision
+InstalmentFlow.Payments.ValidationDecision.RejectUnknownReference = 1 -> InstalmentFlow.Payments.ValidationDecision
+override InstalmentFlow.Payments.PaymentValidationRequest.Equals(object? obj) -> bool
+override InstalmentFlow.Payments.PaymentValidationRequest.GetHashCode() -> int
+override InstalmentFlow.Payments.PaymentValidationRequest.ToString() -> string!
+override InstalmentFlow.Payments.PaymentsHealth.Equals(object? obj) -> bool
+override InstalmentFlow.Payments.PaymentsHealth.GetHashCode() -> int
+override InstalmentFlow.Payments.PaymentsHealth.ToString() -> string!
+override InstalmentFlow.Payments.ProviderReply.Equals(object? obj) -> bool
+override InstalmentFlow.Payments.ProviderReply.GetHashCode() -> int
+override InstalmentFlow.Payments.ProviderReply.ToString() -> string!
+override InstalmentFlow.Payments.ReconciliationStatus.Equals(object? obj) -> bool
+override InstalmentFlow.Payments.ReconciliationStatus.GetHashCode() -> int
+override InstalmentFlow.Payments.ReconciliationStatus.ToString() -> string!
+static InstalmentFlow.Payments.PaymentValidationRequest.operator !=(InstalmentFlow.Payments.PaymentValidationRequest? left, InstalmentFlow.Payments.PaymentValidationRequest? right) -> bool
+static InstalmentFlow.Payments.PaymentValidationRequest.operator ==(InstalmentFlow.Payments.PaymentValidationRequest? left, InstalmentFlow.Payments.PaymentValidationRequest? right) -> bool
+static InstalmentFlow.Payments.PaymentsHealth.operator !=(InstalmentFlow.Payments.PaymentsHealth? left, InstalmentFlow.Payments.PaymentsHealth? right) -> bool
+static InstalmentFlow.Payments.PaymentsHealth.operator ==(InstalmentFlow.Payments.PaymentsHealth? left, InstalmentFlow.Payments.PaymentsHealth? right) -> bool
+static InstalmentFlow.Payments.ProviderReply.Json(int statusCode, string! json) -> InstalmentFlow.Payments.ProviderReply!
+static InstalmentFlow.Payments.ProviderReply.operator !=(InstalmentFlow.Payments.ProviderReply? left, InstalmentFlow.Payments.ProviderReply? right) -> bool
+static InstalmentFlow.Payments.ProviderReply.operator ==(InstalmentFlow.Payments.ProviderReply? left, InstalmentFlow.Payments.ProviderReply? right) -> bool
+static InstalmentFlow.Payments.ReconciliationStatus.operator !=(InstalmentFlow.Payments.ReconciliationStatus? left, InstalmentFlow.Payments.ReconciliationStatus? right) -> bool
+static InstalmentFlow.Payments.ReconciliationStatus.operator ==(InstalmentFlow.Payments.ReconciliationStatus? left, InstalmentFlow.Payments.ReconciliationStatus? right) -> bool

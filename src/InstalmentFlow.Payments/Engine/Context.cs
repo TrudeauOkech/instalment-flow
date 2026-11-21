@@ -86,6 +86,8 @@ internal sealed class ProviderRegistry
         Adapter(provider) as ICollectionInitiator
         ?? throw new RuleViolationException(PaymentsErrorCodes.CapabilityNotSupported, $"Provider '{provider}' does not support merchant-initiated collection.");
 
+    public IPaymentProviderAdapter? Find(string provider) => _adapters.GetValueOrDefault(provider);
+
     public ITransactionStatusQuery? StatusQuery(string provider) => _adapters.GetValueOrDefault(provider) as ITransactionStatusQuery;
 
     public IStatementSource? Statement(string provider) => _adapters.GetValueOrDefault(provider) as IStatementSource;

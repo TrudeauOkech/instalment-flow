@@ -136,9 +136,9 @@ internal sealed class DarajaHarness : IDisposable
         options.Accounts.Add(new MpesaAccount
         {
             ShortCode = ShortCode,
-            StkCallbackUrl = new Uri("https://pay.example.test/hooks/s3cret/stk/600123"),
-            ResultUrl = new Uri("https://pay.example.test/hooks/s3cret/status/600123"),
-            QueueTimeoutUrl = new Uri("https://pay.example.test/hooks/s3cret/status-timeout/600123"),
+            StkCallbackUrl = new Uri("https://pay.example.test/hooks/s3cret/mpesa/stk/600123"),
+            ResultUrl = new Uri("https://pay.example.test/hooks/s3cret/mpesa/transaction-status/600123"),
+            QueueTimeoutUrl = new Uri("https://pay.example.test/hooks/s3cret/mpesa/transaction-status-timeout/600123"),
         });
         configure?.Invoke(options);
         Adapter = new MpesaAdapter(_http, Credentials, options, Clock);

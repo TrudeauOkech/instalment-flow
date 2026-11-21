@@ -34,6 +34,26 @@ public sealed class InstalmentFlowPayments
 
     internal IPaymentsStore Store => _context.Store;
 
+    /// <summary>The adapter registered for <paramref name="provider"/>, or null.</summary>
+    public IPaymentProviderAdapter? FindProvider(string provider) => _context.Settings.Providers.Find(provider);
+
+    /// <summary>Inbox backlog, open intents and the last reconciliation per account, across tenants.</summary>
+    public async Task<PaymentsHealth> GetHealthAsync(CancellationToken cancellationToken = default) =>
+        await _context.Store.GetHealthAsync(cancellationToken).ConfigureAwait(false);
+
+    /// <summary>
+    /// Routes a payment validation preview to its tenant, or null when it cannot be routed. Used by validation
+    /// endpoints, which must not record anything.
+    /// </summary>
+    public async Task<TenantId?> RouteAsync(NormalisedPaymentEvent paymentEvent, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(paymentEvent);
+        return await _context.Router.RouteAsync(paymentEvent, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>The underlying engine.</summary>
+    public InstalmentFlowFactory Flows => _context.Flows;
+
     /// <summary>Payments with their state in memory, for tests and single-process hosts.</summary>
     public static InstalmentFlowPayments CreateInMemory(InstalmentFlowFactory flows, Action<PaymentsBuilder> configure) =>
         Create(flows, new InMemoryPaymentsStore(), configure);

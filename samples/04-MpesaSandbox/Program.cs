@@ -2,8 +2,8 @@
 // a payment intent, checks its status, and simulates a C2B paybill payment. With MPESA_RECORD_DIR set, it saves every
 // Daraja response (tokens redacted) as candidate contract fixtures (docs/integrations/mpesa.md, "Before release").
 //
-// Callbacks need a public HTTPS endpoint, which arrives with InstalmentFlow.AspNetCore (M10); until then, point
-// MPESA_CALLBACK_BASE at any endpoint you can read (a tunnel to a local listener) to capture them.
+// Callbacks need a public HTTPS endpoint: point MPESA_CALLBACK_BASE at a host running MapInstalmentFlowCallbacks
+// (sample 05, through a tunnel) or at any endpoint you can read, to capture them.
 //
 // Without sandbox credentials it explains what to set and exits successfully, so CI can run it.
 using System.Text.RegularExpressions;
@@ -38,9 +38,9 @@ var options = new MpesaOptions { Environment = MpesaEnvironment.Sandbox };
 options.Accounts.Add(new MpesaAccount
 {
     ShortCode = shortCode,
-    StkCallbackUrl = new Uri(callbackBase, $"stk/{shortCode}"),
-    ResultUrl = new Uri(callbackBase, $"status/{shortCode}"),
-    QueueTimeoutUrl = new Uri(callbackBase, $"status-timeout/{shortCode}"),
+    StkCallbackUrl = new Uri(callbackBase, $"mpesa/stk/{shortCode}"),
+    ResultUrl = new Uri(callbackBase, $"mpesa/transaction-status/{shortCode}"),
+    QueueTimeoutUrl = new Uri(callbackBase, $"mpesa/transaction-status-timeout/{shortCode}"),
 });
 using var http = new HttpClient(recordDir is null ? new HttpClientHandler() : new Recorder(recordDir, new HttpClientHandler()));
 var mpesa = new MpesaAdapter(http, new EnvironmentCredentials(key, secret, Environment.GetEnvironmentVariable("MPESA_PASSKEY") ?? string.Empty), options);
@@ -86,7 +86,7 @@ if (intent.CorrelationId is { } checkout)
 
 try
 {
-    Console.WriteLine($"C2B register: {await mpesa.RegisterC2BUrlsAsync(shortCode, new Uri(callbackBase, "c2b/confirm"), new Uri(callbackBase, "c2b/validate"))}");
+    Console.WriteLine($"C2B register: {await mpesa.RegisterC2BUrlsAsync(shortCode, new Uri(callbackBase, "mpesa/c2b-confirmation"), new Uri(callbackBase, "mpesa/validate"))}");
     Console.WriteLine($"C2B simulate: {await mpesa.SimulateC2BAsync(shortCode, Money.Kes(1m), phone, "LN1")}");
 }
 catch (MpesaApiException ex)

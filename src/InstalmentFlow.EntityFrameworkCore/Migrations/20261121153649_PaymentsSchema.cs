@@ -18,7 +18,9 @@ namespace InstalmentFlow.EntityFrameworkCore.Migrations
                 {
                     intent_id = table.Column<Guid>(type: "uuid", nullable: false),
                     tenant_id = table.Column<string>(type: "text", nullable: false),
-                    next_check_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                    next_check_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    status = table.Column<short>(type: "smallint", nullable: false),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {

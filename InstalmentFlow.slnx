@@ -13,9 +13,11 @@
     <Project Path="samples/02-PaygPhoneFinancing/02-PaygPhoneFinancing.csproj" />
     <Project Path="samples/03-MultipleLoans/03-MultipleLoans.csproj" />
     <Project Path="samples/04-MpesaSandbox/04-MpesaSandbox.csproj" />
+    <Project Path="samples/05-WebHost/05-WebHost.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/InstalmentFlow.ArchitectureTests/InstalmentFlow.ArchitectureTests.csproj" />
+    <Project Path="tests/InstalmentFlow.AspNetCore.Tests/InstalmentFlow.AspNetCore.Tests.csproj" />
     <Project Path="tests/InstalmentFlow.EntityFrameworkCore.Tests/InstalmentFlow.EntityFrameworkCore.Tests.csproj" />
     <Project Path="tests/InstalmentFlow.Payments.Mpesa.Tests/InstalmentFlow.Payments.Mpesa.Tests.csproj" />
     <Project Path="tests/InstalmentFlow.Payments.Tests/InstalmentFlow.Payments.Tests.csproj" />
