@@ -6,7 +6,7 @@ namespace InstalmentFlow;
 
 /// <summary>
 /// Entry point. <see cref="CreateInMemory"/> gives a fully working engine with no infrastructure, for tests,
-/// samples and prototypes. Persistent stores arrive with <c>InstalmentFlow.EntityFrameworkCore</c> (milestone M7).
+/// samples and prototypes. <c>InstalmentFlow.EntityFrameworkCore</c> creates one over PostgreSQL.
 /// </summary>
 public sealed class InstalmentFlowFactory : IInstalmentFlowFactory
 {
@@ -25,6 +25,9 @@ public sealed class InstalmentFlowFactory : IInstalmentFlowFactory
     /// <summary>The in-memory store, for invariant verification in tests.</summary>
     internal InMemoryStore? InMemoryStore { get; }
 
+    /// <summary>The ledger store, whichever kind it is.</summary>
+    internal ILedgerStore LedgerStore => _services.LedgerStore;
+
     /// <summary>Creates an engine backed by an in-memory store.</summary>
     /// <example>
     /// <code>
@@ -38,20 +41,61 @@ public sealed class InstalmentFlowFactory : IInstalmentFlowFactory
         configure?.Invoke(builder);
 
         var store = new InMemoryStore();
-        var services = new EngineServices(store, store, builder.TimeProvider, builder.Calendars, builder.ReferenceResolver, builder.MaxAttempts, builder.Strategies);
-        foreach (var tenant in builder.Tenants)
+        var services = Services(builder, store, store);
+        foreach (var record in TenantRecords(builder, services))
         {
-            TenantAdmin.ValidateTimeZone(tenant.TimeZone);
-            var record = new TenantRecord(
-                tenant.TenantId,
-                tenant.BaseCurrency,
-                tenant.TimeZone,
-                [new TenantPolicyVersion(1, tenant.Policy, builder.TimeProvider.GetUtcNow(), "configuration")]);
-            services.ValidatePolicy(tenant.Policy);
             store.Create(record);
         }
 
         return new InstalmentFlowFactory(services, store);
+    }
+
+    /// <summary>
+    /// Creates an engine over persistent stores, used by store packages such as <c>InstalmentFlow.EntityFrameworkCore</c>.
+    /// Tenants added on the builder are created if they do not exist yet; existing ones are left as they are.
+    /// </summary>
+    internal static async Task<InstalmentFlowFactory> CreateAsync(
+        Action<InstalmentFlowBuilder>? configure,
+        ITenantStore tenants,
+        ILedgerStore ledger,
+        CancellationToken cancellationToken)
+    {
+        var builder = new InstalmentFlowBuilder();
+        configure?.Invoke(builder);
+        var services = Services(builder, tenants, ledger);
+        foreach (var record in TenantRecords(builder, services))
+        {
+            if (await tenants.GetAsync(record.Id, cancellationToken).ConfigureAwait(false) is null)
+            {
+                try
+                {
+                    await tenants.CreateAsync(record, cancellationToken).ConfigureAwait(false);
+                }
+                catch (RuleViolationException ex) when (ex.ErrorCode == ErrorCodes.DuplicateTenant)
+                {
+                    // Another process created it first.
+                }
+            }
+        }
+
+        return new InstalmentFlowFactory(services, null);
+    }
+
+    private static EngineServices Services(InstalmentFlowBuilder builder, ITenantStore tenants, ILedgerStore ledger) =>
+        new(tenants, ledger, builder.TimeProvider, builder.Calendars, builder.ReferenceResolver, builder.MaxAttempts, builder.Strategies);
+
+    private static IEnumerable<TenantRecord> TenantRecords(InstalmentFlowBuilder builder, EngineServices services)
+    {
+        foreach (var tenant in builder.Tenants)
+        {
+            TenantAdmin.ValidateTimeZone(tenant.TimeZone);
+            services.ValidatePolicy(tenant.Policy);
+            yield return new TenantRecord(
+                tenant.TenantId,
+                tenant.BaseCurrency,
+                tenant.TimeZone,
+                [new TenantPolicyVersion(1, tenant.Policy, builder.TimeProvider.GetUtcNow(), "configuration")]);
+        }
     }
 
     /// <inheritdoc />

@@ -355,7 +355,7 @@ public sealed class ReversalFlowTests
             var later = Run(instalments, before, payment, after, reallocate);
             var never = Run(instalments, before, null, after, reallocate);
             Assert.Equal(never.Instalments.Sum() - never.Unapplied, later.Instalments.Sum() - later.Unapplied);
-        }, iter: 150);
+        }, iter: TestEngine.Iterations(150));
     }
 
     private static (decimal[] Instalments, decimal Unapplied) Run(int[] instalments, int[] before, int? payment, int[] after, bool reallocate)

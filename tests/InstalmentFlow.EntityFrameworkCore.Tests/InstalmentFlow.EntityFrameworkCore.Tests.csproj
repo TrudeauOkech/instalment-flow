@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.PostgreSql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\InstalmentFlow\InstalmentFlow.csproj" />
+    <ProjectReference Include="..\..\src\InstalmentFlow.EntityFrameworkCore\InstalmentFlow.EntityFrameworkCore.csproj" />
+  </ItemGroup>
+
+</Project>

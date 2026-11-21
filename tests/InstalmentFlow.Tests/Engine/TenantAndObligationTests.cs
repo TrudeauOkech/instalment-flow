@@ -12,7 +12,7 @@ public sealed class TenantAndObligationTests
 
     public TenantAndObligationTests()
     {
-        _factory = InstalmentFlowFactory.CreateInMemory(b => b
+        _factory = TestEngine.Create(b => b
             .UseTimeProvider(_time)
             .AddTenant("acme-ke", Currency.KES, "Africa/Nairobi", p => p with
             {

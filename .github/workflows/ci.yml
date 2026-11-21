@@ -41,8 +41,23 @@ jobs:
       - run: dotnet build --no-restore -c Release
 
       - name: Test
-        run: dotnet test --no-build -c Release
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            dotnet test --no-build -c Release
+          else
+            # Windows runners cannot run Linux containers: the PostgreSQL store's tests run on the Linux legs.
+            dotnet test --no-build -c Release --project tests/InstalmentFlow.Tests
+            dotnet test --no-build -c Release --project tests/InstalmentFlow.ArchitectureTests
+          fi
         env:
+          DOTNET_ROLL_FORWARD: ${{ matrix.runtime == '11.0' && 'LatestMajor' || 'Minor' }}
+
+      - name: Core suite against PostgreSQL
+        if: matrix.os == 'ubuntu-latest'
+        run: dotnet test --no-build -c Release --project tests/InstalmentFlow.Tests
+        env:
+          IF_STORE: postgres
           DOTNET_ROLL_FORWARD: ${{ matrix.runtime == '11.0' && 'LatestMajor' || 'Minor' }}
 
       - name: Run samples

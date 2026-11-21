@@ -153,6 +153,19 @@ internal interface ILedgerStore
     /// <summary>Everything stored for the tenant, for verification.</summary>
     ValueTask<LedgerSnapshot> SnapshotAsync(TenantId tenantId, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Checks the verifiable invariants (doc 02 §7) for a tenant. A database store may check them in SQL instead of
+    /// loading everything.
+    /// </summary>
+    ValueTask<VerificationResult> VerifyAsync(TenantId tenantId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Starts the scope of one command attempt. A database store runs every read and the commit of the attempt in
+    /// one transaction, and can lock the account (pessimistic mode); disposing the scope without a commit rolls it
+    /// back. Stores without transactions return <see langword="null"/>.
+    /// </summary>
+    IAsyncDisposable? EnterCommandScope(TenantId tenantId) => null;
+
     /// <summary>Applies a commit atomically.</summary>
     /// <exception cref="ConcurrencyConflictException">An aggregate changed since it was loaded.</exception>
     /// <exception cref="IdempotencyKeyTakenException">The idempotency key was committed concurrently.</exception>
@@ -161,6 +174,9 @@ internal interface ILedgerStore
     /// <exception cref="RuleViolationException">A uniqueness or state rule would be broken.</exception>
     ValueTask CommitAsync(Commit commit, CancellationToken cancellationToken);
 }
+
+/// <summary>The outcome of verifying a tenant: violation messages (each starting with its invariant) and what was checked.</summary>
+internal sealed record VerificationResult(IReadOnlyList<string> Violations, int JournalTransactions, int Payments, int Accounts);
 
 /// <summary>A journal transaction and its position in the tenant's journal (1 for the first).</summary>
 internal sealed record PositionedTransaction(long Position, JournalTransaction Transaction);
@@ -356,6 +372,13 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
     }
 
     public ValueTask<LedgerSnapshot> SnapshotAsync(TenantId tenantId, CancellationToken cancellationToken) => ValueTask.FromResult(Snapshot(tenantId));
+
+    public ValueTask<VerificationResult> VerifyAsync(TenantId tenantId, CancellationToken cancellationToken)
+    {
+        var snapshot = Snapshot(tenantId);
+        return ValueTask.FromResult(new VerificationResult(
+            Verification.LedgerVerifier.Verify(snapshot), snapshot.Journal.Length, snapshot.Payments.Length, snapshot.Accounts.Length));
+    }
 
     public LedgerSnapshot Snapshot(TenantId tenantId)
     {

@@ -4,7 +4,7 @@
 
 Customers in markets such as Kenya often pay small, irregular amounts through mobile money: KES 100 on Monday, 150 on Tuesday, 700 on Friday. InstalmentFlow records every confirmed payment exactly once and identifies which loan it belongs to. It allocates the money according to the lender's rules and keeps an immutable, double-entry history that can explain every shilling, including after reversals.
 
-> **Status: 0.1 preview.** The core engine works end to end with the in-memory store: identification, allocation, reversals, charges, waivers, refunds, cancellation, as-of history and verification. PostgreSQL (0.2) and the M-Pesa and Airtel Money adapters (0.3, 0.4) come next; the API may still change before 1.0. See the [roadmap](docs/planning/06-implementation-roadmap.md).
+> **Status: 0.2 preview.** The core engine works end to end: identification, allocation, reversals, charges, waivers, refunds, cancellation, as-of history and verification, in memory or on PostgreSQL with row-level security, append-only enforcement and a transactional outbox. The M-Pesa and Airtel Money adapters (0.3, 0.4) come next; the API may still change before 1.0. See the [roadmap](docs/planning/06-implementation-roadmap.md).
 
 ## Quickstart
 
@@ -48,7 +48,7 @@ It is not a complete loan management system, a payment gateway, an accounting pl
 | Package | Purpose |
 |---|---|
 | `InstalmentFlow` | Core engine and in-memory store. Zero third-party dependencies. (0.1 preview) |
-| `InstalmentFlow.EntityFrameworkCore` | PostgreSQL persistence, row-level security, transactional outbox |
+| `InstalmentFlow.EntityFrameworkCore` | PostgreSQL persistence, row-level security, transactional outbox (0.2 preview) |
 | `InstalmentFlow.Payments` | Provider SPI, inbox, payment intents, reconciliation, simulator |
 | `InstalmentFlow.Payments.Mpesa` | Safaricom M-Pesa (Daraja) adapter |
 | `InstalmentFlow.Payments.AirtelMoney` | Airtel Money adapter |
@@ -61,7 +61,8 @@ You need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 ```bash
 dotnet build -c Release
-dotnet test -c Release
+dotnet test -c Release                                           # needs Docker for the PostgreSQL store's tests
+IF_STORE=postgres dotnet test -c Release --project tests/InstalmentFlow.Tests   # the whole core suite on PostgreSQL
 ```
 
 ## Contributing

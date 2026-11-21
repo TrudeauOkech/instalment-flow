@@ -216,7 +216,7 @@ public sealed class AllocationFlowTests
     public async Task Unknown_strategies_are_rejected_IF2003()
     {
         var (_, flow) = Engine();
-        var factory = InstalmentFlowFactory.CreateInMemory(b => b.UseTimeProvider(_time));
+        var factory = TestEngine.Create(b => b.UseTimeProvider(_time));
 
         var ex = await Assert.ThrowsAsync<RuleViolationException>(() => factory.Tenants.CreateAsync(new CreateTenantRequest
         {
@@ -241,7 +241,7 @@ public sealed class AllocationFlowTests
         var result = await flow.Payments.RecordAsync(Paybill("TX1", 100m, "LN100001"), Ct);
 
         Assert.Equal(AllocationStrategies.PrincipalFirst.Ref, Assert.Single(result.Lines).Strategy);
-        Assert.Equal(2, Assert.Single(factory.InMemoryStore!.Snapshot(Tenant).Allocations).PolicyVersion);
+        Assert.Equal(2, Assert.Single(factory.Snapshot(Tenant).Allocations).PolicyVersion);
     }
 
     // ----- Pay-as-you-go -----
@@ -266,7 +266,7 @@ public sealed class AllocationFlowTests
 
     private (InstalmentFlowFactory Factory, IInstalmentFlow Flow) Engine(Func<TenantPolicy, TenantPolicy>? policy = null, Action<InstalmentFlowBuilder>? configure = null)
     {
-        var factory = InstalmentFlowFactory.CreateInMemory(b =>
+        var factory = TestEngine.Create(b =>
         {
             b.UseTimeProvider(_time).UseConcurrencyRetries(50);
             configure?.Invoke(b);

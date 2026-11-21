@@ -4,4 +4,10 @@
     <Description>Multi-tenant payment allocation and flexible instalment engine: obligations, schedules, identification, allocation strategies and an append-only double-entry journal. Zero third-party dependencies.</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- First-party store packages implement the internal storage ports (ADR-017); they ship in lockstep with the core. -->
+    <InternalsVisibleTo Include="InstalmentFlow.EntityFrameworkCore" />
+    <InternalsVisibleTo Include="InstalmentFlow.EntityFrameworkCore.Tests" />
+  </ItemGroup>
+
 </Project>

@@ -72,6 +72,14 @@ internal sealed class CommandRunner(TenantContext context)
         var maxAttempts = context.Services.MaxAttempts;
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
+            if (attempt > 1)
+            {
+                await Task.Delay(Backoff(attempt - 1), cancellationToken).ConfigureAwait(false);
+            }
+
+            // One transaction per attempt where the store has them; disposed (rolled back unless committed) before a retry.
+            var scope = context.Store.EnterCommandScope(context.TenantId) ?? NoScope.Instance;
+            await using var _ = scope.ConfigureAwait(false);
             var tenant = await context.LoadAsync(cancellationToken).ConfigureAwait(false);
             var hash = (await fingerprint(tenant, cancellationToken).ConfigureAwait(false)).Hash();
 
@@ -108,14 +116,16 @@ internal sealed class CommandRunner(TenantContext context)
             {
                 // A concurrent request recorded the same reversal reference; the next attempt reports a duplicate.
             }
-
-            if (attempt < maxAttempts)
-            {
-                await Task.Delay(Backoff(attempt), cancellationToken).ConfigureAwait(false);
-            }
         }
 
         throw conflict ?? new ConcurrencyConflictException(default, Domain.CustomerAccount.NewVersion);
+    }
+
+    private sealed class NoScope : IAsyncDisposable
+    {
+        public static readonly NoScope Instance = new();
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     /// <summary>Jittered exponential backoff (1, 2, 4… ms, capped), so contending commands spread out instead of colliding again.</summary>

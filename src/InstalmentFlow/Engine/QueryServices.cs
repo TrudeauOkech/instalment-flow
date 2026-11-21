@@ -1,7 +1,6 @@
 using System.Runtime.CompilerServices;
 using InstalmentFlow.Domain;
 using InstalmentFlow.Ledger;
-using InstalmentFlow.Verification;
 
 namespace InstalmentFlow.Engine;
 
@@ -153,15 +152,15 @@ internal sealed partial class QueriesService
     {
         ArgumentNullException.ThrowIfNull(scope);
         await context.LoadAsync(cancellationToken).ConfigureAwait(false);
-        var snapshot = await context.Store.SnapshotAsync(context.TenantId, cancellationToken).ConfigureAwait(false);
-        var violations = LedgerVerifier.Verify(snapshot)
+        var result = await context.Store.VerifyAsync(context.TenantId, cancellationToken).ConfigureAwait(false);
+        var violations = result.Violations
             .Select(v =>
             {
                 var colon = v.IndexOf(':', StringComparison.Ordinal);
                 return colon > 0 ? new InvariantViolation(v[..colon], v[(colon + 1)..].Trim()) : new InvariantViolation("unknown", v);
             })
             .ToList();
-        return new VerificationReport(context.Time.GetUtcNow(), violations.Count == 0, violations, snapshot.Journal.Length, snapshot.Payments.Length, snapshot.Accounts.Length);
+        return new VerificationReport(context.Time.GetUtcNow(), violations.Count == 0, violations, result.JournalTransactions, result.Payments, result.Accounts);
     }
 
     /// <summary>The source type whose debits measure a transaction's amount.</summary>
