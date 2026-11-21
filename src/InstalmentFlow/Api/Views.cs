@@ -20,12 +20,16 @@ public sealed record PlanSuperseded(ObligationId ObligationId, int PreviousVersi
 /// <param name="ExternalId">The host's customer ID.</param>
 /// <param name="OpenedAt">When the account was opened.</param>
 /// <param name="Unapplied">Funds received but not yet applied, one entry per currency held.</param>
+/// <param name="ReversalReceivable">
+/// What the customer owes because payments were reversed after their value had been refunded (ADR-005), per currency.
+/// </param>
 /// <param name="Obligations">A summary of each obligation, oldest first.</param>
 public sealed record AccountSummary(
     AccountId AccountId,
     string ExternalId,
     DateTimeOffset OpenedAt,
     IReadOnlyList<Money> Unapplied,
+    IReadOnlyList<Money> ReversalReceivable,
     IReadOnlyList<ObligationSummary> Obligations);
 
 /// <summary>A one-line summary of an obligation.</summary>

@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- M5 corrections:
+  - `Payments.ReverseAsync`: full and partial reversals (ADR-005). The amount comes from the payment's unapplied funds first, then from its allocations most recent first; already-refunded value becomes a reversal receivable (`AccountSummary.ReversalReceivable`, `ReversalDeficitRecorded`). Re-opened instalments are re-allocated from other unapplied funds (`TenantPolicy.ReallocateAfterReversal`, default on). I-8 is enforced (`IF2001`).
+  - Duplicate reversals by provider reference (`ReversalOutcome.Duplicate`; `IF2004` for different details), and reversal-before-payment parking: a reversal for an unrecorded payment is parked and applied when the payment arrives (`RecordOutcome.Reversed`; `ParkedReversalNotApplied` when it cannot be applied in full).
+  - `Charges.PostAsync` for host-calculated interest, fees and penalties with a charge code and a due policy (`ChargeDue`; `TenantPolicy.ChargeDue`); `Charges.ReverseAsync`, which unwinds what paid the charge; `Charges.WaiveAsync`. A charged plan cannot be superseded.
+  - `Refunds.RequestAsync`, `CompleteAsync` and `GetAsync`, recorded only (ADR-010): oldest funds first, a failed payout returns the credit (or settles a reversal deficit), `IF2005` and `IF2006`. `Exceptions.MarkForRefundAsync` for customer-held and unidentified funds; a failed refund raises `RefundFailed`.
+  - `Obligations.CancelAsync` with explicit write-off lines that must equal what is outstanding (ADR-011; `IF4002`, `IF4003`), and `Obligations.QuoteEarlySettlementAsync`. `AllocateFundsRequest.FutureInstalments` overrides the tenant's future-instalment policy, for example to settle early.
+  - `PaymentView.Reversed` and `Refunded`; obligation balances include posted charges and stay visible after cancellation.
+  - The ledger verifier also checks I-8, I-9, I-11, I-13 with charges, I-17 (conservation), refund payable, reversal receivable and clearing net of reversals and refunds.
 - M4 allocation engine:
   - `IAllocationStrategy`, `AllocationContext`, `AllocationPlan` (with `FillInOrder`) and an engine-side plan validator: a plan that over-settles, overspends the funds, pays a non-eligible target, repeats a target, uses another currency or is negative is rejected (`IF2002`).
   - Built-in strategies `oldest-due-first@1` (default), `current-due-first@1`, `principal-first@1`, `charges-first@1`, `proportional@1` and directed allocation, with deterministic tie-breaking (I-14).

@@ -104,6 +104,10 @@ internal sealed class CommandRunner(TenantContext context)
             {
                 // A concurrent request recorded the same provider reference; the next attempt reports a duplicate.
             }
+            catch (DuplicateReversalException)
+            {
+                // A concurrent request recorded the same reversal reference; the next attempt reports a duplicate.
+            }
 
             if (attempt < maxAttempts)
             {

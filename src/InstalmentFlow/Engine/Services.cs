@@ -39,7 +39,7 @@ internal sealed class AccountsService(TenantContext context) : IAccounts
     }
 }
 
-internal sealed class ObligationsService(TenantContext context) : IObligations
+internal sealed partial class ObligationsService(TenantContext context) : IObligations
 {
     private readonly CommandRunner _runner = new(context);
 
@@ -180,7 +180,7 @@ internal sealed class PlansService(TenantContext context) : IPlans
             async (tenant, ct) =>
             {
                 var (_, obligation) = await LoadAsync(tenant, obligationRef, ct).ConfigureAwait(false);
-                var schedule = ScheduleBuilder.Build(0, plan, obligation.Originated, obligation.Currency, tenant.Policy.DefaultGrace, tenant.Calendar, DateTimeOffset.UnixEpoch);
+                var schedule = ScheduleBuilder.Build(0, plan, Owed(obligation), obligation.Currency, tenant.Policy.DefaultGrace, tenant.Calendar, DateTimeOffset.UnixEpoch);
                 var fingerprint = new Fingerprint("SupersedePlan").Add("obligation", obligation.Id.ToString()).Add("reason", request.Reason);
                 return ObligationsService.AddSchedule(fingerprint, schedule);
             },
@@ -191,7 +191,7 @@ internal sealed class PlansService(TenantContext context) : IPlans
                     ?? throw new RuleViolationException(ErrorCodes.InvalidRequest, $"Obligation {obligation.ExternalId} has no active plan.");
                 var now = tenant.Clock.UtcNow;
                 var replacement = ScheduleBuilder.Build(
-                    obligation.Plans.Max(p => p.Version) + 1, plan, obligation.Originated, obligation.Currency, tenant.Policy.DefaultGrace, tenant.Calendar, now);
+                    obligation.Plans.Max(p => p.Version) + 1, plan, Owed(obligation), obligation.Currency, tenant.Policy.DefaultGrace, tenant.Calendar, now);
                 var updated = obligation.SupersedePlan(replacement, now, request.Reason);
 
                 var commit = new Commit
@@ -213,6 +213,15 @@ internal sealed class PlansService(TenantContext context) : IPlans
         var account = await context.LoadAccountAsync(location.AccountId, ct).ConfigureAwait(false);
         return (account, account.GetObligation(location.ObligationId));
     }
+
+    /// <summary>What a replacement schedule must total per component (I-13): the current plan's amounts due, charges included.</summary>
+    private static List<Component> Owed(Obligation obligation) =>
+        obligation.CurrentPlan is not { } plan
+            ? [.. obligation.Originated]
+            : [.. plan.Instalments.SelectMany(i => i.Components).GroupBy(c => c.Key).OrderBy(g => g.Key)
+                .Select(g => (g.Key, Amount: Money.Sum(obligation.Currency, g.Select(c => c.Due))))
+                .Where(o => o.Amount.IsPositive)
+                .Select(o => new Component(o.Key, o.Amount))];
 }
 
 internal sealed class QueriesService(TenantContext context) : IInstalmentQueries
@@ -227,6 +236,7 @@ internal sealed class QueriesService(TenantContext context) : IInstalmentQueries
             loaded.ExternalId,
             loaded.OpenedAt,
             loaded.UnappliedByCurrency(),
+            loaded.ReversalReceivableByCurrency(),
             [.. loaded.Obligations.OrderBy(o => o.OpenedAt).Select(o =>
                 new ObligationSummary(o.Id, o.ExternalId, o.PaymentReference, o.Status, ViewMapper.Outstanding(o)))]);
     }
@@ -245,11 +255,18 @@ internal sealed class QueriesService(TenantContext context) : IInstalmentQueries
             ?? throw new NotFoundException("Payment", payment.ToString());
         var holding = await PaymentLookup.HoldingAsync(context, record, cancellationToken).ConfigureAwait(false);
         var allocations = await context.Store.ListAllocationsAsync(context.TenantId, record.Id, cancellationToken).ConfigureAwait(false);
+        var reversals = await context.Store.ListPaymentReversalsAsync(context.TenantId, record.Id, cancellationToken).ConfigureAwait(false);
+        var unwound = holding.AccountId is { } holder
+            ? (await context.Store.ListAccountAllocationReversalsAsync(context.TenantId, holder, cancellationToken).ConfigureAwait(false)).Where(r => r.PaymentId == record.Id)
+            : [];
+        var currency = record.Amount.Currency;
         return new PaymentView(
             record.Id, record.Source, record.Amount, record.ValueAt, record.RecordedAt, record.TargetKind, record.RawReference,
             holding.AccountId, holding.Lot?.Directive ?? record.IdentifiedObligation,
-            Money.Sum(record.Amount.Currency, allocations.Select(a => a.Amount)),
-            holding.Lot?.Remaining ?? Money.Zero(record.Amount.Currency),
+            Money.Sum(currency, allocations.Select(a => a.Amount)) - Money.Sum(currency, unwound.Select(u => u.Amount)),
+            holding.Lot?.Remaining ?? Money.Zero(currency),
+            Money.Sum(currency, reversals.Select(r => r.Amount)),
+            holding.Lot?.Refunded ?? Money.Zero(currency),
             record.ExceptionId, record.Metadata);
     }
 
@@ -314,7 +331,7 @@ internal static class ViewMapper
 
     public static ObligationView ToView(Obligation obligation, DateOnly asOf)
     {
-        var plan = obligation.ActivePlan;
+        var plan = obligation.CurrentPlan;
         var instalments = plan?.Instalments ?? ImmutableArray<Instalment>.Empty;
         var balances = Balances(obligation);
         var arrears = Money.Sum(obligation.Currency, instalments.Where(i => i.DueDate < asOf).Select(i => i.Outstanding));
@@ -333,7 +350,7 @@ internal static class ViewMapper
             arrears,
             instalments.Select(i => InstalmentEvaluator.DaysPastDue(i, asOf)).DefaultIfEmpty(0).Max(),
             InstalmentEvaluator.PaidThroughDate(instalments),
-            plan?.Version,
+            obligation.ActivePlan?.Version,
             plan?.Grace,
             [.. instalments.Select(i => ToView(i, asOf, plan!.Grace))]);
     }
@@ -366,17 +383,20 @@ internal static class ViewMapper
             exception.Resolution is { } r ? new ResolutionView(r.Kind, r.ResolvedBy, r.Note, r.At) : null);
 
     /// <summary>
-    /// Component balances. Until allocation lands (M4), paid and waived amounts are summed from the active plan;
-    /// afterwards they come from the obligation's component projections.
+    /// Component balances from the current plan (the active one, or the cancelled one): what is owed per component
+    /// including charges posted later (I-13), what was paid and waived, and what is outstanding.
     /// </summary>
     private static List<ComponentBalanceView> Balances(Obligation obligation)
     {
-        var lines = obligation.ActivePlan?.Instalments.SelectMany(i => i.Components).ToList() ?? [];
-        return [.. obligation.Originated.Select(c =>
+        var lines = obligation.CurrentPlan?.Instalments.SelectMany(i => i.Components).ToList() ?? [];
+        var keys = obligation.Originated.Select(c => c.Key).Union(lines.Select(l => l.Key)).Order();
+        return [.. keys.Select(key =>
         {
-            var paid = Money.Sum(obligation.Currency, lines.Where(l => l.Key == c.Key).Select(l => l.Allocated));
-            var waived = Money.Sum(obligation.Currency, lines.Where(l => l.Key == c.Key).Select(l => l.Waived));
-            return new ComponentBalanceView(c.Key, c.Amount, paid, waived, c.Amount - paid - waived);
+            var mine = lines.Where(l => l.Key == key).ToList();
+            var owed = mine.Count == 0 ? obligation.Originated.Single(c => c.Key == key).Amount : Money.Sum(obligation.Currency, mine.Select(l => l.Due));
+            var paid = Money.Sum(obligation.Currency, mine.Select(l => l.Allocated));
+            var waived = Money.Sum(obligation.Currency, mine.Select(l => l.Waived));
+            return new ComponentBalanceView(key, owed, paid, waived, owed - paid - waived);
         })];
     }
 }

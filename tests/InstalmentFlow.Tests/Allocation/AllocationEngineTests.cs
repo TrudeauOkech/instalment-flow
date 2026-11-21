@@ -178,7 +178,7 @@ public sealed class AllocationEngineTests
         }
 
         var lot = new PaymentId(Guid.CreateVersion7());
-        var account = new CustomerAccount("t", accountId, "C", 1, s_epoch, [.. built], [new FundsLot(lot, Money.Kes(pay), Money.Kes(pay), null, s_epoch)]);
+        var account = new CustomerAccount("t", accountId, "C", 1, s_epoch, [.. built], [FundsLot.Received(lot, Money.Kes(pay), null, s_epoch)]);
         return (account, lot, [.. built.Select(b => b.Id)]);
     }
 

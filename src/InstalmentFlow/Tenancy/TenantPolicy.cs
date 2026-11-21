@@ -41,9 +41,21 @@ public sealed record TenantPolicy
     /// <summary>What happens to funds left after every due instalment is paid. The default keeps them as unapplied funds.</summary>
     public FutureInstalmentPolicy FutureInstalments { get; init; } = FutureInstalmentPolicy.HoldAsCredit;
 
+    /// <summary>
+    /// Whether a reversal that re-opens instalments re-allocates the customer's other unapplied funds onto them
+    /// (doc 02 §4). It changes which receipts paid which instalments, so it can be turned off.
+    /// </summary>
+    public bool ReallocateAfterReversal { get; init; } = true;
+
+    /// <summary>
+    /// Which instalment a charge posted with <see cref="ChargeDue.PerTenantPolicy"/> is added to:
+    /// <see cref="ChargeDue.NextUnpaidInstalment"/> (the default) or <see cref="ChargeDue.Immediately"/>.
+    /// </summary>
+    public ChargeDue ChargeDue { get; init; } = ChargeDue.NextUnpaidInstalment;
+
     internal void Validate()
     {
-        if (DefaultGrace is null || PaymentReference is null || Allocation is null || ComponentOrder is null ||
+        if (DefaultGrace is null || PaymentReference is null || Allocation is null || ComponentOrder is null || ChargeDue is null ||
             !Enum.IsDefined(SoleObligation) || !Enum.IsDefined(MultipleObligations) || !Enum.IsDefined(FutureInstalments))
         {
             throw new RuleViolationException(ErrorCodes.InvalidRequest, "Tenant policy settings must not be null or undefined.");
@@ -52,6 +64,11 @@ public sealed record TenantPolicy
         if (ComponentOrder.Count != 4 || ComponentOrder.Distinct().Count() != 4 || ComponentOrder.Any(c => !Enum.IsDefined(c)))
         {
             throw new RuleViolationException(ErrorCodes.InvalidRequest, "The component order must list principal, interest, fee and penalty exactly once each.");
+        }
+
+        if (ChargeDue.Kind is not (ChargeDueKind.NextUnpaidInstalment or ChargeDueKind.Immediately))
+        {
+            throw new RuleViolationException(ErrorCodes.InvalidRequest, "The tenant's charge due policy must be NextUnpaidInstalment or Immediately.");
         }
     }
 }

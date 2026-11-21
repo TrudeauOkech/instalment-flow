@@ -2,13 +2,20 @@ using System.Collections.Immutable;
 
 namespace InstalmentFlow.Domain;
 
-/// <summary>One component of one instalment. <see cref="Allocated"/> and <see cref="Waived"/> are projections.</summary>
-internal sealed record InstalmentComponent(ComponentKey Key, Money Due, Money Allocated, Money Waived)
+/// <summary>
+/// One component of one instalment. <see cref="Due"/> includes host-posted charges, of which <see cref="Charged"/>
+/// is the part; <see cref="Allocated"/>, <see cref="Waived"/> and <see cref="Charged"/> are projections of facts.
+/// </summary>
+internal sealed record InstalmentComponent(ComponentKey Key, Money Due, Money Allocated, Money Waived, Money Charged)
 {
     public Money Outstanding => Due - Allocated - Waived;
 
     public static InstalmentComponent Create(Component component) =>
-        new(component.Key, component.Amount, Money.Zero(component.Amount.Currency), Money.Zero(component.Amount.Currency));
+        new(component.Key, component.Amount, Money.Zero(component.Amount.Currency), Money.Zero(component.Amount.Currency), Money.Zero(component.Amount.Currency));
+
+    /// <summary>A component that exists on the instalment only because a charge was posted to it.</summary>
+    public static InstalmentComponent Empty(ComponentKey key, Currency currency) =>
+        new(key, Money.Zero(currency), Money.Zero(currency), Money.Zero(currency), Money.Zero(currency));
 }
 
 /// <summary>A numbered instalment of a plan version. <see cref="SettledAt"/> is when it was last fully covered.</summary>
@@ -24,7 +31,7 @@ internal sealed record Instalment(int Sequence, DateOnly DueDate, ImmutableArray
 
     public Money Outstanding => Money.Sum(Currency, Components.Select(c => c.Outstanding));
 
-    public bool HasFinancialHistory => Components.Any(c => c.Allocated.IsPositive || c.Waived.IsPositive);
+    public bool HasFinancialHistory => Components.Any(c => c.Allocated.IsPositive || c.Waived.IsPositive || c.Charged.IsPositive);
 }
 
 /// <summary>One immutable version of an obligation's repayment plan.</summary>
@@ -38,27 +45,67 @@ internal sealed record PlanVersion(
     DateTimeOffset? EndedAt,
     string? EndReason)
 {
-    /// <summary>Invariant I-23: a plan with allocations or waivers can never be superseded.</summary>
+    /// <summary>Invariant I-23: a plan with allocations, waivers or charges can never be superseded.</summary>
     public bool HasFinancialHistory => Instalments.Any(i => i.HasFinancialHistory);
 
     public PlanVersion End(PlanVersionStatus status, DateTimeOffset at, string reason) =>
         this with { Status = status, EndedAt = at, EndReason = reason };
 
     /// <summary>Applies an allocated amount to one component of one instalment. Enforces I-6: nothing goes below zero.</summary>
-    public PlanVersion Apply(int sequence, ComponentKey key, Money amount, DateTimeOffset at)
+    public PlanVersion Apply(int sequence, ComponentKey key, Money amount, DateTimeOffset at) =>
+        Change(sequence, key, c => c with { Allocated = c.Allocated + amount }, at, $"Allocating {amount}");
+
+    /// <summary>Undoes part of an allocation (an allocation reversal). The instalment re-opens if it was covered.</summary>
+    public PlanVersion Unapply(int sequence, ComponentKey key, Money amount, DateTimeOffset at) =>
+        Change(sequence, key, c => c.Allocated >= amount ? c with { Allocated = c.Allocated - amount }
+            : throw new InvalidOperationException($"Cannot unwind {amount} from instalment {sequence} {key}; only {c.Allocated} is allocated."), at, $"Unwinding {amount}");
+
+    /// <summary>Waives or writes off part of one component of one instalment.</summary>
+    public PlanVersion Waive(int sequence, ComponentKey key, Money amount, DateTimeOffset at) =>
+        Change(sequence, key, c => c with { Waived = c.Waived + amount }, at, $"Waiving {amount}");
+
+    /// <summary>Adds a host-posted charge to an instalment, creating the component if the instalment has none of it.</summary>
+    public PlanVersion AddCharge(int sequence, ComponentKey key, Money amount, DateTimeOffset at)
+    {
+        var instalment = Instalments.Single(i => i.Sequence == sequence);
+        var plan = this;
+        if (instalment.Components.All(c => c.Key != key))
+        {
+            var added = instalment with { Components = [.. instalment.Components.Add(InstalmentComponent.Empty(key, amount.Currency)).OrderBy(c => c.Key)] };
+            plan = this with { Instalments = Instalments.SetItem(Instalments.IndexOf(instalment), added) };
+        }
+
+        return plan.Change(sequence, key, c => c with { Due = c.Due + amount, Charged = c.Charged + amount }, at, $"Charging {amount}");
+    }
+
+    /// <summary>Removes a reversed charge. The caller first unwinds allocations so the amount is outstanding.</summary>
+    public PlanVersion RemoveCharge(int sequence, ComponentKey key, Money amount, DateTimeOffset at) =>
+        Change(sequence, key, c => c.Charged >= amount ? c with { Due = c.Due - amount, Charged = c.Charged - amount }
+            : throw new InvalidOperationException($"Instalment {sequence} {key} carries only {c.Charged} of charges."), at, $"Reversing a charge of {amount}");
+
+    public Instalment GetInstalment(int sequence) => Instalments.Single(i => i.Sequence == sequence);
+
+    /// <summary>
+    /// Changes one component and keeps <see cref="Instalment.SettledAt"/> in step: set when the instalment becomes
+    /// fully covered, cleared when it re-opens. Enforces I-6: nothing goes below zero.
+    /// </summary>
+    private PlanVersion Change(int sequence, ComponentKey key, Func<InstalmentComponent, InstalmentComponent> change, DateTimeOffset at, string what)
     {
         var index = Instalments.IndexOf(Instalments.Single(i => i.Sequence == sequence));
         var instalment = Instalments[index];
         var componentIndex = instalment.Components.IndexOf(instalment.Components.Single(c => c.Key == key));
-        var component = instalment.Components[componentIndex];
-        var updated = component with { Allocated = component.Allocated + amount };
+        var updated = change(instalment.Components[componentIndex]);
         if (updated.Outstanding.IsNegative)
         {
-            throw new InvalidOperationException($"Allocating {amount} to instalment {sequence} {key} would over-settle it (I-6).");
+            throw new InvalidOperationException($"{what} on instalment {sequence} {key} would over-settle it (I-6).");
         }
 
         var next = instalment with { Components = instalment.Components.SetItem(componentIndex, updated) };
-        if (instalment.Outstanding.IsPositive && !next.Outstanding.IsPositive)
+        if (next.Outstanding.IsPositive)
+        {
+            next = next with { SettledAt = null };
+        }
+        else if (instalment.Outstanding.IsPositive)
         {
             next = next with { SettledAt = at };
         }

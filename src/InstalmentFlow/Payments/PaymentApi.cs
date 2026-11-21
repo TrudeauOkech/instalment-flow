@@ -148,6 +148,9 @@ public enum RecordOutcome
 
     /// <summary>Recorded; part was allocated and the rest is held as unapplied funds.</summary>
     PartiallyAllocated = 5,
+
+    /// <summary>Recorded and fully reversed at once by a reversal that arrived before the payment.</summary>
+    Reversed = 6,
 }
 
 /// <summary>The result of recording a payment.</summary>
@@ -187,6 +190,8 @@ public sealed record RecordPaymentResult(
 /// <param name="IdentifiedObligation">The obligation the funds are directed to, if any.</param>
 /// <param name="Allocated">How much of the payment has been allocated.</param>
 /// <param name="Unapplied">How much of the payment has not yet been applied.</param>
+/// <param name="Reversed">How much of the payment has been reversed, including any reversal deficit.</param>
+/// <param name="Refunded">How much of the payment's funds has been refunded or is pending refund.</param>
 /// <param name="ExceptionId">The payment exception raised for it, if any.</param>
 /// <param name="Metadata">Provider details kept with the payment.</param>
 public sealed record PaymentView(
@@ -201,6 +206,8 @@ public sealed record PaymentView(
     ObligationId? IdentifiedObligation,
     Money Allocated,
     Money Unapplied,
+    Money Reversed,
+    Money Refunded,
     PaymentExceptionId? ExceptionId,
     IReadOnlyDictionary<string, string> Metadata);
 
@@ -214,6 +221,17 @@ public interface IPayments
     /// <see cref="RecordOutcome.Duplicate"/>; with a different amount it throws <c>IF1011</c>.
     /// </summary>
     Task<RecordPaymentResult> RecordAsync(RecordPaymentRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records a full or partial reversal (ADR-005, ADR-010). The amount comes first from the payment's unapplied
+    /// funds, then from its allocations, most recent first; whatever had already been refunded becomes a reversal
+    /// receivable. Re-opened instalments may be paid from other unapplied funds (<see cref="TenantPolicy.ReallocateAfterReversal"/>).
+    /// </summary>
+    /// <exception cref="RuleViolationException">
+    /// The amount exceeds what can still be reversed (<c>IF2001</c>), or the reversal reference was used for a
+    /// different reversal (<c>IF2004</c>).
+    /// </exception>
+    Task<ReversalResult> ReverseAsync(ReversePaymentRequest request, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

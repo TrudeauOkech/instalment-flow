@@ -109,5 +109,5 @@ public sealed class InstalmentEvaluatorTests
     }
 
     internal static Instalment Instalment(decimal due, decimal allocated = 0m, decimal waived = 0m, int sequence = 1) =>
-        new(sequence, s_due.AddDays(sequence - 1), [new InstalmentComponent(ComponentKey.Principal, Money.Kes(due), Money.Kes(allocated), Money.Kes(waived))]);
+        new(sequence, s_due.AddDays(sequence - 1), [new InstalmentComponent(ComponentKey.Principal, Money.Kes(due), Money.Kes(allocated), Money.Kes(waived), Money.Kes(0m))]);
 }

@@ -67,17 +67,35 @@ public static class ErrorCodes
     /// <summary>A payment exception is already resolved or cannot be resolved this way.</summary>
     public const string ExceptionNotResolvable = "IF1012";
 
+    /// <summary>A reversal would take back more than the payment's amount not yet reversed (I-8).</summary>
+    public const string ReversalExceedsPayment = "IF2001";
+
     /// <summary>An allocation strategy produced a plan the engine rejected, or failed (ADR-006).</summary>
     public const string InvalidAllocationPlan = "IF2002";
 
     /// <summary>The allocation strategy named in a policy or request is not registered.</summary>
     public const string UnknownAllocationStrategy = "IF2003";
 
+    /// <summary>A reversal with the same provider reference was already recorded with different details.</summary>
+    public const string ReversalConflict = "IF2004";
+
+    /// <summary>The customer's eligible unapplied funds are smaller than the amount requested.</summary>
+    public const string InsufficientFunds = "IF2005";
+
+    /// <summary>The refund is not pending: it was already confirmed or failed.</summary>
+    public const string RefundNotPending = "IF2006";
+
     /// <summary>The account changed concurrently and the command could not be applied.</summary>
     public const string ConcurrencyConflict = "IF3001";
 
     /// <summary>A plan cannot be superseded because payments or waivers have been applied to it.</summary>
     public const string PlanHasFinancialHistory = "IF4001";
+
+    /// <summary>A cancellation's write-off lines do not clear exactly what is outstanding (ADR-011).</summary>
+    public const string WriteOffMismatch = "IF4002";
+
+    /// <summary>The obligation is cancelled or closed, so amounts can no longer be charged, waived or paid on it.</summary>
+    public const string ObligationNotOpen = "IF4003";
 
     /// <summary>The operation would touch another tenant's data.</summary>
     public const string TenantMismatch = "IF5001";

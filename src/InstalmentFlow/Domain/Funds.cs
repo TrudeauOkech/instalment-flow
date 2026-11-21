@@ -4,11 +4,29 @@ using InstalmentFlow.Ledger;
 namespace InstalmentFlow.Domain;
 
 /// <summary>
-/// The part of one payment's value still held as funds (ADR-005). Allocations (M4) consume lots; until then a
-/// lot's remaining amount equals its original amount. <see cref="Directive"/> is the obligation identification
-/// directed the funds to, if any.
+/// One payment's value and where it went (ADR-005). Invariant I-5:
+/// <c>Original = active allocations + Remaining + Reversed + Refunded</c>. <see cref="Remaining"/> is what is still
+/// held as funds; <see cref="Reversed"/> what reversals took back from the lot; <see cref="Refunded"/> what refunds
+/// requested or paid out. <see cref="Deficit"/> is reversed value that had already been refunded: the holder owes
+/// it (the reversal receivable), and it is not part of the sum. <see cref="Directive"/> is the obligation
+/// identification directed the funds to, if any.
 /// </summary>
-internal sealed record FundsLot(PaymentId PaymentId, Money Original, Money Remaining, ObligationId? Directive, DateTimeOffset ValueAt);
+internal sealed record FundsLot(
+    PaymentId PaymentId,
+    Money Original,
+    Money Remaining,
+    ObligationId? Directive,
+    DateTimeOffset ValueAt,
+    Money Reversed,
+    Money Refunded,
+    Money Deficit)
+{
+    public static FundsLot Received(PaymentId paymentId, Money amount, ObligationId? directive, DateTimeOffset valueAt) =>
+        new(paymentId, amount, amount, directive, valueAt, Money.Zero(amount.Currency), Money.Zero(amount.Currency), Money.Zero(amount.Currency));
+
+    /// <summary>How much of the payment can still be reversed (I-8): its amount less what reversals already took.</summary>
+    public Money Reversible => Original - Reversed - Deficit;
+}
 
 /// <summary>
 /// Tenant unidentified funds for one provider account (source). A separate aggregate per source, so unidentified
@@ -20,6 +38,9 @@ internal sealed record UnidentifiedFunds(TenantId TenantId, string Source, long 
 
     public FundsLot GetLot(PaymentId payment) =>
         Lots.SingleOrDefault(l => l.PaymentId == payment) ?? throw new InvalidOperationException($"Payment {payment} has no unidentified funds in {Source}.");
+
+    public UnidentifiedFunds ReplaceLot(FundsLot lot) =>
+        this with { Lots = Lots.SetItem(Lots.IndexOf(GetLot(lot.PaymentId)), lot) };
 }
 
 /// <summary>A recorded payment. An immutable fact (ADR-004); later changes are separate facts.</summary>

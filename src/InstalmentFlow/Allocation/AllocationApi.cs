@@ -186,6 +186,12 @@ public sealed record AllocateFundsRequest : InstalmentFlowRequest
 
     /// <summary>A registered strategy to use instead of the tenant's.</summary>
     public StrategyRef? Strategy { get; init; }
+
+    /// <summary>
+    /// What to do with funds left after every due instalment is paid, instead of the tenant's policy; for example
+    /// <see cref="FutureInstalmentPolicy.ApplyToNextInstalments"/> to settle an obligation early.
+    /// </summary>
+    public FutureInstalmentPolicy? FutureInstalments { get; init; }
 }
 
 /// <summary>Applies the funds of a payment exception to an obligation, resolving it.</summary>

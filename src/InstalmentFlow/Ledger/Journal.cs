@@ -17,6 +17,14 @@ internal enum JournalKind
     PaymentUnidentified = 3,
     UnidentifiedAssigned = 4,
     FundsAllocated = 5,
+    PaymentReversed = 6,
+    ChargePosted = 7,
+    ChargeReversed = 8,
+    AmountWaived = 9,
+    RefundRequested = 10,
+    RefundConfirmed = 11,
+    RefundFailed = 12,
+    ObligationCancelled = 13,
 }
 
 /// <summary>The kind of fact a ledger line points back to (invariant I-15). Persisted; never renumber.</summary>
@@ -26,6 +34,11 @@ internal enum LedgerSourceType
     Payment = 2,
     Assignment = 3,
     Allocation = 4,
+    PaymentReversal = 5,
+    AllocationReversal = 6,
+    Charge = 7,
+    Waiver = 8,
+    Refund = 9,
 }
 
 /// <summary>One debit or credit on one ledger account. Exactly one of debit and credit is positive.</summary>
@@ -62,6 +75,24 @@ internal static class LedgerAccounts
 
     /// <summary>The counterpart of amounts owed when an obligation is opened or a charge posted.</summary>
     public static string Origination(ComponentKey key) => $"origination:{Code(key)}";
+
+    /// <summary>The write-down counterpart of waivers and write-offs (doc 02 §5). Debit balance.</summary>
+    public static string Waiver(ComponentKey key) => $"waiver:{Code(key)}";
+
+    /// <summary>
+    /// What a customer owes after a payment was reversed although its value had already been refunded (ADR-005).
+    /// Debit balance; the only way an account goes "negative".
+    /// </summary>
+    public static string ReversalReceivable(AccountId account, Currency currency) => $"acct:{account}:reversal-receivable:{currency.Code}";
+
+    /// <summary>The reversal receivable for reversed unidentified funds that had been refunded. Debit balance.</summary>
+    public static string ReversalReceivable(string source) => $"reversal-receivable:unidentified:{source}";
+
+    /// <summary>Refunds requested for a customer and not yet paid out or failed. Credit balance.</summary>
+    public static string RefundPayable(AccountId account) => $"refund-payable:{account}";
+
+    /// <summary>Refunds requested from unidentified funds, per provider account. Credit balance.</summary>
+    public static string RefundPayable(string source) => $"refund-payable:unidentified:{source}";
 
     private static string Code(ComponentKey key)
     {

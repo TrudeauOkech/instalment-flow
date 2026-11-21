@@ -230,11 +230,11 @@ The status is a pure function `f(instalment, allocations, waivers, asOfDate, gra
 
 ### 6.6 Repayment plan version (ADR-011)
 
-`Active → Superseded` (only if no allocation or waiver ever targeted it) `| Cancelled` (together with obligation cancellation). Exactly one Active version per obligation, except after cancellation when there are none.
+`Active → Superseded` (only if no allocation, waiver or charge ever targeted it) `| Cancelled` (together with obligation cancellation). Exactly one Active version per obligation, except after cancellation when there are none.
 
 ### 6.7 Refund
 
-`Requested → Confirmed | Failed`. A failed refund returns the credit.
+`Requested → Confirmed | Failed`. A failed refund returns the credit. If the refunded payment was reversed while the refund was pending, that part was already counted as a reversal deficit; the failed refund settles the deficit instead of becoming credit again (the money never left). A failed refund that resolved a payment exception raises a new `RefundFailed` exception, because the funds need attention again (and unidentified funds always have one, I-22).
 
 ## 7. Financial invariants
 

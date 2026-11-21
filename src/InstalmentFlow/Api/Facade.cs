@@ -37,6 +37,12 @@ public interface IInstalmentFlow
     /// <summary>The payment exception queue.</summary>
     IPaymentExceptions Exceptions { get; }
 
+    /// <summary>Host-posted charges, waivers and their reversals.</summary>
+    ICharges Charges { get; }
+
+    /// <summary>Refunds of unapplied funds, recorded only.</summary>
+    IRefunds Refunds { get; }
+
     /// <summary>Read-only queries.</summary>
     IInstalmentQueries Queries { get; }
 }
@@ -58,6 +64,18 @@ public interface IObligations
     /// used (<c>IF1007</c>), or the schedule is invalid (<c>IF1008</c>).
     /// </exception>
     Task<ObligationOpened> OpenAsync(OpenObligationRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Cancels an obligation and its active plan (ADR-011). Allocations already made stay as history; unapplied
+    /// funds stay with the customer; whatever is outstanding is cleared only by the request's write-off lines.
+    /// </summary>
+    /// <exception cref="RuleViolationException">
+    /// The obligation is not active or settled (<c>IF4003</c>), or the write-offs do not match what is outstanding (<c>IF4002</c>).
+    /// </exception>
+    Task<ObligationCancelled> CancelAsync(CancelObligationRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>What it would take to settle an obligation now. Read-only.</summary>
+    Task<SettlementQuote> QuoteEarlySettlementAsync(QuoteSettlementRequest request, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Repayment plans.</summary>
