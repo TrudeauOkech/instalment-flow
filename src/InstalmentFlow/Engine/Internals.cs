@@ -9,7 +9,8 @@ internal sealed class EngineServices(
     TimeProvider timeProvider,
     IReadOnlyDictionary<TenantId, IBusinessCalendar> calendars,
     IPaymentReferenceResolver? referenceResolver,
-    int maxAttempts)
+    int maxAttempts,
+    IReadOnlyDictionary<StrategyRef, IAllocationStrategy> strategies)
 {
     private readonly ConcurrentDictionary<string, TimeZoneInfo> _timeZones = new(StringComparer.Ordinal);
 
@@ -20,6 +21,18 @@ internal sealed class EngineServices(
     public IPaymentReferenceResolver? ReferenceResolver { get; } = referenceResolver;
 
     public int MaxAttempts { get; } = maxAttempts;
+
+    public IAllocationStrategy Strategy(StrategyRef reference) =>
+        strategies.GetValueOrDefault(reference)
+        ?? throw new RuleViolationException(ErrorCodes.UnknownAllocationStrategy, $"Allocation strategy {reference} is not registered.");
+
+    /// <summary>Validates a policy, including that its allocation strategy is registered.</summary>
+    public void ValidatePolicy(TenantPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        policy.Validate();
+        _ = Strategy(policy.Allocation);
+    }
 
     public TimeProvider TimeProvider { get; } = timeProvider;
 
@@ -38,7 +51,7 @@ internal sealed class TenantAdmin(EngineServices services) : ITenantAdmin
         ArgumentNullException.ThrowIfNull(request.BaseCurrency);
         ArgumentNullException.ThrowIfNull(request.Policy);
         ValidateTimeZone(request.TimeZone);
-        request.Policy.Validate();
+        services.ValidatePolicy(request.Policy);
 
         var record = new TenantRecord(
             request.TenantId,
@@ -61,7 +74,7 @@ internal sealed class TenantAdmin(EngineServices services) : ITenantAdmin
             current =>
             {
                 var policy = change(current.Current.Policy) ?? throw new RuleViolationException(ErrorCodes.InvalidRequest, "The policy change returned null.");
-                policy.Validate();
+                services.ValidatePolicy(policy);
                 return new TenantPolicyVersion(current.Current.Version + 1, policy, services.TimeProvider.GetUtcNow(), actor);
             },
             cancellationToken).ConfigureAwait(false);
@@ -103,6 +116,7 @@ internal sealed class TenantScopedFlow : IInstalmentFlow
         Obligations = new ObligationsService(context);
         Plans = new PlansService(context);
         Payments = new PaymentsService(context);
+        Allocations = new AllocationsService(context);
         Exceptions = new ExceptionsService(context);
         Queries = new QueriesService(context);
     }
@@ -116,6 +130,8 @@ internal sealed class TenantScopedFlow : IInstalmentFlow
     public IPlans Plans { get; }
 
     public IPayments Payments { get; }
+
+    public IAllocations Allocations { get; }
 
     public IPaymentExceptions Exceptions { get; }
 

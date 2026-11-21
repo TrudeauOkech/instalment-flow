@@ -11,8 +11,8 @@ internal sealed record InstalmentComponent(ComponentKey Key, Money Due, Money Al
         new(component.Key, component.Amount, Money.Zero(component.Amount.Currency), Money.Zero(component.Amount.Currency));
 }
 
-/// <summary>A numbered instalment of a plan version.</summary>
-internal sealed record Instalment(int Sequence, DateOnly DueDate, ImmutableArray<InstalmentComponent> Components)
+/// <summary>A numbered instalment of a plan version. <see cref="SettledAt"/> is when it was last fully covered.</summary>
+internal sealed record Instalment(int Sequence, DateOnly DueDate, ImmutableArray<InstalmentComponent> Components, DateTimeOffset? SettledAt = null)
 {
     public Currency Currency => Components[0].Due.Currency;
 
@@ -43,6 +43,28 @@ internal sealed record PlanVersion(
 
     public PlanVersion End(PlanVersionStatus status, DateTimeOffset at, string reason) =>
         this with { Status = status, EndedAt = at, EndReason = reason };
+
+    /// <summary>Applies an allocated amount to one component of one instalment. Enforces I-6: nothing goes below zero.</summary>
+    public PlanVersion Apply(int sequence, ComponentKey key, Money amount, DateTimeOffset at)
+    {
+        var index = Instalments.IndexOf(Instalments.Single(i => i.Sequence == sequence));
+        var instalment = Instalments[index];
+        var componentIndex = instalment.Components.IndexOf(instalment.Components.Single(c => c.Key == key));
+        var component = instalment.Components[componentIndex];
+        var updated = component with { Allocated = component.Allocated + amount };
+        if (updated.Outstanding.IsNegative)
+        {
+            throw new InvalidOperationException($"Allocating {amount} to instalment {sequence} {key} would over-settle it (I-6).");
+        }
+
+        var next = instalment with { Components = instalment.Components.SetItem(componentIndex, updated) };
+        if (instalment.Outstanding.IsPositive && !next.Outstanding.IsPositive)
+        {
+            next = next with { SettledAt = at };
+        }
+
+        return this with { Instalments = Instalments.SetItem(index, next) };
+    }
 }
 
 /// <summary>Turns a <see cref="PlanSpec"/> into a validated, numbered plan version.</summary>

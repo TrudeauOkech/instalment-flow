@@ -30,6 +30,9 @@ public enum PaymentExceptionReason
 
     /// <summary>The customer is known but has no payable obligation in the payment's currency.</summary>
     NoPayableObligation = 6,
+
+    /// <summary>The allocation strategy failed or produced an invalid plan; the funds are held (ADR-002).</summary>
+    AllocationFailed = 7,
 }
 
 /// <summary>Whether an exception still needs action.</summary>
@@ -118,7 +121,7 @@ public sealed record AssignToCustomerRequest : InstalmentFlowRequest
     /// <summary>The customer the funds belong to.</summary>
     public required AccountRef Account { get; init; }
 
-    /// <summary>Optionally, the customer's obligation the funds are for. Allocation follows in a later release.</summary>
+    /// <summary>Optionally, the customer's obligation the funds are for; they are allocated to it in the same command.</summary>
     public ObligationRef? Obligation { get; init; }
 
     /// <summary>Who is resolving it.</summary>
@@ -162,6 +165,12 @@ public interface IPaymentExceptions
     /// <summary>Moves unidentified funds to a customer's unapplied funds.</summary>
     /// <exception cref="RuleViolationException">The exception is resolved, or its funds are not unidentified (<c>IF1012</c>).</exception>
     Task<ResolutionResult> AssignToCustomerAsync(AssignToCustomerRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Applies a customer's held funds to one of their obligations, resolving the exception. Unidentified funds must
+    /// be assigned to the customer first (or use <see cref="AssignToCustomerRequest.Obligation"/>).
+    /// </summary>
+    Task<ResolutionResult> AllocateToObligationAsync(AllocateToObligationRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Closes an exception without moving funds. Not allowed while the funds are still tenant unidentified funds

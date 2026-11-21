@@ -157,7 +157,16 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
   - CsCheck `SampleParallel` duplicate receipts on the in-memory store;
   - a property test that a generated payment with any identification outcome is recorded exactly once and never allocated when ambiguous.
 
-### M4 — Allocation engine (L)
+### M4 — Allocation engine (L) — ✅ done 2026-11-21
+
+> **Delivered:**
+> - **Strategies:** `IAllocationStrategy`, `AllocationContext` and `AllocationPlan` with `FillInOrder`. Built-ins `oldest-due-first@1` (default), `current-due-first@1`, `principal-first@1`, `charges-first@1`, `proportional@1` (largest remainder across obligations) and directed allocation, all sharing one tie-break order (due date, opened, obligation ID, instalment, component rank).
+> - **Validation:** the engine validates every plan. It rejects over-settlement, overspending, non-eligible or repeated targets, a foreign currency and non-positive lines (`IF2002`). A faulty or throwing strategy leaves the payment recorded and held with `AllocationFailed`.
+> - **Policy:** pinned strategy version, component order (charges never first by default, R-F11) and the future-instalment policy (`HoldAsCredit`, `ApplyToNextInstalments`, `PrepayPrincipal`). Allocations record the strategy and the policy version.
+> - **Commands:** recording allocates identified funds in the same command, with no spill-over (I-21) and holding without an instruction (I-20). `Allocations.AllocateAsync`, `Exceptions.AllocateToObligationAsync`, and `AssignToCustomerAsync` with an obligation. Custom strategies are registered with `AddAllocationStrategy`; an unknown one is `IF2003`.
+> - **Verification:** the ledger verifier also checks I-6, I-12 and I-23.
+>
+> **Tests:** 199 in total (173 core). The golden tables in `docs/allocation-strategies/*.md` run as specs; there are CsCheck properties for conservation, no over-settlement, eligibility, determinism (I-14) and `Proportional` remainder bounds. Manual mutation checks: 17 mutants on strategies, validator, due boundary and future-instalment policies. Two survived (instalment-sequence tie-break and in-instalment component order) and were killed by two new spec examples. One is equivalent: the `Proportional` funds cap, because when funds cover everything each share already reaches its due amount. Stryker.NET is not wired in yet.
 - **Features:**
   - `IAllocationStrategy`, `AllocationContext`, `AllocationPlan` builder and plan validator;
   - built-ins: `OldestDueFirst`, `CurrentDueFirst`, `PrincipalFirst`, `ChargesFirst`, `Proportional`, `Directed`;

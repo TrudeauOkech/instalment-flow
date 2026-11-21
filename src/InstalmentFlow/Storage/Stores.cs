@@ -37,6 +37,8 @@ internal sealed record Commit
 
     public ImmutableArray<PaymentAssignment> Assignments { get; init; } = [];
 
+    public ImmutableArray<AllocationRecord> Allocations { get; init; } = [];
+
     public ImmutableArray<PaymentExceptionRecord> NewExceptions { get; init; } = [];
 
     public ImmutableArray<PaymentExceptionRecord> ResolvedExceptions { get; init; } = [];
@@ -90,6 +92,8 @@ internal interface ILedgerStore
 
     ValueTask<IdempotencyRecord?> GetIdempotencyAsync(TenantId tenantId, string key, CancellationToken cancellationToken);
 
+    ValueTask<IReadOnlyList<AllocationRecord>> ListAllocationsAsync(TenantId tenantId, PaymentId paymentId, CancellationToken cancellationToken);
+
     /// <summary>Applies a commit atomically.</summary>
     /// <exception cref="ConcurrencyConflictException">An aggregate changed since it was loaded.</exception>
     /// <exception cref="IdempotencyKeyTakenException">The idempotency key was committed concurrently.</exception>
@@ -105,6 +109,7 @@ internal sealed record LedgerSnapshot(
     ImmutableArray<UnidentifiedFunds> Pools,
     ImmutableArray<PaymentRecord> Payments,
     ImmutableArray<PaymentAssignment> Assignments,
+    ImmutableArray<AllocationRecord> Allocations,
     ImmutableArray<PaymentExceptionRecord> Exceptions,
     ImmutableArray<JournalTransaction> Journal,
     ImmutableArray<DomainEvent> Events);
@@ -206,6 +211,9 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
     public ValueTask<IdempotencyRecord?> GetIdempotencyAsync(TenantId tenantId, string key, CancellationToken cancellationToken) =>
         ValueTask.FromResult(State(tenantId).Data.Idempotency.GetValueOrDefault(key));
 
+    public ValueTask<IReadOnlyList<AllocationRecord>> ListAllocationsAsync(TenantId tenantId, PaymentId paymentId, CancellationToken cancellationToken) =>
+        ValueTask.FromResult<IReadOnlyList<AllocationRecord>>([.. State(tenantId).Data.Allocations.Where(a => a.PaymentId == paymentId)]);
+
     public LedgerSnapshot Snapshot(TenantId tenantId)
     {
         var state = State(tenantId);
@@ -216,6 +224,7 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
             [.. data.Pools.Values],
             [.. data.Payments.Values],
             [.. data.Assignments.Values],
+            [.. data.Allocations],
             [.. data.Exceptions.Values],
             [.. data.Journal],
             [.. data.Events]);
@@ -339,6 +348,8 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
             data = data with { Assignments = data.Assignments.Add(assignment.PaymentId, assignment) };
         }
 
+        data = data with { Allocations = data.Allocations.AddRange(commit.Allocations) };
+
         foreach (var exception in commit.NewExceptions.Concat(commit.ResolvedExceptions))
         {
             data = data with { Exceptions = data.Exceptions.SetItem(exception.Id, exception) };
@@ -388,6 +399,7 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
         ImmutableDictionary<PaymentId, PaymentRecord> Payments,
         ImmutableDictionary<ExternalReference, PaymentId> PaymentsBySource,
         ImmutableDictionary<PaymentId, PaymentAssignment> Assignments,
+        ImmutableList<AllocationRecord> Allocations,
         ImmutableDictionary<PaymentExceptionId, PaymentExceptionRecord> Exceptions,
         ImmutableDictionary<string, IdempotencyRecord> Idempotency,
         ImmutableList<JournalTransaction> Journal,
@@ -403,6 +415,7 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
             ImmutableDictionary<PaymentId, PaymentRecord>.Empty,
             ImmutableDictionary<ExternalReference, PaymentId>.Empty,
             ImmutableDictionary<PaymentId, PaymentAssignment>.Empty,
+            ImmutableList<AllocationRecord>.Empty,
             ImmutableDictionary<PaymentExceptionId, PaymentExceptionRecord>.Empty,
             ImmutableDictionary.Create<string, IdempotencyRecord>(StringComparer.Ordinal),
             ImmutableList<JournalTransaction>.Empty,

@@ -28,11 +28,30 @@ public sealed record TenantPolicy
     /// </summary>
     public MultipleObligationsPolicy MultipleObligations { get; init; } = MultipleObligationsPolicy.Hold;
 
+    /// <summary>The allocation strategy and version (ADR-006). Tenants pin a version, so strategy changes never alter their books silently.</summary>
+    public StrategyRef Allocation { get; init; } = AllocationStrategies.OldestDueFirst.Ref;
+
+    /// <summary>
+    /// The order in which an instalment's components are paid. The default, principal → interest → fee → penalty,
+    /// never puts charges first (risk R-F11); set a different order only where the contract and regulation allow it.
+    /// </summary>
+    public IReadOnlyList<ComponentType> ComponentOrder { get; init; } =
+        [ComponentType.Principal, ComponentType.Interest, ComponentType.Fee, ComponentType.Penalty];
+
+    /// <summary>What happens to funds left after every due instalment is paid. The default keeps them as unapplied funds.</summary>
+    public FutureInstalmentPolicy FutureInstalments { get; init; } = FutureInstalmentPolicy.HoldAsCredit;
+
     internal void Validate()
     {
-        if (DefaultGrace is null || PaymentReference is null || !Enum.IsDefined(SoleObligation) || !Enum.IsDefined(MultipleObligations))
+        if (DefaultGrace is null || PaymentReference is null || Allocation is null || ComponentOrder is null ||
+            !Enum.IsDefined(SoleObligation) || !Enum.IsDefined(MultipleObligations) || !Enum.IsDefined(FutureInstalments))
         {
-            throw new RuleViolationException(ErrorCodes.InvalidRequest, "Tenant policy settings must not be null.");
+            throw new RuleViolationException(ErrorCodes.InvalidRequest, "Tenant policy settings must not be null or undefined.");
+        }
+
+        if (ComponentOrder.Count != 4 || ComponentOrder.Distinct().Count() != 4 || ComponentOrder.Any(c => !Enum.IsDefined(c)))
+        {
+            throw new RuleViolationException(ErrorCodes.InvalidRequest, "The component order must list principal, interest, fee and penalty exactly once each.");
         }
     }
 }

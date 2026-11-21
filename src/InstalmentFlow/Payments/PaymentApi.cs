@@ -134,7 +134,7 @@ public sealed record RecordPaymentRequest : InstalmentFlowRequest
 /// <summary>What happened to a recorded payment.</summary>
 public enum RecordOutcome
 {
-    /// <summary>Recorded and held as the customer's unapplied funds (allocation arrives in a later release).</summary>
+    /// <summary>Recorded and held as the customer's unapplied funds; nothing was allocated.</summary>
     HeldUnapplied = 1,
 
     /// <summary>Recorded as tenant unidentified funds; an exception explains why.</summary>
@@ -142,6 +142,12 @@ public enum RecordOutcome
 
     /// <summary>Already recorded; nothing changed. The result describes the original recording.</summary>
     Duplicate = 3,
+
+    /// <summary>Recorded and fully allocated.</summary>
+    Allocated = 4,
+
+    /// <summary>Recorded; part was allocated and the rest is held as unapplied funds.</summary>
+    PartiallyAllocated = 5,
 }
 
 /// <summary>The result of recording a payment.</summary>
@@ -150,15 +156,23 @@ public enum RecordOutcome
 /// <param name="AccountId">The customer holding the funds, or null if unidentified.</param>
 /// <param name="IdentifiedObligation">The obligation the funds are directed to, if identification found one.</param>
 /// <param name="Amount">The payment amount.</param>
+/// <param name="Allocated">How much of this payment was allocated when it was recorded.</param>
 /// <param name="UnappliedAfter">The customer's unapplied funds in this currency after recording; zero if unidentified.</param>
-/// <param name="Exception">The payment exception raised by identification, if any.</param>
+/// <param name="Lines">What was paid.</param>
+/// <param name="InstalmentsSettled">Instalments that became fully covered.</param>
+/// <param name="ObligationsSettled">Obligations that became settled.</param>
+/// <param name="Exception">The payment exception raised, if any.</param>
 public sealed record RecordPaymentResult(
     RecordOutcome Outcome,
     PaymentId PaymentId,
     AccountId? AccountId,
     ObligationId? IdentifiedObligation,
     Money Amount,
+    Money Allocated,
     Money UnappliedAfter,
+    IReadOnlyList<AllocationLineView> Lines,
+    IReadOnlyList<InstalmentRef> InstalmentsSettled,
+    IReadOnlyList<ObligationId> ObligationsSettled,
     PaymentExceptionView? Exception);
 
 /// <summary>A recorded payment.</summary>
@@ -171,6 +185,7 @@ public sealed record RecordPaymentResult(
 /// <param name="RawReference">The reference as entered by the payer, if any.</param>
 /// <param name="AccountId">The customer now holding the funds, or null while unidentified.</param>
 /// <param name="IdentifiedObligation">The obligation the funds are directed to, if any.</param>
+/// <param name="Allocated">How much of the payment has been allocated.</param>
 /// <param name="Unapplied">How much of the payment has not yet been applied.</param>
 /// <param name="ExceptionId">The payment exception raised for it, if any.</param>
 /// <param name="Metadata">Provider details kept with the payment.</param>
@@ -184,6 +199,7 @@ public sealed record PaymentView(
     string? RawReference,
     AccountId? AccountId,
     ObligationId? IdentifiedObligation,
+    Money Allocated,
     Money Unapplied,
     PaymentExceptionId? ExceptionId,
     IReadOnlyDictionary<string, string> Metadata);

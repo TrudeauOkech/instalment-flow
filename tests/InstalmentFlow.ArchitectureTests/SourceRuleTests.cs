@@ -33,6 +33,9 @@ public sealed partial class SourceRuleTests
         Assert.DoesNotMatch(FloatingPoint(), StripCommentsAndStrings("// never use double here"));
         Assert.DoesNotMatch(FloatingPoint(), StripCommentsAndStrings("var s = \"double\";"));
         Assert.DoesNotMatch(FloatingPoint(), StripCommentsAndStrings("var doubled = DoubleEntry();"));
+        Assert.DoesNotMatch(FloatingPoint(), StripCommentsAndStrings("var lot = lots.Single(l => l.Id == id);"));
+        Assert.Matches(FloatingPoint(), StripCommentsAndStrings("var x = Single.Parse(text);"));
+        Assert.Matches(FloatingPoint(), StripCommentsAndStrings("Double rate = 0;"));
     }
 
     private static IEnumerable<string> SourceFiles() =>
@@ -47,7 +50,8 @@ public sealed partial class SourceRuleTests
         return comment >= 0 ? withoutStrings[..comment] : withoutStrings;
     }
 
-    [GeneratedRegex(@"\b(double|float|Double|Single)\b")]
+    // The keywords anywhere; the type names Double/Single only as types, not as members such as LINQ's .Single(...).
+    [GeneratedRegex(@"\b(double|float)\b|(?<![.\w])(Double|Single)\b(?!\s*\()")]
     private static partial Regex FloatingPoint();
 
     [GeneratedRegex("\"(?:[^\"\\\\]|\\\\.)*\"")]

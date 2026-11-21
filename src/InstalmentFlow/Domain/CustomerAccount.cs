@@ -19,6 +19,21 @@ internal sealed record Obligation(
 {
     public PlanVersion? ActivePlan => Plans.SingleOrDefault(p => p.Status == PlanVersionStatus.Active);
 
+    /// <summary>Replaces the active plan version and derives the status: settled once nothing is outstanding.</summary>
+    public Obligation WithActivePlan(PlanVersion plan)
+    {
+        var current = ActivePlan ?? throw new InvalidOperationException($"Obligation {ExternalId} has no active plan.");
+        if (plan.Version != current.Version)
+        {
+            throw new InvalidOperationException("Only the active plan version can be updated.");
+        }
+
+        var updated = this with { Plans = Plans.SetItem(Plans.IndexOf(current), plan) };
+        return Status == ObligationStatus.Active && plan.Instalments.All(i => !i.Outstanding.IsPositive)
+            ? updated with { Status = ObligationStatus.Settled }
+            : updated;
+    }
+
     public Obligation SupersedePlan(PlanVersion replacement, DateTimeOffset now, string reason)
     {
         var current = ActivePlan
@@ -70,6 +85,9 @@ internal sealed record CustomerAccount(
         [.. Lots.Select(l => l.Remaining.Currency).Distinct().OrderBy(c => c.Code, StringComparer.Ordinal).Select(Unapplied)];
 
     public CustomerAccount AddLot(FundsLot lot) => this with { Lots = Lots.Add(lot) };
+
+    public CustomerAccount ReplaceLot(FundsLot lot) =>
+        this with { Lots = Lots.SetItem(Lots.IndexOf(Lots.Single(l => l.PaymentId == lot.PaymentId)), lot) };
 
     public Obligation GetObligation(ObligationId id) =>
         Obligations.SingleOrDefault(o => o.Id == id) ?? throw new NotFoundException("Obligation", id.ToString());

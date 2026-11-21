@@ -244,9 +244,12 @@ internal sealed class QueriesService(TenantContext context) : IInstalmentQueries
         var record = await PaymentLookup.FindAsync(context, payment, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("Payment", payment.ToString());
         var holding = await PaymentLookup.HoldingAsync(context, record, cancellationToken).ConfigureAwait(false);
+        var allocations = await context.Store.ListAllocationsAsync(context.TenantId, record.Id, cancellationToken).ConfigureAwait(false);
         return new PaymentView(
             record.Id, record.Source, record.Amount, record.ValueAt, record.RecordedAt, record.TargetKind, record.RawReference,
-            holding.AccountId, holding.Lot?.Directive ?? record.IdentifiedObligation, holding.Lot?.Remaining ?? Money.Zero(record.Amount.Currency),
+            holding.AccountId, holding.Lot?.Directive ?? record.IdentifiedObligation,
+            Money.Sum(record.Amount.Currency, allocations.Select(a => a.Amount)),
+            holding.Lot?.Remaining ?? Money.Zero(record.Amount.Currency),
             record.ExceptionId, record.Metadata);
     }
 
