@@ -25,7 +25,6 @@ public sealed class InstalmentFlowFactory : IInstalmentFlowFactory
     /// <summary>The in-memory store, for invariant verification in tests.</summary>
     internal InMemoryStore? InMemoryStore { get; }
 
-    /// <summary>The ledger store, whichever kind it is.</summary>
     internal ILedgerStore LedgerStore => _services.LedgerStore;
 
     /// <summary>Creates an engine backed by an in-memory store.</summary>

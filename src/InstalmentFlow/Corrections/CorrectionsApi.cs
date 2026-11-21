@@ -40,8 +40,6 @@ public readonly record struct RefundId(Guid Value)
     internal static RefundId New(TimeProvider time) => new(Guid.CreateVersion7(time.GetUtcNow()));
 }
 
-// ----- Reversals -----
-
 /// <summary>
 /// Records that a payment was reversed, fully or partly, for example after a provider reversal or reconciliation
 /// (ADR-010). The engine records it; it never calls the provider.
@@ -122,8 +120,6 @@ public sealed record ReversalResult(
     IReadOnlyList<AllocationReversalView> Unwinds,
     IReadOnlyList<AllocationLineView> Reallocated,
     Money? UnappliedAfter);
-
-// ----- Charges and waivers -----
 
 /// <summary>The kind of amount a host posts after origination (ADR-008).</summary>
 public enum ChargeType
@@ -295,8 +291,6 @@ public interface ICharges
     Task<ChargeResult> ReverseAsync(ReverseChargeRequest request, CancellationToken cancellationToken = default);
 }
 
-// ----- Refunds -----
-
 /// <summary>Where a refund is in its lifecycle (doc 02 §6.7).</summary>
 public enum RefundStatus
 {
@@ -428,8 +422,6 @@ public sealed record MarkForRefundRequest : InstalmentFlowRequest
     /// <summary>An optional note.</summary>
     public string? Note { get; init; }
 }
-
-// ----- Cancellation and early settlement -----
 
 /// <summary>
 /// Cancels an obligation together with its active plan (ADR-011). Unpaid amounts are cleared only by the explicit

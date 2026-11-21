@@ -51,7 +51,6 @@ internal sealed partial class PostgresStore
         var tenant = commit.Tenant.Value;
         await GuardReversalRacesAsync(session, db, commit, ct).ConfigureAwait(false);
 
-        // Optimistic concurrency: bump each aggregate's version, or insert it if it is new.
         foreach (var account in commit.Accounts.Where(a => a.Version != CustomerAccount.NewVersion))
         {
             var updated = await db.Accounts.Where(a => a.TenantId == tenant && a.AccountId == account.Id.Value && a.Version == account.Version)

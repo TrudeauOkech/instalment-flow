@@ -6,7 +6,6 @@ namespace InstalmentFlow.Domain;
 // Immutable correction facts (ADR-004). Projections on the aggregate (instalment components, funds lots) are folded
 // from these; the ledger verifier recomputes the projections from them independently.
 
-/// <summary>Why an allocation was unwound.</summary>
 internal enum UnwindCause
 {
     PaymentReversal = 1,
@@ -71,7 +70,6 @@ internal sealed record ChargeRecord(
     JournalTxId JournalTxId,
     DateTimeOffset At);
 
-/// <summary>The full reversal of a charge.</summary>
 internal sealed record ChargeReversalRecord(ChargeId ChargeId, string Reason, JournalTxId JournalTxId, DateTimeOffset At);
 
 internal enum WaiverKind

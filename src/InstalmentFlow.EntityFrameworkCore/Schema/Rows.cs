@@ -4,8 +4,6 @@ namespace InstalmentFlow.EntityFrameworkCore.Schema;
 // first, and money is an amount plus a currency code. Projection rows are records so a command can write only the
 // rows whose values changed; fact rows are inserted once and never changed (triggers forbid it).
 
-// ----- Configuration -----
-
 internal sealed record TenantRow
 {
     public required string TenantId { get; set; }
@@ -28,8 +26,6 @@ internal sealed record PolicyVersionRow
 
     public required string CreatedBy { get; set; }
 }
-
-// ----- The customer account aggregate (projections) -----
 
 internal sealed record AccountRow
 {
@@ -181,8 +177,6 @@ internal sealed record PoolRow
 
     public required long Version { get; set; }
 }
-
-// ----- Facts -----
 
 internal sealed record PaymentRow
 {
@@ -553,8 +547,6 @@ internal sealed record ExceptionResolutionRow
     public Guid? JournalTxId { get; set; }
 }
 
-// ----- Journal -----
-
 internal sealed record JournalTransactionRow
 {
     public required string TenantId { get; set; }
@@ -595,8 +587,6 @@ internal sealed record LedgerEntryRow
 
     public required Guid SourceId { get; set; }
 }
-
-// ----- Idempotency and outbox -----
 
 internal sealed record IdempotencyRow
 {

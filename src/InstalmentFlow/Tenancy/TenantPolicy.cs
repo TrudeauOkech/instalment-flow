@@ -2,8 +2,7 @@ namespace InstalmentFlow;
 
 /// <summary>
 /// A tenant's configurable rules (ADR-007). Policies are versioned: every change creates a new version and
-/// commands record the version they used, so a change never alters history. Later milestones add allocation,
-/// identification and charge settings as further properties.
+/// commands record the version they used, so a change never alters history.
 /// </summary>
 public sealed record TenantPolicy
 {

@@ -7,8 +7,7 @@ namespace InstalmentFlow.Verification;
 /// <summary>
 /// Checks the financial invariants (doc 02 §7) against everything stored for a tenant, independently of the code
 /// that wrote it: facts are folded and compared with the projections, and the journal is folded per ledger account
-/// and compared with both. Becomes the public <c>VerifyAsync</c> in milestone M6; until then tests run it after
-/// every scenario.
+/// and compared with both. Backs the in-memory store's <c>VerifyAsync</c>; tests also run it after every scenario.
 /// </summary>
 internal static class LedgerVerifier
 {

@@ -8,7 +8,7 @@ internal readonly record struct AllocationId(Guid Value)
     public override string ToString() => Value.ToString();
 }
 
-/// <summary>An applied allocation: an immutable fact (ADR-004). Undone only by an allocation reversal (M5).</summary>
+/// <summary>An applied allocation: an immutable fact (ADR-004). Undone only by an allocation reversal.</summary>
 internal sealed record AllocationRecord(
     AllocationId Id,
     PaymentId PaymentId,
@@ -24,7 +24,6 @@ internal sealed record AllocationRecord(
     JournalTxId JournalTxId,
     DateTimeOffset CreatedAt);
 
-/// <summary>The result of allocating one lot.</summary>
 internal sealed record LotAllocation(
     CustomerAccount Account,
     ImmutableArray<AllocationRecord> Allocations,

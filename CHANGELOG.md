@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0-preview.1] - 2026-11-21
+
 ### Added
 - M7 PostgreSQL store, `InstalmentFlow.EntityFrameworkCore` (0.2.0-preview):
   - `InstalmentFlowPostgres.CreateFactoryAsync`, `MigrateAsync` (migrations and role grants, run explicitly by the schema owner), `GenerateMigrationScript` (idempotent SQL) and `Enlist` (commands join a host-owned transaction through savepoints).
@@ -17,8 +19,12 @@ All notable changes to this project are documented here. The format follows
   - The whole core suite runs against PostgreSQL with `IF_STORE=postgres` (Testcontainers); CI runs it, and the store's own tests, on the Linux legs.
 
 ### Changed
+- CI publishes to NuGet with Trusted Publishing instead of a stored API key.
+- XML documentation no longer describes shipped features as future milestones (for example `InstalmentFlowRequest` and `IF1002`).
 - `ILedgerStore` gained command scopes and store-provided verification; commands back off before a retry, not after a failed attempt.
 - All `DateTimeOffset` values are stored in UTC, so hosts may pass any offset.
+
+## [0.1.0-preview.1] - 2026-11-21
 
 ### Added
 - M6 queries, history and verification (0.1.0-preview):
