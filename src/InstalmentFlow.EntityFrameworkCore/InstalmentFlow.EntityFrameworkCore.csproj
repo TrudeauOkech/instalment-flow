@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- Empty until milestone M7; not published before then. -->
+    <IsPackable>false</IsPackable>
     <Description>PostgreSQL persistence for InstalmentFlow via EF Core: optimistic concurrency, row-level security, append-only enforcement and a transactional outbox.</Description>
   </PropertyGroup>
 

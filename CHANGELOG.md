@@ -6,6 +6,22 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- M6 queries, history and verification (0.1.0-preview):
+  - `AsOf` on `GetAccountAsync`, `GetObligationAsync` and `GetScheduleAsync`: past states are reconstructed by folding the facts of the journal transactions recorded up to the cut-off (`AsOf.Date` = end of a business date, `AsOf.At` = an instant; a `DateOnly` converts implicitly). A past query is unaffected by later commands.
+  - `TracePaymentAsync`: receipt, assignment, allocations, unwinds, reversals, deficits, refunds and exceptions, oldest first.
+  - `GetStatementAsync`: a customer statement with a running net balance (owed less credit).
+  - `ReadJournalAsync`: incremental journal export with a `JournalCursor`, for the host's general ledger.
+  - `VerifyAsync(VerifyScope.Tenant)`: the ledger verifier as a public report of `InvariantViolation`s.
+  - `InstalmentFlow.Testing`: the scenario DSL (`Scenario.InMemory().Given(…).When(…).Then(…).RunAsync()`), `Plan` helpers, `ScenarioClock`, `ShouldBe` and `ShouldSatisfyAllInvariantsAsync`.
+  - Samples 01 (console quickstart), 02 (pay-as-you-go phone financing) and 03 (multiple loans), run in CI.
+  - Docs: [concepts](docs/concepts.md) and [financial invariants](docs/financial-invariants.md).
+  - CI runs the samples and 10⁵ random histories, and publishes packages to NuGet from `v*` tags (environment `nuget`).
+
+### Changed
+- `IInstalmentQueries` takes `AsOf? asOf` instead of `DateOnly? asOfDate`.
+- Only `InstalmentFlow` and `InstalmentFlow.Testing` are packed; the other packages stay unpublished until their milestones.
+
+### Added
 - M5 corrections:
   - `Payments.ReverseAsync`: full and partial reversals (ADR-005). The amount comes from the payment's unapplied funds first, then from its allocations most recent first; already-refunded value becomes a reversal receivable (`AccountSummary.ReversalReceivable`, `ReversalDeficitRecorded`). Re-opened instalments are re-allocated from other unapplied funds (`TenantPolicy.ReallocateAfterReversal`, default on). I-8 is enforced (`IF2001`).
   - Duplicate reversals by provider reference (`ReversalOutcome.Duplicate`; `IF2004` for different details), and reversal-before-payment parking: a reversal for an unrecorded payment is parked and applied when the payment arrives (`RecordOutcome.Reversed`; `ParkedReversalNotApplied` when it cannot be applied in full).

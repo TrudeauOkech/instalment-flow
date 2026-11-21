@@ -141,6 +141,18 @@ internal interface ILedgerStore
 
     ValueTask<RefundRecord?> GetRefundAsync(TenantId tenantId, RefundId refundId, CancellationToken cancellationToken);
 
+    /// <summary>Refunds that use a payment's funds, oldest first.</summary>
+    ValueTask<IReadOnlyList<RefundRecord>> ListPaymentRefundsAsync(TenantId tenantId, PaymentId paymentId, CancellationToken cancellationToken);
+
+    /// <summary>Every fact recorded for one account, with its journal transactions in journal order.</summary>
+    ValueTask<AccountHistory> LoadHistoryAsync(TenantId tenantId, AccountId accountId, CancellationToken cancellationToken);
+
+    /// <summary>Up to <paramref name="max"/> journal transactions after position <paramref name="after"/>, in order.</summary>
+    ValueTask<IReadOnlyList<PositionedTransaction>> ReadJournalAsync(TenantId tenantId, long after, int max, CancellationToken cancellationToken);
+
+    /// <summary>Everything stored for the tenant, for verification.</summary>
+    ValueTask<LedgerSnapshot> SnapshotAsync(TenantId tenantId, CancellationToken cancellationToken);
+
     /// <summary>Applies a commit atomically.</summary>
     /// <exception cref="ConcurrencyConflictException">An aggregate changed since it was loaded.</exception>
     /// <exception cref="IdempotencyKeyTakenException">The idempotency key was committed concurrently.</exception>
@@ -149,6 +161,9 @@ internal interface ILedgerStore
     /// <exception cref="RuleViolationException">A uniqueness or state rule would be broken.</exception>
     ValueTask CommitAsync(Commit commit, CancellationToken cancellationToken);
 }
+
+/// <summary>A journal transaction and its position in the tenant's journal (1 for the first).</summary>
+internal sealed record PositionedTransaction(long Position, JournalTransaction Transaction);
 
 /// <summary>Everything stored for one tenant, for invariant verification.</summary>
 internal sealed record LedgerSnapshot(
@@ -307,6 +322,40 @@ internal sealed class InMemoryStore : ITenantStore, ILedgerStore
 
     public ValueTask<RefundRecord?> GetRefundAsync(TenantId tenantId, RefundId refundId, CancellationToken cancellationToken) =>
         ValueTask.FromResult(State(tenantId).Data.Refunds.GetValueOrDefault(refundId));
+
+    public ValueTask<IReadOnlyList<RefundRecord>> ListPaymentRefundsAsync(TenantId tenantId, PaymentId paymentId, CancellationToken cancellationToken) =>
+        ValueTask.FromResult<IReadOnlyList<RefundRecord>>(
+            [.. State(tenantId).Data.Refunds.Values.Where(r => r.Portions.Any(p => p.PaymentId == paymentId)).OrderBy(r => r.RequestedAt).ThenBy(r => r.Id.Value)]);
+
+    public ValueTask<AccountHistory> LoadHistoryAsync(TenantId tenantId, AccountId accountId, CancellationToken cancellationToken)
+    {
+        var data = State(tenantId).Data;
+        var charges = data.Charges.Values.Where(c => c.AccountId == accountId).ToImmutableArray();
+        var assignments = data.Assignments.Values.Where(a => a.AccountId == accountId).ToImmutableArray();
+        var assigned = assignments.Select(a => a.PaymentId).ToHashSet();
+        return ValueTask.FromResult(new AccountHistory(
+            [.. data.Journal.Select((tx, i) => new PositionedTransaction(i + 1, tx)).Where(p => p.Transaction.AccountId == accountId)],
+            [.. data.Payments.Values.Where(p => p.AccountId == accountId || assigned.Contains(p.Id))],
+            assignments,
+            [.. data.Allocations.Where(a => a.AccountId == accountId)],
+            [.. data.AllocationReversals.Where(r => r.AccountId == accountId)],
+            [.. data.PaymentReversals.Where(r => r.AccountId == accountId)],
+            charges,
+            [.. charges.Select(c => data.ChargeReversals.GetValueOrDefault(c.Id)).OfType<ChargeReversalRecord>()],
+            [.. data.Waivers.Where(w => w.AccountId == accountId)],
+            [.. data.Refunds.Values.Where(r => r.AccountId == accountId)]));
+    }
+
+    public ValueTask<IReadOnlyList<PositionedTransaction>> ReadJournalAsync(TenantId tenantId, long after, int max, CancellationToken cancellationToken)
+    {
+        var journal = State(tenantId).Data.Journal;
+        var start = (int)Math.Clamp(after, 0, journal.Count);
+        var count = Math.Min(max, journal.Count - start);
+        return ValueTask.FromResult<IReadOnlyList<PositionedTransaction>>(
+            [.. Enumerable.Range(start, count).Select(i => new PositionedTransaction(i + 1, journal[i]))]);
+    }
+
+    public ValueTask<LedgerSnapshot> SnapshotAsync(TenantId tenantId, CancellationToken cancellationToken) => ValueTask.FromResult(Snapshot(tenantId));
 
     public LedgerSnapshot Snapshot(TenantId tenantId)
     {

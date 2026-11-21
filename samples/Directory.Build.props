@@ -1,0 +1,16 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!-- Runnable samples: built and run in CI (doc 08 §4). Not packaged. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Application code with no synchronisation context: ConfigureAwait(false) would only add noise. -->
+    <NoWarn>$(NoWarn);CS1591;CA1303;CA2007</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../src/InstalmentFlow/InstalmentFlow.csproj" />
+  </ItemGroup>
+</Project>

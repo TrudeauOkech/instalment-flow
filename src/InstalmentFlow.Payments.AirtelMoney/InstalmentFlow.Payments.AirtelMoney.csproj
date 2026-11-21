@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- Empty until milestone M11; not published before then. -->
+    <IsPackable>false</IsPackable>
     <Description>Airtel Money adapter for InstalmentFlow: USSD push collection, callbacks and transaction enquiry.</Description>
   </PropertyGroup>
 

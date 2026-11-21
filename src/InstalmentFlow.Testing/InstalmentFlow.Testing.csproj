@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>Test helpers for applications using InstalmentFlow: scenario DSL, fake clock, provider payload builders and invariant assertions.</Description>
+    <Description>Test helpers for applications using InstalmentFlow: a scenario DSL on an in-memory engine, a controllable clock and invariant assertions.</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\InstalmentFlow\InstalmentFlow.csproj" />
-    <ProjectReference Include="..\InstalmentFlow.Payments\InstalmentFlow.Payments.csproj" />
+    <!-- The payments package (simulator, payload builders) is referenced again when it has content (M8). -->
   </ItemGroup>
 </Project>

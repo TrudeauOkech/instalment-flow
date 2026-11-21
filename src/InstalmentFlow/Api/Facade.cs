@@ -88,18 +88,39 @@ public interface IPlans
     Task<PlanSuperseded> SupersedeAsync(SupersedePlanRequest request, CancellationToken cancellationToken = default);
 }
 
-/// <summary>Read-only queries. Status values are derived for <c>asOfDate</c>, the tenant's current business date by default.</summary>
+/// <summary>
+/// Read-only queries. <c>asOf</c> reconstructs the state at a past cut-off from the recorded facts (the journal fold),
+/// so a past query is unaffected by later commands; by default it is now, evaluated for the tenant's business date.
+/// </summary>
 public interface IInstalmentQueries
 {
     /// <summary>An account and a summary of its obligations.</summary>
-    Task<AccountSummary> GetAccountAsync(AccountRef account, DateOnly? asOfDate = null, CancellationToken cancellationToken = default);
+    Task<AccountSummary> GetAccountAsync(AccountRef account, AsOf? asOf = null, CancellationToken cancellationToken = default);
 
     /// <summary>An obligation with its balances and active schedule.</summary>
-    Task<ObligationView> GetObligationAsync(ObligationRef obligation, DateOnly? asOfDate = null, CancellationToken cancellationToken = default);
+    Task<ObligationView> GetObligationAsync(ObligationRef obligation, AsOf? asOf = null, CancellationToken cancellationToken = default);
 
     /// <summary>A recorded payment.</summary>
     Task<PaymentView> GetPaymentAsync(PaymentRef payment, CancellationToken cancellationToken = default);
 
     /// <summary>Every plan version of an obligation, including superseded and cancelled ones.</summary>
-    Task<ScheduleView> GetScheduleAsync(ObligationRef obligation, DateOnly? asOfDate = null, CancellationToken cancellationToken = default);
+    Task<ScheduleView> GetScheduleAsync(ObligationRef obligation, AsOf? asOf = null, CancellationToken cancellationToken = default);
+
+    /// <summary>Where every part of a payment went: receipt, lot, allocations, reversals, refunds and exceptions.</summary>
+    Task<PaymentTrace> TracePaymentAsync(PaymentRef payment, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The customer's statement for business dates <paramref name="fromDate"/> to <paramref name="toDate"/> inclusive,
+    /// in recording order, with a running balance that includes everything before <paramref name="fromDate"/>.
+    /// </summary>
+    IAsyncEnumerable<StatementLine> GetStatementAsync(AccountRef account, DateOnly fromDate, DateOnly toDate, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The tenant's journal after <paramref name="from"/>, in order, for export to a general ledger. Store the
+    /// last transaction's <see cref="JournalTransactionView.Cursor"/> to continue later.
+    /// </summary>
+    IAsyncEnumerable<JournalTransactionView> ReadJournalAsync(JournalCursor from, CancellationToken cancellationToken = default);
+
+    /// <summary>Checks every verifiable financial invariant (doc 02 §7) and reports what is broken.</summary>
+    Task<VerificationReport> VerifyAsync(VerifyScope scope, CancellationToken cancellationToken = default);
 }

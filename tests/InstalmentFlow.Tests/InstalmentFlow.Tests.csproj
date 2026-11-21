@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\InstalmentFlow\InstalmentFlow.csproj" />
+    <ProjectReference Include="..\..\src\InstalmentFlow.Testing\InstalmentFlow.Testing.csproj" />
   </ItemGroup>
 
 </Project>

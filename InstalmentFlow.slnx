@@ -8,6 +8,11 @@
     <Project Path="src/InstalmentFlow.Testing/InstalmentFlow.Testing.csproj" />
     <Project Path="src/InstalmentFlow/InstalmentFlow.csproj" />
   </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/01-ConsoleQuickstart/01-ConsoleQuickstart.csproj" />
+    <Project Path="samples/02-PaygPhoneFinancing/02-PaygPhoneFinancing.csproj" />
+    <Project Path="samples/03-MultipleLoans/03-MultipleLoans.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/InstalmentFlow.ArchitectureTests/InstalmentFlow.ArchitectureTests.csproj" />
     <Project Path="tests/InstalmentFlow.Tests/InstalmentFlow.Tests.csproj" />
