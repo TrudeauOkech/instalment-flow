@@ -169,6 +169,30 @@ public sealed class StoreBehaviourTests
     }
 
     [Fact]
+    public async Task A_clock_finer_than_the_database_does_not_make_cached_accounts_differ()
+    {
+        // Linux clocks tick in 100 ns, PostgreSQL stores microseconds; the cache self-check compares the two.
+        var db = await PostgresServer.CreateDatabaseAsync();
+        var time = new ManualTime(new DateTimeOffset(2026, 3, 2, 6, 0, 0, TimeSpan.Zero).AddTicks(1_234_567));
+        var factory = await InstalmentFlowPostgres.CreateFactoryAsync(new PostgresStoreOptions { ConnectionString = db.Application }, b => b
+            .UseTimeProvider(time).AddTenant(Seeded.Tenant, Currency.KES, "Africa/Nairobi"), Ct);
+        ((PostgresStore)factory.LedgerStore).CheckCacheOnHit = true;
+        var flow = factory.ForTenant(Seeded.Tenant);
+
+        var customer = await flow.Accounts.OpenAsync(new OpenAccountRequest { IdempotencyKey = "acct", ExternalId = "C-1" }, Ct);
+        await flow.Obligations.OpenAsync(new OpenObligationRequest
+        {
+            IdempotencyKey = "loan", Account = customer.AccountId, ExternalId = "L-1", PaymentReference = "LN-1",
+            Components = [Component.Principal(Money.Kes(1_000m))], Plan = PlanSpec.Equal(Frequency.Monthly, 2, new DateOnly(2026, 3, 1)),
+        }, Ct);
+        await flow.Payments.RecordAsync(Seeded.Payment("TX1", 600m, "LN-1") with { ValueAt = time.Now.AddTicks(7) }, Ct);   // a lot with a fine value time
+        await flow.Payments.RecordAsync(Seeded.Payment("TX2", 100m, "LN-1") with { ValueAt = time.Now.AddTicks(3) }, Ct);
+
+        Assert.True(((PostgresStore)factory.LedgerStore).CacheHits > 0);
+        Assert.Equal(0, (await flow.Queries.GetPaymentAsync(PaymentRef.BySource(new ExternalReference("mpesa:600123", "TX1")), Ct)).ValueAt.Ticks % 10);
+    }
+
+    [Fact]
     public async Task Results_replay_after_a_restart()
     {
         var (db, factory) = await Seeded.CreateAsync();

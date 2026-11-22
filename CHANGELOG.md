@@ -50,6 +50,7 @@ All notable changes to this project are documented here. The format follows
 - The public API of 0.2.0-preview.1 is recorded in `PublicAPI.Shipped.txt`.
 - The PostgreSQL store writes only the obligations a command changed, and loads schedules in key order. It previously loaded them unordered.
 - Ledger partitioning is deferred (ADR-019).
+- Instants are kept to the microsecond, the precision PostgreSQL stores: the engine's clock and payments' `ValueAt` are truncated, so every store holds identical values.
 - The unreleased `PaymentsSchema` migration now also records each open intent's state and age in `intent_checks`, for health checks.
 
 ## [0.2.0-preview.1] - 2026-11-21

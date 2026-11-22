@@ -81,7 +81,7 @@ public sealed class InstalmentFlowFactory : IInstalmentFlowFactory
     }
 
     private static EngineServices Services(InstalmentFlowBuilder builder, ITenantStore tenants, ILedgerStore ledger) =>
-        new(tenants, ledger, builder.TimeProvider, builder.Calendars, builder.ReferenceResolver, builder.MaxAttempts, builder.Strategies);
+        new(tenants, ledger, new MicrosecondClock(builder.TimeProvider), builder.Calendars, builder.ReferenceResolver, builder.MaxAttempts, builder.Strategies);
 
     private static IEnumerable<TenantRecord> TenantRecords(InstalmentFlowBuilder builder, EngineServices services)
     {
@@ -93,7 +93,7 @@ public sealed class InstalmentFlowFactory : IInstalmentFlowFactory
                 tenant.TenantId,
                 tenant.BaseCurrency,
                 tenant.TimeZone,
-                [new TenantPolicyVersion(1, tenant.Policy, builder.TimeProvider.GetUtcNow(), "configuration")]);
+                [new TenantPolicyVersion(1, tenant.Policy, Microseconds.Truncate(builder.TimeProvider.GetUtcNow()), "configuration")]);
         }
     }
 

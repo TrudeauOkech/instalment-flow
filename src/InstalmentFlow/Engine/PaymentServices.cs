@@ -16,6 +16,8 @@ internal sealed partial class PaymentsService(TenantContext context) : IPayments
 
     public Task<RecordPaymentResult> RecordAsync(RecordPaymentRequest request, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+        request = request with { ValueAt = Microseconds.Truncate(request.ValueAt) };   // as stored: the same in every store
         Validate.Request(request);
         var source = Validate.Required(request.Source, nameof(request.Source));
         var amount = Validate.Required(request.Amount, nameof(request.Amount));
