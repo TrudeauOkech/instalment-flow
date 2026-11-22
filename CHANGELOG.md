@@ -29,7 +29,7 @@ All notable changes to this project are documented here. The format follows
   - `AddInstalmentFlow`: the engine and payments, created once at start-up (in memory, or PostgreSQL through `UseEngine` and `UsePayments`). Each request gets an `IInstalmentFlow` for its tenant from an `ITenantContext` (`ClaimsTenantContext`, `RouteTenantContext`; `UseTenantContext<T>`); a request with no tenant gets 403.
   - `MapInstalmentFlowCallbacks("/hooks/{secret}")`: provider callbacks, answered once the inbox has stored them, with the provider's acknowledgement format (`IProviderReplies`). Requests are checked in order: a constant-time path secret (404), a source-IP allowlist per provider (403) and a body limit (413). An optional `{account}` segment covers callbacks that do not name their account (M-Pesa STK).
   - Payment validation at `/{provider}/validate`, within `ValidationBudget` (5 s). It accepts by default; tenants in `RejectUnknownReferences` refuse references that match no active obligation (`IPaymentValidation`).
-  - `MapInstalmentFlowSimulator`: endpoints to pay, answer pushes, deliver and list, refused in `Production` unless `allowInProduction`.
+  - `MapInstalmentFlowSimulator`: endpoints to pay, answer pushes, deliver and list, refused outside `Development` unless `allowOutsideDevelopment` (they are unauthenticated).
   - Engine errors become `ProblemDetails` with an `errorCode`: 404 not found, 409 conflicts and key reuse, 422 rule violations.
   - Health checks (`AddInstalmentFlowChecks`): inbox backlog and failed entries, ambiguous intents, reconciliation age of the reconciled accounts, and outbox lag (`OutboxDispatcher.GetLagAsync`).
   - Background workers for inbox processing, intent resolution, reconciliation and host work such as the outbox dispatcher. A failed pass is logged and retried on schedule.
@@ -46,8 +46,14 @@ All notable changes to this project are documented here. The format follows
 - M12 observability: OpenTelemetry traces and metrics under `InstalmentFlowTelemetry.SourceName` and `MeterName` (`InstalmentFlow`) from every package: command spans and durations, retries, payments by outcome and amount, `Verify` violations, inbox, intents, status queries, reconciliation and outbox. No personal data in attributes. See [docs/observability.md](docs/observability.md).
 - M12 performance: `PostgresStoreOptions.AccountCacheSize` (default 1,024), an account cache checked by version on every use; a BenchmarkDotNet suite and a PostgreSQL harness (`benchmarks/`). NFR-4 is met: p95 11–18 ms and 829–912 payments/s ([docs/performance.md](docs/performance.md)).
 
+- M12 security review: threat model and host hardening checklist ([docs/security/threat-model.md](docs/security/threat-model.md)).
+  - `PaymentsBuilder.ConfirmByStatementAbove(provider, amount)`: holds callback payments above the amount until a reconciled statement line confirms the same transaction and amount. A contradicting statement keeps the payment held and raises a discrepancy.
+  - `InstalmentFlowPayments.Providers`.
+  - A warning is logged at start-up when a provider without authenticated callbacks has no allowed networks, outside Development.
+
 ### Changed
 - The public API of 0.2.0-preview.1 is recorded in `PublicAPI.Shipped.txt`.
+- Simulator endpoints are refused outside `Development`, not only in `Production`: `UseSimulator(…, allowOutsideDevelopment)`.
 - The PostgreSQL store writes only the obligations a command changed, and loads schedules in key order. It previously loaded them unordered.
 - Ledger partitioning is deferred (ADR-019).
 - Instants are kept to the microsecond, the precision PostgreSQL stores: the engine's clock and payments' `ValueAt` are truncated, so every store holds identical values.

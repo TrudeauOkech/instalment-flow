@@ -32,3 +32,8 @@ Please do **not** include real customer data, phone numbers or provider credenti
 - **Callback authenticity:** Safaricom Daraja callbacks carry no signature. InstalmentFlow mitigates this with network controls and reconciliation (see `docs/planning/03-architecture.md` §7). Weaknesses in those mitigations are in scope.
 - **Tenant isolation:** any way to read or affect another tenant's data is treated as critical.
 - **Host responsibilities:** issues in the host application's own authentication, secret storage or infrastructure are out of scope. Kenya Data Protection Act obligations rest with the host as data controller.
+
+## Threat model
+
+The threat model, the findings of the pre-1.0 security review and a hardening checklist for hosts are in
+[docs/security/threat-model.md](docs/security/threat-model.md).

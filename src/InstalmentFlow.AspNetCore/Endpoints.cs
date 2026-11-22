@@ -53,7 +53,8 @@ public static class InstalmentFlowEndpoints
     /// <summary>
     /// Maps endpoints that drive the simulated provider, for front-end development: <c>POST {prefix}/pay</c>,
     /// <c>POST {prefix}/push</c> (how the next push is answered), <c>POST {prefix}/deliver</c> and
-    /// <c>GET {prefix}/transactions</c>. Refused in <c>Production</c> unless the host allowed it (ADR-016).
+    /// <c>GET {prefix}/transactions</c>. They are unauthenticated, so they are refused outside <c>Development</c> unless
+    /// the host allowed it (ADR-016).
     /// </summary>
     public static RouteGroupBuilder MapInstalmentFlowSimulator(this IEndpointRouteBuilder endpoints, string prefix = "/simulator")
     {
@@ -61,9 +62,10 @@ public static class InstalmentFlowEndpoints
         var settings = endpoints.ServiceProvider.GetRequiredService<InstalmentFlowServerBuilder>();
         var simulator = settings.Simulator ?? throw new InvalidOperationException("Register the simulator with UseSimulator first.");
         var environment = endpoints.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
-        if (environment.IsProduction() && !settings.SimulatorInProduction)
+        if (!environment.IsDevelopment() && !settings.SimulatorOutsideDevelopment)
         {
-            throw new InvalidOperationException("The simulated provider is refused in Production; pass allowInProduction to UseSimulator to override.");
+            throw new InvalidOperationException(
+                $"The simulated provider's endpoints are refused in the {environment.EnvironmentName} environment: they are unauthenticated and create payments. Pass allowOutsideDevelopment to UseSimulator to override.");
         }
 
         var group = endpoints.MapGroup(prefix);

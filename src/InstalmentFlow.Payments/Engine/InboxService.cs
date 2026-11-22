@@ -4,6 +4,9 @@ namespace InstalmentFlow.Payments.Engine;
 
 internal sealed class InboxService(PaymentsContext context) : IProviderInbox
 {
+    /// <summary>The hold reason of a payment waiting for a statement line (<see cref="PaymentsBuilder.ConfirmByStatementAbove"/>).</summary>
+    internal const string AwaitingStatement = "awaiting statement confirmation";
+
     private const int MetadataLimit = 32;
 
     public async Task<InboxReceipt> ReceiveAsync(ProviderCallback callback, CancellationToken cancellationToken = default)
@@ -28,7 +31,8 @@ internal sealed class InboxService(PaymentsContext context) : IProviderInbox
                 throw new InvalidOperationException($"Adapter '{adapter.Provider}' produced an event for provider '{paymentEvent.Provider}'.");
             }
 
-            if (await EnqueueAsync(paymentEvent, InboxOrigin.Callback, callback.Body, cancellationToken, parsed.HoldReason).ConfigureAwait(false))
+            var hold = parsed.HoldReason ?? NeedsStatement(paymentEvent);
+            if (await EnqueueAsync(paymentEvent, InboxOrigin.Callback, callback.Body, cancellationToken, hold).ConfigureAwait(false))
             {
                 stored++;
             }
@@ -47,6 +51,34 @@ internal sealed class InboxService(PaymentsContext context) : IProviderInbox
 
         activity?.SetTag("instalmentflow.outcome", stored > 0 ? "Stored" : duplicates > 0 ? "Duplicate" : "Empty");
         return new InboxReceipt(stored == 0 && duplicates > 0 ? InboxReceiptOutcome.Duplicate : InboxReceiptOutcome.Accepted, stored, duplicates, null);
+    }
+
+    private string? NeedsStatement(NormalisedPaymentEvent paymentEvent) =>
+        paymentEvent.Kind == PaymentEventKind.PaymentReceived && paymentEvent.Amount is { } amount &&
+        context.Settings.ConfirmAbove.TryGetValue(paymentEvent.Provider, out var limit) &&
+        (amount.Currency != limit.Currency || amount.CompareTo(limit) > 0)
+            ? $"{AwaitingStatement} (above {limit})"
+            : null;
+
+    /// <summary>
+    /// Releases a payment held for statement confirmation when a statement line shows the same transaction and
+    /// amount. Returns whether a held entry was found (released or not).
+    /// </summary>
+    internal async Task<(bool Held, bool Released)> ConfirmByStatementAsync(NormalisedPaymentEvent statementLine, CancellationToken cancellationToken)
+    {
+        var held = await context.Store.FindInboxAsync(statementLine.Provider, statementLine.DedupeKey, cancellationToken).ConfigureAwait(false);
+        if (held is not { Status: InboxStatus.Failed } || held.Error?.StartsWith($"Held: {AwaitingStatement}", StringComparison.Ordinal) != true)
+        {
+            return (false, false);
+        }
+
+        if (held.Event.Amount != statementLine.Amount)
+        {
+            return (true, false);
+        }
+
+        await context.Store.UpdateInboxAsync(held with { Status = InboxStatus.Pending, Attempts = 0, NextAttemptAt = context.Now, Error = null }, cancellationToken).ConfigureAwait(false);
+        return (true, true);
     }
 
     /// <summary>Stores an event once per deduplication key; false if it was already stored.</summary>

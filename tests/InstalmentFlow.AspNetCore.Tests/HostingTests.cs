@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace InstalmentFlow.AspNetCore.Tests;
 
@@ -113,12 +114,14 @@ public sealed class HostingTests
     }
 
     [Fact]
-    public async Task The_simulator_is_refused_in_production_unless_allowed()
+    public async Task The_simulator_is_refused_outside_development_unless_allowed()
     {
-        var refused = await Assert.ThrowsAsync<InvalidOperationException>(() => Host.StartAsync(map: app => app.MapInstalmentFlowSimulator(), environment: "Production"));
-        await using var allowed = await Host.StartAsync(o => o.UseSimulator(new Payments.Simulation.SimulatedProvider("x"), allowInProduction: true), map: app => app.MapInstalmentFlowSimulator(), environment: "Production");
+        var production = await Assert.ThrowsAsync<InvalidOperationException>(() => Host.StartAsync(map: app => app.MapInstalmentFlowSimulator(), environment: "Production"));
+        var staging = await Assert.ThrowsAsync<InvalidOperationException>(() => Host.StartAsync(map: app => app.MapInstalmentFlowSimulator(), environment: "Staging"));
+        await using var allowed = await Host.StartAsync(o => o.UseSimulator(new Payments.Simulation.SimulatedProvider("x"), allowOutsideDevelopment: true), map: app => app.MapInstalmentFlowSimulator(), environment: "Production");
 
-        Assert.Contains("Production", refused.Message, StringComparison.Ordinal);
+        Assert.Contains("Production", production.Message, StringComparison.Ordinal);
+        Assert.Contains("Staging", staging.Message, StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.OK, (await allowed.Client.GetAsync("/simulator/transactions", Ct)).StatusCode);
     }
 
@@ -160,6 +163,49 @@ public sealed class HostingTests
         }
 
         Assert.True(Volatile.Read(ref runs) >= 5);
+    }
+
+    [Fact]
+    public async Task Outside_development_a_provider_without_authenticated_callbacks_or_allowed_networks_is_warned_about()
+    {
+        var warnings = new Captured();
+        await using (await Host.StartAsync(environment: "Production", services: s => s.AddSingleton<Microsoft.Extensions.Logging.ILoggerProvider>(warnings)))
+        {
+        }
+
+        var unprotected = new Captured();
+        await using (await Host.StartAsync(o => o.Callbacks.AllowedNetworks["mpesa"] = [System.Net.IPNetwork.Parse("196.201.214.0/24")], environment: "Production",
+            services: s => s.AddSingleton<Microsoft.Extensions.Logging.ILoggerProvider>(unprotected)))
+        {
+        }
+
+        Assert.Contains(warnings.Messages, m => m.Contains("provider mpesa", StringComparison.Ordinal));
+        Assert.DoesNotContain(warnings.Messages, m => m.Contains("provider sim", StringComparison.Ordinal));   // signed callbacks
+        Assert.DoesNotContain(unprotected.Messages, m => m.Contains("provider mpesa", StringComparison.Ordinal));
+    }
+
+    private sealed class Captured : Microsoft.Extensions.Logging.ILoggerProvider, Microsoft.Extensions.Logging.ILogger
+    {
+        public System.Collections.Concurrent.ConcurrentBag<string> Messages { get; } = [];
+
+        public Microsoft.Extensions.Logging.ILogger CreateLogger(string categoryName) => this;
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => logLevel >= Microsoft.Extensions.Logging.LogLevel.Warning;
+
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (IsEnabled(logLevel))
+            {
+                Messages.Add(formatter(state, exception));
+            }
+        }
+
+        public void Dispose()
+        {
+        }
     }
 
     private static async Task<string?> ErrorCodeAsync(HttpResponseMessage response) =>

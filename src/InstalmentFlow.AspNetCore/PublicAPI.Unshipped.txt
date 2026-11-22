@@ -35,7 +35,7 @@ InstalmentFlow.AspNetCore.InstalmentFlowServerBuilder.UseEngine(System.Func<Syst
 InstalmentFlow.AspNetCore.InstalmentFlowServerBuilder.UseInMemoryEngine(System.Action<InstalmentFlow.InstalmentFlowBuilder!>! configure) -> InstalmentFlow.AspNetCore.InstalmentFlowServerBuilder!
 InstalmentFlow.AspNetCore.InstalmentFlowServerBuilder.UseInMemoryPayments(System.Action<System.IServiceProvider!, InstalmentFlow.Payments.PaymentsBuilder!>! configure) -> InstalmentFlow.AspNetCore.InstalmentFlowServerBuilder!
 InstalmentFlow.AspNetCore.InstalmentFlowServerBuilder.UsePayments(System.Func<System.IServiceProvider!, InstalmentFlow.InstalmentFlowFactory!, System.Threading.CancellationToken, System.Threading.Tasks.Task<InstalmentFlow.Payments.InstalmentFlowPayments!>!>! create) -> InstalmentFlow.AspNetCore.InstalmentFlowServerBuilder!
-InstalmentFlow.AspNetCore.InstalmentFlowServerBuilder.UseSimulator(InstalmentFlow.Payments.Simulation.SimulatedProvider! simulator, bool allowInProduction = false) -> InstalmentFlow.AspNetCore.InstalmentFlowServerBuilder!
+InstalmentFlow.AspNetCore.InstalmentFlowServerBuilder.UseSimulator(InstalmentFlow.Payments.Simulation.SimulatedProvider! simulator, bool allowOutsideDevelopment = false) -> InstalmentFlow.AspNetCore.InstalmentFlowServerBuilder!
 InstalmentFlow.AspNetCore.InstalmentFlowServerBuilder.Workers.get -> InstalmentFlow.AspNetCore.WorkerOptions!
 InstalmentFlow.AspNetCore.InstalmentFlowServiceCollectionExtensions
 InstalmentFlow.AspNetCore.RouteTenantContext

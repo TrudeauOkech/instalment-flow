@@ -381,7 +381,7 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
 > - **Set-up:** `AddInstalmentFlow` creates the engine and payments at start-up. `IInstalmentFlow` is scoped to the request's tenant through `ITenantContext` (claims or route).
 > - **Callbacks:** `MapInstalmentFlowCallbacks` checks a constant-time path secret, then the IP allowlist, then a body limit, and acknowledges each callback once stored, in the provider's own format.
 > - **Validation:** answered within a 5 s budget, accepting by default; tenants can opt in to refusing unknown references.
-> - **Simulator endpoints:** refused in Production unless the host overrides it.
+> - **Simulator endpoints:** refused outside Development unless the host overrides it; M12's security review tightened this from Production only.
 > - **Errors and health:** `ProblemDetails` with `errorCode`. Health checks cover inbox backlog and failures, ambiguous intents, reconciliation age and outbox lag; `PaymentsHealth` comes from the store's cross-tenant counts.
 > - **Workers:** background workers, including host-supplied work.
 > - **Sample 05:** a web host that runs against itself.
@@ -441,7 +441,13 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
 > - **Correctness gap closed:** schedule loads had no `ORDER BY` (from M7); they are ordered by key now.
 > - **Partitioning deferred** with data (ADR-019).
 >
-> **Next:** security review and threat model; documentation site and operations docs; API freeze review and k6 script. The external pilot is the host's.
+> **Phase 2 (security review), done 2026-11-23:** threat model with STRIDE and a hardening checklist ([docs/security/threat-model.md](../security/threat-model.md)). Six findings, no high-severity ones open:
+> - F1 (unsigned M-Pesa callbacks) fixed: `ConfirmByStatementAbove` holds large callback payments until a statement confirms them, and a warning is logged at start-up for unprotected providers.
+> - F2 fixed: simulator endpoints are refused outside Development.
+> - The others are accepted or documented.
+> - No vulnerable packages; no injectable SQL.
+>
+> **Next:** documentation site and operations docs; API freeze review and k6 script. The external pilot is the host's.
 
 - **Features:**
   - OpenTelemetry conventions finalised;

@@ -254,6 +254,7 @@ InstalmentFlow.Payments.InstalmentFlowPayments.ForTenant(InstalmentFlow.TenantId
 InstalmentFlow.Payments.InstalmentFlowPayments.GetHealthAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.Payments.PaymentsHealth!>!
 InstalmentFlow.Payments.InstalmentFlowPayments.Inbox.get -> InstalmentFlow.Payments.IProviderInbox!
 InstalmentFlow.Payments.InstalmentFlowPayments.IntentResolver.get -> InstalmentFlow.Payments.IIntentResolver!
+InstalmentFlow.Payments.InstalmentFlowPayments.Providers.get -> System.Collections.Generic.IReadOnlyCollection<InstalmentFlow.Payments.IPaymentProviderAdapter!>!
 InstalmentFlow.Payments.InstalmentFlowPayments.Reconciliation.get -> InstalmentFlow.Payments.IReconciliation!
 InstalmentFlow.Payments.InstalmentFlowPayments.RouteAsync(InstalmentFlow.Payments.NormalisedPaymentEvent! paymentEvent, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.TenantId?>!
 InstalmentFlow.Payments.InstalmentFlowPayments.Routing.get -> InstalmentFlow.Payments.IProviderRouting!
@@ -367,6 +368,7 @@ InstalmentFlow.Payments.PaymentValidationRequest.TransactionId.get -> string!
 InstalmentFlow.Payments.PaymentValidationRequest.TransactionId.init -> void
 InstalmentFlow.Payments.PaymentsBuilder
 InstalmentFlow.Payments.PaymentsBuilder.AddProvider(InstalmentFlow.Payments.IPaymentProviderAdapter! adapter) -> InstalmentFlow.Payments.PaymentsBuilder!
+InstalmentFlow.Payments.PaymentsBuilder.ConfirmByStatementAbove(string! provider, InstalmentFlow.Money! amount) -> InstalmentFlow.Payments.PaymentsBuilder!
 InstalmentFlow.Payments.PaymentsBuilder.Inbox.get -> InstalmentFlow.Payments.InboxOptions!
 InstalmentFlow.Payments.PaymentsBuilder.Intents.get -> InstalmentFlow.Payments.IntentOptions!
 InstalmentFlow.Payments.PaymentsBuilder.Reconciliation.get -> InstalmentFlow.Payments.ReconciliationOptions!

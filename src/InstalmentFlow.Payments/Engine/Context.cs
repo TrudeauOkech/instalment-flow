@@ -10,7 +10,8 @@ internal sealed record PaymentsSettings(
     InboxOptions Inbox,
     IntentOptions Intents,
     ReconciliationOptions Reconciliation,
-    IReadOnlyDictionary<TenantId, ReversedAtProviderPolicy> ReversalPolicies);
+    IReadOnlyDictionary<TenantId, ReversedAtProviderPolicy> ReversalPolicies,
+    IReadOnlyDictionary<string, Money> ConfirmAbove);
 
 internal sealed class PaymentsContext
 {
@@ -87,6 +88,8 @@ internal sealed class ProviderRegistry
         ?? throw new RuleViolationException(PaymentsErrorCodes.CapabilityNotSupported, $"Provider '{provider}' does not support merchant-initiated collection.");
 
     public IPaymentProviderAdapter? Find(string provider) => _adapters.GetValueOrDefault(provider);
+
+    public IReadOnlyCollection<IPaymentProviderAdapter> All => _adapters.Values;
 
     public ITransactionStatusQuery? StatusQuery(string provider) => _adapters.GetValueOrDefault(provider) as ITransactionStatusQuery;
 

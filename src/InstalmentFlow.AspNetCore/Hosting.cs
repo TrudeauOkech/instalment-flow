@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace InstalmentFlow.AspNetCore;
 
@@ -143,7 +144,7 @@ public sealed class InstalmentFlowServerBuilder
 
     internal SimulatedProvider? Simulator { get; private set; }
 
-    internal bool SimulatorInProduction { get; private set; }
+    internal bool SimulatorOutsideDevelopment { get; private set; }
 
     /// <summary>
     /// Creates the engine at start-up, for example
@@ -178,13 +179,13 @@ public sealed class InstalmentFlowServerBuilder
 
     /// <summary>
     /// Makes the simulated provider's endpoints available (<c>MapInstalmentFlowSimulator</c>) and connects it to the
-    /// inbox. Add it to the payments as a provider too. Refused in the <c>Production</c> environment unless
-    /// <paramref name="allowInProduction"/> (ADR-016).
+    /// inbox. Add it to the payments as a provider too. Its endpoints are unauthenticated and create payments, so they
+    /// are refused outside the <c>Development</c> environment unless <paramref name="allowOutsideDevelopment"/> (ADR-016).
     /// </summary>
-    public InstalmentFlowServerBuilder UseSimulator(SimulatedProvider simulator, bool allowInProduction = false)
+    public InstalmentFlowServerBuilder UseSimulator(SimulatedProvider simulator, bool allowOutsideDevelopment = false)
     {
         Simulator = simulator ?? throw new ArgumentNullException(nameof(simulator));
-        SimulatorInProduction = allowInProduction;
+        SimulatorOutsideDevelopment = allowOutsideDevelopment;
         return this;
     }
 }
@@ -270,11 +271,31 @@ internal sealed class InstalmentFlowRuntime(IServiceProvider services, Instalmen
     }
 }
 
-internal sealed class InstalmentFlowStartup(InstalmentFlowRuntime runtime) : IHostedService
+internal sealed partial class InstalmentFlowStartup(InstalmentFlowRuntime runtime, IHostEnvironment environment, ILogger<InstalmentFlowStartup> logger) : IHostedService
 {
-    public Task StartAsync(CancellationToken cancellationToken) => runtime.StartAsync(cancellationToken);
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        await runtime.StartAsync(cancellationToken).ConfigureAwait(false);
+        if (!runtime.HasPayments || environment.IsDevelopment())
+        {
+            return;
+        }
+
+        // A provider whose callbacks cannot be authenticated relies on the path secret and the source network (R-I3).
+        foreach (var provider in runtime.Payments.Providers.Where(p => !p.Capabilities.HasFlag(ProviderCapabilities.AuthenticatedCallbacks)))
+        {
+            if (!runtime.Settings.Callbacks.AllowedNetworks.TryGetValue(provider.Provider, out var networks) || networks.Count == 0)
+            {
+                UnprotectedProvider(provider.Provider);
+            }
+        }
+    }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    [LoggerMessage(EventId = 2, Level = LogLevel.Warning,
+        Message = "Callbacks from provider {Provider} cannot be authenticated and no source networks are allowed for it: anyone with the path secret can post payments. Set Callbacks.AllowedNetworks (behind a proxy, with forwarded headers) and consider ConfirmByStatementAbove.")]
+    private partial void UnprotectedProvider(string provider);
 }
 
 /// <summary>Maps engine errors to <c>ProblemDetails</c> with a stable <c>errorCode</c> extension.</summary>

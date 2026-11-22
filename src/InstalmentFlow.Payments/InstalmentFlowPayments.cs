@@ -34,6 +34,9 @@ public sealed class InstalmentFlowPayments
 
     internal IPaymentsStore Store => _context.Store;
 
+    /// <summary>Every registered provider adapter.</summary>
+    public IReadOnlyCollection<IPaymentProviderAdapter> Providers => _context.Settings.Providers.All;
+
     /// <summary>The adapter registered for <paramref name="provider"/>, or null.</summary>
     public IPaymentProviderAdapter? FindProvider(string provider) => _context.Settings.Providers.Find(provider);
 
@@ -82,6 +85,7 @@ public sealed class PaymentsBuilder
 {
     private readonly List<IPaymentProviderAdapter> _adapters = [];
     private readonly Dictionary<TenantId, ReversedAtProviderPolicy> _reversalPolicies = [];
+    private readonly Dictionary<string, Money> _confirmAbove = new(StringComparer.Ordinal);
     private ITenantRouter? _router;
     private IPayloadProtector? _protector;
     private TimeProvider _time = TimeProvider.System;
@@ -132,6 +136,21 @@ public sealed class PaymentsBuilder
         return this;
     }
 
+    /// <summary>
+    /// Holds customer-initiated payments that <paramref name="provider"/>'s callbacks report above
+    /// <paramref name="amount"/> (or in another currency) until a reconciled statement line confirms the same
+    /// transaction and amount (R-I3). For providers whose callbacks cannot be authenticated, such as M-Pesa C2B, this
+    /// stops a forged callback from crediting a large amount. Held payments are visible as failed inbox entries until
+    /// released.
+    /// </summary>
+    public PaymentsBuilder ConfirmByStatementAbove(string provider, Money amount)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(provider);
+        ArgumentNullException.ThrowIfNull(amount);
+        _confirmAbove[provider] = amount;
+        return this;
+    }
+
     /// <summary>What to do about reversals only a tenant's statements show.</summary>
     public PaymentsBuilder UseReversedAtProviderPolicy(TenantId tenant, ReversedAtProviderPolicy policy)
     {
@@ -157,7 +176,7 @@ public sealed class PaymentsBuilder
 
         return new PaymentsSettings(
             ProviderRegistry.Create(_adapters), _router, _protector, _time, Inbox, Intents, Reconciliation,
-            new Dictionary<TenantId, ReversedAtProviderPolicy>(_reversalPolicies));
+            new Dictionary<TenantId, ReversedAtProviderPolicy>(_reversalPolicies), new Dictionary<string, Money>(_confirmAbove, StringComparer.Ordinal));
     }
 
     private static void RequirePositive(int value, string name)

@@ -136,7 +136,16 @@ internal sealed class ReconciliationService(PaymentsContext context) : IReconcil
             var payment = await FindPaymentAsync(tenant, line.TransactionId, cancellationToken).ConfigureAwait(false);
             if (payment is null)
             {
-                await context.Inbox.EnqueueAsync(paymentEvent, InboxOrigin.Statement, ReadOnlyMemory<byte>.Empty, cancellationToken).ConfigureAwait(false);
+                if (!await context.Inbox.EnqueueAsync(paymentEvent, InboxOrigin.Statement, ReadOnlyMemory<byte>.Empty, cancellationToken).ConfigureAwait(false) &&
+                    await context.Inbox.ConfirmByStatementAsync(paymentEvent, cancellationToken).ConfigureAwait(false) is (true, false))
+                {
+                    // A held callback that the statement contradicts: the amount differs, so it stays held for a person.
+                    var held = await context.Store.FindInboxAsync(provider, paymentEvent.DedupeKey, cancellationToken).ConfigureAwait(false);
+                    _lines.Add(new ReconciliationLine(line.TransactionId, ReconciliationClassification.AmountMismatch, tenant, null));
+                    await RaiseAsync(tenant, DiscrepancyKind.AmountMismatch, line.TransactionId, line.Amount, held?.Event.Amount, null, cancellationToken).ConfigureAwait(false);
+                    return;
+                }
+
                 _lines.Add(new ReconciliationLine(line.TransactionId, ReconciliationClassification.MissingInEngine, tenant, null));
             }
             else if (payment.Amount != line.Amount)

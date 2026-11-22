@@ -1,5 +1,6 @@
 #nullable enable
 InstalmentFlow.IInstalmentQueries.ListPaymentsAsync(InstalmentFlow.PaymentQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<InstalmentFlow.PaymentView!>!
+InstalmentFlow.InstalmentFlowTelemetry
 InstalmentFlow.PaymentQuery
 InstalmentFlow.PaymentQuery.<Clone>$() -> InstalmentFlow.PaymentQuery!
 InstalmentFlow.PaymentQuery.Equals(InstalmentFlow.PaymentQuery? other) -> bool
@@ -10,11 +11,10 @@ InstalmentFlow.PaymentQuery.Source.get -> string!
 InstalmentFlow.PaymentQuery.Source.init -> void
 InstalmentFlow.PaymentQuery.To.get -> System.DateTimeOffset?
 InstalmentFlow.PaymentQuery.To.init -> void
+const InstalmentFlow.InstalmentFlowTelemetry.MeterName = "InstalmentFlow" -> string!
+const InstalmentFlow.InstalmentFlowTelemetry.SourceName = "InstalmentFlow" -> string!
 override InstalmentFlow.PaymentQuery.Equals(object? obj) -> bool
 override InstalmentFlow.PaymentQuery.GetHashCode() -> int
 override InstalmentFlow.PaymentQuery.ToString() -> string!
 static InstalmentFlow.PaymentQuery.operator !=(InstalmentFlow.PaymentQuery? left, InstalmentFlow.PaymentQuery? right) -> bool
 static InstalmentFlow.PaymentQuery.operator ==(InstalmentFlow.PaymentQuery? left, InstalmentFlow.PaymentQuery? right) -> bool
-InstalmentFlow.InstalmentFlowTelemetry
-const InstalmentFlow.InstalmentFlowTelemetry.MeterName = "InstalmentFlow" -> string!
-const InstalmentFlow.InstalmentFlowTelemetry.SourceName = "InstalmentFlow" -> string!

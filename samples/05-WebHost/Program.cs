@@ -20,7 +20,7 @@ using Microsoft.Extensions.Logging;
 
 var serve = args.Contains("--serve");
 var simulator = new SimulatedProvider("simulator-callback-secret");
-// The simulator is refused in Production (ADR-016), which is ASP.NET Core's default environment; this sample is for development.
+// The simulator's endpoints are refused outside Development (ADR-016); Production is ASP.NET Core's default environment.
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args, EnvironmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? Environments.Development,
@@ -41,7 +41,7 @@ builder.Services.AddHealthChecks().AddInstalmentFlowChecks();
 var app = builder.Build();
 app.UseExceptionHandler();
 app.MapInstalmentFlowCallbacks();          // /hooks/{secret}/{provider}/{kind}
-app.MapInstalmentFlowSimulator();          // /simulator/… (refused in Production)
+app.MapInstalmentFlowSimulator();          // /simulator/… (Development only)
 app.MapHealthChecks("/health");
 app.MapGet("/tenants/{tenant}/loans/{reference}", async (string reference, IInstalmentFlow flow) =>
 {
