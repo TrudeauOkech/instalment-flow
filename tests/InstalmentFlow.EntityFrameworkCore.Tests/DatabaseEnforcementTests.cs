@@ -112,6 +112,7 @@ internal static class Seeded
             .UseConcurrencyRetries(retries)
             .AddTenant(Tenant, Currency.KES, "Africa/Nairobi")
             .AddTenant(Other, Currency.UGX, "Africa/Kampala"));
+        ((Persistence.PostgresStore)factory.LedgerStore).CheckCacheOnHit = true;   // every cache hit is compared with a reload
         var flow = factory.ForTenant(Tenant);
         var customer = await flow.Accounts.OpenAsync(new OpenAccountRequest { IdempotencyKey = "acct", ExternalId = "C-1" });
         await flow.Obligations.OpenAsync(new OpenObligationRequest

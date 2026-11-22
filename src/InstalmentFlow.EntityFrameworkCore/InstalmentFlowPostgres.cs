@@ -36,6 +36,12 @@ public sealed record PostgresStoreOptions
 
     /// <summary>How commands guard accounts against concurrent changes.</summary>
     public ConcurrencyMode ConcurrencyMode { get; init; } = ConcurrencyMode.Optimistic;
+
+    /// <summary>
+    /// How many customer accounts to keep in memory between commands. A cached account is used only after a one-row
+    /// check that its version is current, so a hit avoids reloading its schedule. Default 1024; 0 turns the cache off.
+    /// </summary>
+    public int AccountCacheSize { get; init; } = 1024;
 }
 
 /// <summary>Roles to grant when migrating (doc 05 §4a). Roles are created by the database administrator.</summary>
@@ -69,7 +75,7 @@ public static class InstalmentFlowPostgres
         EnsureLockstepVersions();
         var dataSource = NpgsqlDataSource.Create(options.ConnectionString);
         await EnsureSchemaAsync(dataSource, cancellationToken).ConfigureAwait(false);
-        var store = new PostgresStore(dataSource, options.ConcurrencyMode);
+        var store = new PostgresStore(dataSource, options.ConcurrencyMode, options.AccountCacheSize);
         return await InstalmentFlowFactory.CreateAsync(configure, store, store, cancellationToken).ConfigureAwait(false);
     }
 

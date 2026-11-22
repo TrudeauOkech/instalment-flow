@@ -15,3 +15,6 @@ override InstalmentFlow.PaymentQuery.GetHashCode() -> int
 override InstalmentFlow.PaymentQuery.ToString() -> string!
 static InstalmentFlow.PaymentQuery.operator !=(InstalmentFlow.PaymentQuery? left, InstalmentFlow.PaymentQuery? right) -> bool
 static InstalmentFlow.PaymentQuery.operator ==(InstalmentFlow.PaymentQuery? left, InstalmentFlow.PaymentQuery? right) -> bool
+InstalmentFlow.InstalmentFlowTelemetry
+const InstalmentFlow.InstalmentFlowTelemetry.MeterName = "InstalmentFlow" -> string!
+const InstalmentFlow.InstalmentFlowTelemetry.SourceName = "InstalmentFlow" -> string!

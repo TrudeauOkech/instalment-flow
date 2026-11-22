@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <!-- Benchmarks are not documented; BenchmarkDotNet needs public, unsealed benchmark classes. -->
+    <NoWarn>$(NoWarn);CS1591;CA1515;CA1707;CA1822;CA2007</NoWarn>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- As in an ASP.NET Core host: a workstation GC pauses every writer at once and understates throughput. -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\InstalmentFlow\InstalmentFlow.csproj" />
+    <ProjectReference Include="..\..\src\InstalmentFlow.EntityFrameworkCore\InstalmentFlow.EntityFrameworkCore.csproj" />
+    <Compile Include="..\..\tests\InstalmentFlow.EntityFrameworkCore.Tests\Support\PostgresServer.cs" Link="PostgresServer.cs" />
+  </ItemGroup>
+
+</Project>

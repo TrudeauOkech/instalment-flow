@@ -26,14 +26,20 @@ internal sealed partial class PaymentsService(TenantContext context) : IPayments
         }
 
         var metadata = ValidateMetadata(request.Metadata);
+        return RecordAndMeasureAsync();
 
-        return _runner.RunAsync(
-            request,
-            "RecordPayment",
-            (_, _) => Task.FromResult(Fingerprint(request, metadata)),
-            (tenant, ct) => PlanAsync(tenant, request, source, amount, target, metadata, ct),
-            result => result with { Outcome = RecordOutcome.Duplicate },
-            cancellationToken);
+        async Task<RecordPaymentResult> RecordAndMeasureAsync()
+        {
+            var result = await _runner.RunAsync(
+                request,
+                "RecordPayment",
+                (_, _) => Task.FromResult(Fingerprint(request, metadata)),
+                (tenant, ct) => PlanAsync(tenant, request, source, amount, target, metadata, ct),
+                result => result with { Outcome = RecordOutcome.Duplicate },
+                cancellationToken).ConfigureAwait(false);
+            Telemetry.PaymentRecorded(result, source);
+            return result;
+        }
     }
 
     private async Task<Planned<RecordPaymentResult>> PlanAsync(

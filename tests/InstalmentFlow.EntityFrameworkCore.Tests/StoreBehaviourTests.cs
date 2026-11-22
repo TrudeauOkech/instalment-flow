@@ -115,6 +115,60 @@ public sealed class StoreBehaviourTests
     }
 
     [Fact]
+    public async Task An_account_given_older_unidentified_funds_is_reloaded_not_served_from_the_cache()
+    {
+        // Lots reload in insertion order. Assigning an older unidentified payment puts its lot last in memory but not
+        // in the database, so that account must not be cached as committed (the cache self-check would see the order).
+        var (_, factory) = await Seeded.CreateAsync();
+        var flow = factory.ForTenant(Seeded.Tenant);
+        var customer = (await flow.Queries.GetAccountAsync(AccountRef.ByExternalId("C-1"), cancellationToken: Ct)).AccountId;
+        var unidentified = await flow.Payments.RecordAsync(Seeded.Payment("TXU", 50m, "NO-SUCH-REF"), Ct);
+        await flow.Payments.RecordAsync(Seeded.Payment("TXN", 900m, "LN-1"), Ct);   // overpays: a newer lot on the account
+        await flow.Exceptions.AssignToCustomerAsync(new AssignToCustomerRequest
+        {
+            IdempotencyKey = "assign", ExceptionId = unidentified.Exception!.ExceptionId, Account = AccountRef.ById(customer), ResolvedBy = "ops",
+        }, Ct);
+        var store = (PostgresStore)factory.LedgerStore;
+        var hits = store.CacheHits;
+
+        await flow.Payments.RecordAsync(Seeded.Payment("TXM", 10m, "LN-1"), Ct);   // loads the account (checked against the database on a hit)
+        await flow.Payments.RecordAsync(Seeded.Payment("TXO", 10m, "LN-1"), Ct);
+
+        Assert.True(store.CacheHits > hits);   // the cache is back in use after the reload
+        Assert.True((await flow.Queries.VerifyAsync(VerifyScope.Tenant, Ct)).Passed);
+    }
+
+    [Fact]
+    public async Task A_change_rolled_back_by_the_host_is_never_served_from_the_cache()
+    {
+        // After a host rollback the account's next version number is reused by another engine; a cached copy of the
+        // rolled-back state would match that version. Commits inside host transactions are therefore not cached.
+        var (db, factory) = await Seeded.CreateAsync();
+        var flow = factory.ForTenant(Seeded.Tenant);
+        await flow.Payments.RecordAsync(Seeded.Payment("TXA", 10m, "LN-1"), Ct);
+        await using (var connection = new NpgsqlConnection(db.Application))
+        {
+            await connection.OpenAsync(Ct);
+            await using var transaction = await connection.BeginTransactionAsync(Ct);
+            using (InstalmentFlowPostgres.Enlist(transaction))
+            {
+                await flow.Payments.RecordAsync(Seeded.Payment("TXB", 20m, "LN-1"), Ct);
+            }
+
+            await transaction.RollbackAsync(Ct);
+        }
+
+        var other = await InstalmentFlowPostgres.CreateFactoryAsync(new PostgresStoreOptions { ConnectionString = db.Application }, b => b
+            .AddTenant(Seeded.Tenant, Currency.KES, "Africa/Nairobi").AddTenant(Seeded.Other, Currency.UGX, "Africa/Kampala"), Ct);
+        await other.ForTenant(Seeded.Tenant).Payments.RecordAsync(Seeded.Payment("TXC", 30m, "LN-1"), Ct);   // reuses the rolled-back version
+
+        await flow.Payments.RecordAsync(Seeded.Payment("TXD", 40m, "LN-1"), Ct);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => flow.Queries.GetPaymentAsync(PaymentRef.BySource(new ExternalReference("mpesa:600123", "TXB")), Ct));
+        Assert.True((await flow.Queries.VerifyAsync(VerifyScope.Tenant, Ct)).Passed);
+    }
+
+    [Fact]
     public async Task Results_replay_after_a_restart()
     {
         var (db, factory) = await Seeded.CreateAsync();

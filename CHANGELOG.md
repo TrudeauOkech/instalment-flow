@@ -43,8 +43,13 @@ All notable changes to this project are documented here. The format follows
   - Sample 06 runs against Airtel's UAT and records its responses.
 - Payments package: `NormalisedPaymentEvent.RequiresVerification`, which confirms untrusted collection successes and failures with the status query before acting; optional collection amounts (the intent's amount is used); `ProviderTransactionRef.RequestedAmount`; `ProviderTransactionStatus.Ambiguous`; and `PaymentsErrorCodes.UnverifiableCollection` (`IF6007`).
 
+- M12 observability: OpenTelemetry traces and metrics under `InstalmentFlowTelemetry.SourceName` and `MeterName` (`InstalmentFlow`) from every package: command spans and durations, retries, payments by outcome and amount, `Verify` violations, inbox, intents, status queries, reconciliation and outbox. No personal data in attributes. See [docs/observability.md](docs/observability.md).
+- M12 performance: `PostgresStoreOptions.AccountCacheSize` (default 1,024), an account cache checked by version on every use; a BenchmarkDotNet suite and a PostgreSQL harness (`benchmarks/`). NFR-4 is met: p95 11–18 ms and 829–912 payments/s ([docs/performance.md](docs/performance.md)).
+
 ### Changed
 - The public API of 0.2.0-preview.1 is recorded in `PublicAPI.Shipped.txt`.
+- The PostgreSQL store writes only the obligations a command changed, and loads schedules in key order. It previously loaded them unordered.
+- Ledger partitioning is deferred (ADR-019).
 - The unreleased `PaymentsSchema` migration now also records each open intent's state and age in `intent_checks`, for health checks.
 
 ## [0.2.0-preview.1] - 2026-11-21

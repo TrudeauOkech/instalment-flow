@@ -9,10 +9,14 @@ internal sealed class InboxService(PaymentsContext context) : IProviderInbox
     public async Task<InboxReceipt> ReceiveAsync(ProviderCallback callback, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(callback);
+        using var activity = PaymentsTelemetry.Start("inbox.receive", callback.Provider);
+        activity?.SetTag("instalmentflow.callback_kind", callback.Kind);
         var adapter = context.Settings.Providers.Adapter(callback.Provider);
         var parsed = await adapter.ParseCallbackAsync(callback, cancellationToken).ConfigureAwait(false);
         if (!parsed.Accepted)
         {
+            activity?.SetTag("instalmentflow.outcome", "Rejected");
+            PaymentsTelemetry.EventReceived(callback.Provider, "Rejected");
             return new InboxReceipt(InboxReceiptOutcome.Rejected, 0, 0, parsed.RejectionReason);
         }
 
@@ -31,6 +35,17 @@ internal sealed class InboxService(PaymentsContext context) : IProviderInbox
         }
 
         var duplicates = parsed.Events.Count - stored;
+        for (var i = 0; i < stored; i++)
+        {
+            PaymentsTelemetry.EventReceived(callback.Provider, parsed.HoldReason is null ? "Stored" : "Held");
+        }
+
+        for (var i = 0; i < duplicates; i++)
+        {
+            PaymentsTelemetry.EventReceived(callback.Provider, "Duplicate");
+        }
+
+        activity?.SetTag("instalmentflow.outcome", stored > 0 ? "Stored" : duplicates > 0 ? "Duplicate" : "Empty");
         return new InboxReceipt(stored == 0 && duplicates > 0 ? InboxReceiptOutcome.Duplicate : InboxReceiptOutcome.Accepted, stored, duplicates, null);
     }
 
@@ -67,8 +82,11 @@ internal sealed class InboxService(PaymentsContext context) : IProviderInbox
 
             foreach (var entry in fresh)
             {
+                using var activity = PaymentsTelemetry.Start("inbox.process", entry.Provider);
+                activity?.SetTag("instalmentflow.event_kind", entry.Event.Kind.ToString());
                 var outcome = await ProcessAsync(entry, cancellationToken).ConfigureAwait(false);
                 await context.Store.UpdateInboxAsync(outcome, cancellationToken).ConfigureAwait(false);
+                PaymentsTelemetry.EntryProcessed(activity, entry.Provider, outcome.Status, outcome.Attempts);
                 switch (outcome.Status)
                 {
                     case InboxStatus.Processed: processed++; break;
@@ -220,6 +238,7 @@ internal sealed class InboxService(PaymentsContext context) : IProviderInbox
             ?? throw new RuleViolationException(PaymentsErrorCodes.UnverifiableCollection, "The collection cannot be identified for confirmation.");
         var status = await query.QueryAsync(
             new ProviderTransactionRef(paymentEvent.ProviderAccount, intent?.CorrelationId ?? paymentEvent.CorrelationId, merchantReference, amount), cancellationToken).ConfigureAwait(false);
+        PaymentsTelemetry.StatusQueried(paymentEvent.Provider, status.Status.ToString());
         switch (status.Status)
         {
             case ProviderTransactionStatus.Succeeded when status.TransactionId is null || status.TransactionId == paymentEvent.TransactionId:

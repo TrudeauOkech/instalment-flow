@@ -66,6 +66,33 @@ internal sealed class CommandRunner(TenantContext context)
         CancellationToken cancellationToken)
         where TResult : class
     {
+        using var activity = Telemetry.StartCommand(commandType, context.TenantId);
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+        var attempts = new int[1];
+        try
+        {
+            var result = await RunAttemptsAsync(request, commandType, fingerprint, plan, onReplay, attempts, cancellationToken).ConfigureAwait(false);
+            Telemetry.CommandFinished(activity, commandType, System.Diagnostics.Stopwatch.GetTimestamp() - started, attempts[0], attempts[0] == 0 ? "replayed" : "committed", null);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Telemetry.CommandFinished(activity, commandType, System.Diagnostics.Stopwatch.GetTimestamp() - started, attempts[0], "failed",
+                ex is InstalmentFlowException flow ? flow.ErrorCode : ex.GetType().Name);
+            throw;
+        }
+    }
+
+    private async Task<TResult> RunAttemptsAsync<TResult>(
+        InstalmentFlowRequest request,
+        string commandType,
+        Func<TenantSnapshot, CancellationToken, Task<Fingerprint>> fingerprint,
+        Func<TenantSnapshot, CancellationToken, Task<Planned<TResult>>> plan,
+        Func<TResult, TResult> onReplay,
+        int[] attempts,
+        CancellationToken cancellationToken)
+        where TResult : class
+    {
         var key = Validate.Request(request).Value;
         ConcurrencyConflictException? conflict = null;
 
@@ -74,6 +101,7 @@ internal sealed class CommandRunner(TenantContext context)
         {
             if (attempt > 1)
             {
+                Telemetry.Retried(commandType);
                 await Task.Delay(Backoff(attempt - 1), cancellationToken).ConfigureAwait(false);
             }
 
@@ -86,8 +114,11 @@ internal sealed class CommandRunner(TenantContext context)
             var existing = await context.Store.GetIdempotencyAsync(context.TenantId, key, cancellationToken).ConfigureAwait(false);
             if (existing is not null)
             {
+                attempts[0] = 0;
                 return Replay(existing, commandType, hash, onReplay);
             }
+
+            attempts[0] = attempt;
 
             try
             {

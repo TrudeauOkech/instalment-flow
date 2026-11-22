@@ -432,7 +432,17 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
 - **Features:** OAuth; USSD push; callback parsing and verification; enquiry (`TS`, `TF`, `TA`, `TIP` mapping, with `TA` treated as ambiguous). **No refund or disbursement initiation** (ADR-010).
 - **Acceptance:** sandbox end-to-end; contract tests.
 
-### M12 — Hardening → **1.0.0-rc** (L)
+### M12 — Hardening → **1.0.0-rc** (L) — in progress
+
+> **Phase 1 (observability and performance), done 2026-11-22:**
+> - **Telemetry:** OpenTelemetry conventions are final, with spans and metrics under `InstalmentFlow` across all packages and no personal data in attributes ([docs/observability.md](../observability.md)).
+> - **Benchmarks:** a BenchmarkDotNet suite, plus a PostgreSQL harness for NFR-4.
+> - **NFR-4 is met:** p95 11–18 ms (target under 25), and 829–912 payments/s (target 500 or more), after an account cache in the PostgreSQL store and change-only projection writes. The first measurement was p95 96.7 ms and 80/s ([docs/performance.md](../performance.md)).
+> - **Correctness gap closed:** schedule loads had no `ORDER BY` (from M7); they are ordered by key now.
+> - **Partitioning deferred** with data (ADR-019).
+>
+> **Next:** security review and threat model; documentation site and operations docs; API freeze review and k6 script. The external pilot is the host's.
+
 - **Features:**
   - OpenTelemetry conventions finalised;
   - BenchmarkDotNet suite (allocation on 5×365 instalments, receive path, Verify throughput);

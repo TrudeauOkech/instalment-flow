@@ -80,6 +80,11 @@ internal sealed class IntentService(PaymentsContext context, TenantId tenant) : 
             next = next with { UpdatedAt = context.Now };
             if (await context.Store.UpdateIntentAsync(next, current.Version, cancellationToken).ConfigureAwait(false))
             {
+                if (next.Status != current.Status)
+                {
+                    PaymentsTelemetry.IntentChanged(next.Provider, next.Status);
+                }
+
                 return next with { Version = current.Version + 1 };
             }
 
@@ -220,6 +225,7 @@ internal sealed class IntentResolverService(PaymentsContext context) : IIntentRe
         }
 
         StatusQueryResult status;
+        using var activity = PaymentsTelemetry.Start("provider.status_query", intent.Provider);
         try
         {
             status = await query.QueryAsync(new ProviderTransactionRef(intent.ProviderAccount, intent.CorrelationId, intent.Id.ToString("N"), intent.Amount), cancellationToken).ConfigureAwait(false);
@@ -229,11 +235,15 @@ internal sealed class IntentResolverService(PaymentsContext context) : IIntentRe
             throw;
         }
 #pragma warning disable CA1031 // A failed status query tells us nothing; the intent is checked again later.
-        catch (Exception)
+        catch (Exception ex)
 #pragma warning restore CA1031
         {
+            activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, ex.GetType().Name);
             status = StatusQueryResult.Pending;
         }
+
+        activity?.SetTag("instalmentflow.status", status.Status.ToString());
+        PaymentsTelemetry.StatusQueried(intent.Provider, status.Status.ToString());
 
         switch (status.Status)
         {

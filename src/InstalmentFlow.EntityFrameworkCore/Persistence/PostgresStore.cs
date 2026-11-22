@@ -24,8 +24,18 @@ internal static class DbContexts
 /// The PostgreSQL store (doc 05): the same contract as the in-memory store, enforced again by the database. Every
 /// call runs in a tenant-scoped transaction: the command scope's when a command is running, otherwise its own.
 /// </summary>
-internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, ConcurrencyMode mode) : ITenantStore, ILedgerStore
+internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, ConcurrencyMode mode, int accountCacheSize = 1024) : ITenantStore, ILedgerStore
 {
+    private readonly AccountCache? _cache = accountCacheSize > 0 ? new AccountCache(accountCacheSize) : null;
+
+    /// <summary>Test hook: on every cache hit, also reload the account and fail if the two differ.</summary>
+    internal bool CheckCacheOnHit { get; set; }
+
+    /// <summary>Test hook: how many account loads the cache served.</summary>
+    internal int CacheHits => _cacheHits;
+
+    private int _cacheHits;
+
     /// <summary>Test hook: runs after a commit's statements and before its transaction commits (failure injection).</summary>
     internal Func<Session, CancellationToken, Task>? BeforeCommit { get; set; }
 
@@ -116,12 +126,36 @@ internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, Concurr
                 await LockAsync(session, "accounts", "account_id", accountId.Value, cancellationToken).ConfigureAwait(false);
             }
 
+            if (_cache is not null && _cache.TryGet(tenantId, accountId, out var cached))
+            {
+                var current = await db.Accounts.Where(a => a.TenantId == tenantId.Value && a.AccountId == accountId.Value).Select(a => (long?)a.Version)
+                    .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                if (current == cached.Version)
+                {
+                    if (CheckCacheOnHit)
+                    {
+                        var fresh = await LoadAccountRowsAsync(db, tenantId.Value, accountId.Value, cancellationToken).ConfigureAwait(false);
+                        var still = await db.Accounts.Where(a => a.TenantId == tenantId.Value && a.AccountId == accountId.Value).Select(a => (long?)a.Version)
+                            .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                        if (still == cached.Version && fresh?.Version == cached.Version)
+                        {
+                            RequireSame(cached, fresh);   // compared only when no commit landed during the reload
+                        }
+                    }
+
+                    Interlocked.Increment(ref _cacheHits);
+                    session.LoadedAccounts[accountId] = cached;
+                    return cached;
+                }
+            }
+
             var account = await LoadAccountRowsAsync(db, tenantId.Value, accountId.Value, cancellationToken).ConfigureAwait(false);
             if (account is not null)
             {
                 await RequireUntornAsync(db.Accounts.Where(a => a.TenantId == tenantId.Value && a.AccountId == accountId.Value).Select(a => a.Version),
                     account.Version, accountId, cancellationToken).ConfigureAwait(false);
                 session.LoadedAccounts[account.Id] = account;
+                _cache?.Set(account);
             }
 
             return account;
@@ -135,15 +169,18 @@ internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, Concurr
             return null;
         }
 
-        var obligations = await db.Obligations.Where(o => o.TenantId == tenant && o.AccountId == accountId).ToListAsync(ct).ConfigureAwait(false);
+        var obligations = await db.Obligations.Where(o => o.TenantId == tenant && o.AccountId == accountId).OrderBy(o => o.OpenedAt).ThenBy(o => o.ObligationId)
+            .ToListAsync(ct).ConfigureAwait(false);
         var ids = obligations.Select(o => o.ObligationId).ToList();
         var rows = new AccountRows(
             account,
             obligations,
             await db.OriginatedComponents.Where(c => c.TenantId == tenant && ids.Contains(c.ObligationId)).ToListAsync(ct).ConfigureAwait(false),
-            await db.PlanVersions.Where(p => p.TenantId == tenant && ids.Contains(p.ObligationId)).ToListAsync(ct).ConfigureAwait(false),
-            await db.Instalments.Where(i => i.TenantId == tenant && ids.Contains(i.ObligationId)).ToListAsync(ct).ConfigureAwait(false),
-            await db.InstalmentComponents.Where(c => c.TenantId == tenant && ids.Contains(c.ObligationId)).ToListAsync(ct).ConfigureAwait(false),
+            await db.PlanVersions.Where(p => p.TenantId == tenant && ids.Contains(p.ObligationId)).OrderBy(p => p.ObligationId).ThenBy(p => p.Version).ToListAsync(ct).ConfigureAwait(false),
+            await db.Instalments.Where(i => i.TenantId == tenant && ids.Contains(i.ObligationId)).OrderBy(i => i.ObligationId).ThenBy(i => i.PlanVersion).ThenBy(i => i.Sequence)
+                .ToListAsync(ct).ConfigureAwait(false),
+            await db.InstalmentComponents.Where(c => c.TenantId == tenant && ids.Contains(c.ObligationId))
+                .OrderBy(c => c.ObligationId).ThenBy(c => c.PlanVersion).ThenBy(c => c.Sequence).ThenBy(c => c.Component).ThenBy(c => c.ChargeCode).ToListAsync(ct).ConfigureAwait(false),
             await db.FundsLots.Where(l => l.TenantId == tenant && l.AccountId == accountId).ToListAsync(ct).ConfigureAwait(false));
         return Mapping.ToAccount(rows);
     }
@@ -189,6 +226,32 @@ internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, Concurr
         if (await version.SingleOrDefaultAsync(ct).ConfigureAwait(false) != loaded)
         {
             throw new ConcurrencyConflictException(accountId, loaded);
+        }
+    }
+
+    private static void RequireSame(CustomerAccount cached, CustomerAccount fresh)
+    {
+        var (a, b) = (Mapping.ToRows(cached), Mapping.ToRows(fresh));
+        static string? Diff<T>(string name, IReadOnlyList<T> x, IReadOnlyList<T> y)
+        {
+            if (x.Count != y.Count)
+            {
+                return $"{name}: {x.Count} cached, {y.Count} stored";
+            }
+
+            var i = Enumerable.Range(0, x.Count).FirstOrDefault(k => !Equals(x[k], y[k]), -1);
+            return i < 0 ? null : $"{name}[{i}]: cached {x[i]} / stored {y[i]}";
+        }
+
+        // Schedule rows are compared as sets (their order carries no meaning); lots in order (their order is the insertion order).
+        static List<T> Sorted<T>(IEnumerable<T> rows) => [.. rows.OrderBy(r => r!.ToString(), StringComparer.Ordinal)];
+        var difference = Diff("account", [a.Account], [b.Account]) ?? Diff("obligations", Sorted(a.Obligations), Sorted(b.Obligations))
+            ?? Diff("originated", Sorted(a.Originated), Sorted(b.Originated)) ?? Diff("plans", Sorted(a.Plans), Sorted(b.Plans))
+            ?? Diff("instalments", Sorted(a.Instalments), Sorted(b.Instalments)) ?? Diff("components", Sorted(a.Components), Sorted(b.Components))
+            ?? Diff("lots", a.Lots, b.Lots);
+        if (difference is not null)
+        {
+            throw new InvalidOperationException($"The cached account {cached.Id} differs from the database at version {cached.Version}: {difference}");
         }
     }
 

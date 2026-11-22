@@ -160,6 +160,7 @@ internal sealed partial class QueriesService
                 return colon > 0 ? new InvariantViolation(v[..colon], v[(colon + 1)..].Trim()) : new InvariantViolation("unknown", v);
             })
             .ToList();
+        Telemetry.Verified(violations.Count);
         return new VerificationReport(context.Time.GetUtcNow(), violations.Count == 0, violations, result.JournalTransactions, result.Payments, result.Accounts);
     }
 

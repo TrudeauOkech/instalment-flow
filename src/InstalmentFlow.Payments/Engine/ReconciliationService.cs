@@ -34,6 +34,7 @@ internal sealed class ReconciliationService(PaymentsContext context) : IReconcil
             throw new ArgumentException("The reconciliation window is empty.", nameof(request));
         }
 
+        using var activity = PaymentsTelemetry.Start("reconciliation.run", request.Provider);
         var run = new Run(context, Guid.CreateVersion7(started), request.Provider, request.ProviderAccount);
         await foreach (var line in statement.ReadAsync(request.ProviderAccount, from, to, cancellationToken).ConfigureAwait(false))
         {
@@ -45,6 +46,18 @@ internal sealed class ReconciliationService(PaymentsContext context) : IReconcil
 
         await run.FindMissingAtProviderAsync(from, to, cancellationToken).ConfigureAwait(false);
         var report = run.Report(from, to);
+        foreach (var line in report.Lines.Concat(report.MissingAtProvider))
+        {
+            PaymentsTelemetry.Reconciled(request.Provider, line.Classification);
+        }
+
+        foreach (var discrepancy in report.NewDiscrepancies)
+        {
+            PaymentsTelemetry.DiscrepancyRaised(request.Provider, discrepancy.Kind);
+        }
+
+        activity?.SetTag("instalmentflow.lines", report.Lines.Count);
+        activity?.SetTag("instalmentflow.discrepancies", report.NewDiscrepancies.Count);
         await context.Store.AddRunAsync(new ReconciliationRunRecord(
             report.RunId, report.Provider, report.ProviderAccount, from, to, started, context.Now, report.Lines.Count,
             report.Count(ReconciliationClassification.Matched), report.Count(ReconciliationClassification.MissingInEngine),

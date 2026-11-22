@@ -21,7 +21,9 @@ internal static class TestEngine
         }
 
         var database = PostgresServer.CreateDatabaseAsync().GetAwaiter().GetResult();
-        return InstalmentFlowPostgres.CreateFactoryAsync(new PostgresStoreOptions { ConnectionString = database.Application }, configure).GetAwaiter().GetResult();
+        var factory = InstalmentFlowPostgres.CreateFactoryAsync(new PostgresStoreOptions { ConnectionString = database.Application }, configure).GetAwaiter().GetResult();
+        ((EntityFrameworkCore.Persistence.PostgresStore)factory.LedgerStore).CheckCacheOnHit = true;   // every cache hit is compared with a reload
+        return factory;
     }
 
     /// <summary>Scales a property test's iteration count down on PostgreSQL, where each engine is a database.</summary>

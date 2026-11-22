@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using InstalmentFlow.EntityFrameworkCore.Persistence;
 using InstalmentFlow.EntityFrameworkCore.Schema;
 using Npgsql;
@@ -59,6 +61,9 @@ public sealed class OutboxDispatcher : IAsyncDisposable
         {
             var integrationEvent = new IntegrationEvent(row.EventId, row.Type, row.TenantId, row.AccountId is { } a ? new AccountId(a) : null, row.OccurredAt,
                 Json.Deserialize<Dictionary<string, string>>(row.Payload).ToImmutableSortedDictionary(StringComparer.Ordinal));
+            using var activity = OutboxTelemetry.Source.StartActivity("instalmentflow.outbox.publish", ActivityKind.Producer);
+            activity?.SetTag("instalmentflow.event_type", row.Type);
+            activity?.SetTag("instalmentflow.tenant", row.TenantId);
             try
             {
                 await _publisher.PublishAsync(integrationEvent, cancellationToken).ConfigureAwait(false);
@@ -67,6 +72,8 @@ public sealed class OutboxDispatcher : IAsyncDisposable
             catch (Exception ex) when (ex is not OperationCanceledException)
 #pragma warning restore CA1031
             {
+                activity?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);
+                OutboxTelemetry.Published.Add(1, new KeyValuePair<string, object?>("instalmentflow.outcome", "failed"));
                 var backoff = TimeSpan.FromSeconds(Math.Min(_options.MaxBackoff.TotalSeconds, Math.Pow(2, row.Attempts))); // floating-point-allowed: retry timing, not money
                 await MarkAsync(row.OutboxId, "set attempts = attempts + 1, next_attempt_at = @at, lease_until = null, last_error = @error",
                     _time.GetUtcNow() + backoff, ex.Message, cancellationToken).ConfigureAwait(false);
@@ -74,6 +81,7 @@ public sealed class OutboxDispatcher : IAsyncDisposable
             }
 
             await MarkAsync(row.OutboxId, "set status = 1, published_at = @at, lease_until = null, attempts = attempts + 1", _time.GetUtcNow(), null, cancellationToken).ConfigureAwait(false);
+            OutboxTelemetry.Published.Add(1, new KeyValuePair<string, object?>("instalmentflow.outcome", "published"));
             published++;
         }
 
@@ -191,4 +199,15 @@ public sealed class OutboxDispatcher : IAsyncDisposable
     }
 
     private sealed record Claimed(long OutboxId, string TenantId, Guid EventId, Guid? AccountId, string Type, string Payload, DateTimeOffset OccurredAt, int Attempts);
+}
+
+/// <summary>The outbox dispatcher's instruments (docs/observability.md).</summary>
+internal static class OutboxTelemetry
+{
+    public static readonly ActivitySource Source = new(InstalmentFlowTelemetry.SourceName);
+
+    private static readonly Meter Meter = new(InstalmentFlowTelemetry.MeterName);
+
+    public static readonly Counter<long> Published = Meter.CreateCounter<long>(
+        "instalmentflow.outbox.events", "{event}", "Outbox events handed to the publisher, by outcome (published, failed).");
 }

@@ -322,17 +322,19 @@ The rule for the timeout case: **a timeout is not a failure.** An intent in `Amb
 
 ## 8. Observability
 
-- `ActivitySource("InstalmentFlow")` spans: `engine.receive`, `engine.allocate`, `store.save`, `outbox.dispatch`, `provider.callback`, `provider.status_query`, `reconcile.run`.
-- `Meter("InstalmentFlow")` metrics:
-  - `if.payments.received` (by provider and outcome: new, duplicate, unidentified, exception);
-  - `if.exceptions.open` (by reason, with age);
-  - `if.allocations.amount`;
-  - `if.concurrency.retries`;
-  - `if.outbox.lag_seconds`;
-  - `if.intents.ambiguous`;
-  - `if.reconciliation.discrepancies`;
-  - `if.verify.violations` (alert on > 0).
-- Structured logging through `ILogger` with source-generated `LoggerMessage` methods. Correlation fields: `tenant`, `account`, `journalTx`, `externalRef`.
+As built in M12, the full catalogue is in [docs/observability.md](../observability.md). One `ActivitySource` and one
+`Meter`, both named `InstalmentFlow` (`InstalmentFlowTelemetry.SourceName` and `MeterName`), are shared by every
+package and built on `System.Diagnostics`, so the core has no extra dependency.
+- **Spans:** `instalmentflow.command {CommandType}`, `instalmentflow.inbox.receive`, `instalmentflow.inbox.process`,
+  `instalmentflow.provider.status_query`, `instalmentflow.reconciliation.run` and `instalmentflow.outbox.publish`.
+- **Metrics:** `instalmentflow.*` counters and histograms. They cover command duration and retries, payments by outcome
+  and amount, `Verify` violations (alert on more than zero), the inbox, intents, status queries, reconciliation lines
+  and discrepancies, and outbox events.
+- **Attributes:** tenant, provider, command, outcome, status and error code. No personal data.
+- **Current state:** inbox backlog, ambiguous intents, reconciliation age and outbox lag come from health checks, not
+  gauges.
+- **Logs:** the ASP.NET Core workers use source-generated `LoggerMessage` methods. The core logs nothing and reports
+  through exceptions, results and telemetry.
 
 ## 9. Technology choices
 

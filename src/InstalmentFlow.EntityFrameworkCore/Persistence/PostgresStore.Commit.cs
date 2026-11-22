@@ -22,10 +22,18 @@ internal sealed partial class PostgresStore
             throw new RuleViolationException(ErrorCodes.TenantMismatch, "A commit touched another tenant's data.");
         }
 
+        List<CustomerAccount>? cacheable = null;
         try
         {
             await InTenantAsync(commit.Tenant, async (session, db) =>
             {
+                if (_cache is not null && HostTransaction.Current is null)
+                {
+                    // Decided before writing: the loaded versions are what the commit is based on.
+                    var created = commit.Payments.Select(p => p.Id).ToHashSet();
+                    cacheable = [.. commit.Accounts.Where(a => AccountCache.ReloadsIdentically(session.LoadedAccounts.GetValueOrDefault(a.Id), a, created))];
+                }
+
                 await WriteAsync(session, db, commit, cancellationToken).ConfigureAwait(false);
                 if (BeforeCommit is { } hook)
                 {
@@ -38,11 +46,33 @@ internal sealed partial class PostgresStore
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException pg)
         {
+            Forget(commit);
             throw Translate(pg, commit) ?? throw new InvalidOperationException($"The commit was refused by the database: {pg.MessageText}", ex);
         }
         catch (PostgresException pg) when (Translate(pg, commit) is { } translated)
         {
+            Forget(commit);
             throw translated;
+        }
+        catch
+        {
+            Forget(commit);
+            throw;
+        }
+
+        // Committed and durable: the next command on these accounts needs no reload (each commit bumped the version by one).
+        Forget(commit);
+        foreach (var account in cacheable ?? [])
+        {
+            _cache!.Set(account with { Version = account.Version + 1 });
+        }
+    }
+
+    private void Forget(Commit commit)
+    {
+        foreach (var account in commit.Accounts)
+        {
+            _cache?.Remove(commit.Tenant, account.Id);
         }
     }
 
@@ -146,17 +176,25 @@ internal sealed partial class PostgresStore
 
         foreach (var account in commit.Accounts)
         {
-            var after = Mapping.ToRows(account with { Version = account.Version + 1 });
+            AccountRows after;
             AccountRows? before = null;
             if (account.Version != CustomerAccount.NewVersion)
             {
                 var loaded = session.LoadedAccounts.TryGetValue(account.Id, out var cached) && cached.Version == account.Version
                     ? cached
                     : await LoadAccountRowsAsync(db, tenant, account.Id.Value, ct).ConfigureAwait(false) ?? throw new ConcurrencyConflictException(account.Id, account.Version);
-                before = Mapping.ToRows(loaded with { Version = account.Version + 1 });
+
+                // The domain replaces only the obligations a command changes, so one that is the very same object as
+                // when loaded has no row to write; mapping a full schedule per commit would cost thousands of rows.
+                var untouched = loaded.Obligations.Where(o => account.Obligations.Any(a => ReferenceEquals(a, o))).Select(o => o.Id).ToHashSet();
+                CustomerAccount Changed(CustomerAccount a) =>
+                    a with { Version = account.Version + 1, Obligations = [.. a.Obligations.Where(o => !untouched.Contains(o.Id))] };
+                before = Mapping.ToRows(Changed(loaded));
+                after = Mapping.ToRows(Changed(account));
             }
             else
             {
+                after = Mapping.ToRows(account with { Version = account.Version + 1 });
                 db.Accounts.Add(after.Account);
             }
 
