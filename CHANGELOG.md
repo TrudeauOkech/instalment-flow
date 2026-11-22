@@ -51,6 +51,8 @@ All notable changes to this project are documented here. The format follows
   - `InstalmentFlowPayments.Providers`.
   - A warning is logged at start-up when a provider without authenticated callbacks has no allowed networks, outside Development.
 
+- M12 documentation: a DocFX site with guides and the API reference, published to GitHub Pages. New pages: operations runbook, failure scenarios (each linked to its tests), integration guides (existing loan system, custom provider adapter, general-ledger export) and compliance notes. Sample 07 runs inside an existing loan system's `DbContext` with `Enlist`.
+
 ### Changed
 - The public API of 0.2.0-preview.1 is recorded in `PublicAPI.Shipped.txt`.
 - Simulator endpoints are refused outside `Development`, not only in `Production`: `UseSimulator(…, allowOutsideDevelopment)`.

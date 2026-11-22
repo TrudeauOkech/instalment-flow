@@ -188,6 +188,27 @@ public sealed class ChargeFlowTests
         f.AssertInvariants();
     }
 
+    [Fact]
+    public async Task Scenario6_reversing_a_payment_after_a_waiver_keeps_the_waiver()
+    {
+        var f = new Flows();
+        var customer = await f.CustomerAsync("C-1");
+        await f.LoanAsync(customer, "LN100001",
+        [
+            new PlannedInstalment(s_today.AddDays(-1), [Component.Principal(Money.Kes(100m))]),
+            new PlannedInstalment(s_today, [Component.Principal(Money.Kes(100m))]),
+        ]);
+        await f.PayAsync("TX1", 100m, "LN100001");      // settles the first instalment
+        await Waive(f, ComponentKey.Principal, 100m);   // waives the second
+
+        await f.ReverseAsync("TX1");
+
+        var loan = await f.LoanViewAsync("LN100001");
+        Assert.Equal(Money.Kes(100m), loan.Outstanding);   // the first is owed again; the waived one stays waived
+        Assert.Equal(InstalmentPaymentState.Waived, loan.Instalments[1].PaymentState);
+        f.AssertInvariants();
+    }
+
     // ----- Cancellation (ADR-011) -----
 
     [Fact]

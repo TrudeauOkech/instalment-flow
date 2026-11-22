@@ -6,6 +6,7 @@ the centre stands for every payment being accounted for.
 | File | Use |
 |---|---|
 | `logo.svg` | The source: use it wherever SVG works |
+| `logo-nav.svg` | The documentation site's header (the same drawing at 36 × 36) |
 | `logo-256.png` | The README header (an absolute URL, so it also shows on nuget.org) |
 | `icon.png` | The NuGet package icon (128 × 128) |
 | `social-preview.svg`, `social-preview.png` | GitHub's social preview (1280 × 640; upload it under Settings → General → Social preview) |

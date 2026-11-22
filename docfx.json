@@ -1,0 +1,40 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/docfx/main/schemas/docfx.schema.json",
+  "metadata": [
+    {
+      "src": [
+        {
+          "src": "src",
+          "files": [
+            "InstalmentFlow/InstalmentFlow.csproj",
+            "InstalmentFlow.EntityFrameworkCore/InstalmentFlow.EntityFrameworkCore.csproj",
+            "InstalmentFlow.Payments/InstalmentFlow.Payments.csproj",
+            "InstalmentFlow.Payments.Mpesa/InstalmentFlow.Payments.Mpesa.csproj",
+            "InstalmentFlow.Payments.AirtelMoney/InstalmentFlow.Payments.AirtelMoney.csproj",
+            "InstalmentFlow.AspNetCore/InstalmentFlow.AspNetCore.csproj",
+            "InstalmentFlow.Testing/InstalmentFlow.Testing.csproj"
+          ]
+        }
+      ],
+      "dest": "api",
+      "properties": { "Configuration": "Release" }
+    }
+  ],
+  "build": {
+    "content": [
+      { "files": [ "api/**.yml", "api/index.md" ] },
+      { "files": [ "index.md", "toc.yml", "docs/**.md", "docs/**/toc.yml" ] }
+    ],
+    "resource": [ { "files": [ "docs/assets/**" ] } ],
+    "output": "_site",
+    "template": [ "default", "modern" ],
+    "globalMetadata": {
+      "_appName": "InstalmentFlow",
+      "_appTitle": "InstalmentFlow",
+      "_appLogoPath": "docs/assets/logo-nav.svg",
+      "_appFaviconPath": "docs/assets/icon.png",
+      "_enableSearch": true,
+      "_gitContribute": { "repo": "https://github.com/TrudeauOkech/instalment-flow", "branch": "main" }
+    }
+  }
+}

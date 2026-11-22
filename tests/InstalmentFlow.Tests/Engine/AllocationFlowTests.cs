@@ -213,6 +213,20 @@ public sealed class AllocationFlowTests
     }
 
     [Fact]
+    public async Task Scenario21_a_tenant_pinned_to_version_1_is_unaffected_when_version_2_ships()
+    {
+        var (factory, flow) = Engine(p => p with { Allocation = Versioned.Reference(1) }, b => b
+            .AddAllocationStrategy(new Versioned(1)).AddAllocationStrategy(new Versioned(2)));
+        var customer = await Customer(flow, "C-1");
+        await Loan(flow, customer, "LN100001", Single(500m, s_today));
+
+        var result = await flow.Payments.RecordAsync(Paybill("TX1", 200m, "LN100001"), Ct);
+
+        Assert.Equal(Money.Kes(200m), result.Allocated);   // version 1 pays in full; version 2 would allocate nothing
+        Invariants.AssertHold(factory, Tenant);
+    }
+
+    [Fact]
     public async Task Unknown_strategies_are_rejected_IF2003()
     {
         var (_, flow) = Engine();
@@ -326,5 +340,15 @@ public sealed class AllocationFlowTests
         public StrategyRef Ref => Reference;
 
         public AllocationPlan Plan(AllocationContext context) => throw new InvalidOperationException("strategy bug");
+    }
+
+    /// <summary>A strategy whose behaviour changed between versions: version 2 allocates nothing.</summary>
+    private sealed class Versioned(int version) : IAllocationStrategy
+    {
+        public StrategyRef Ref => Reference(version);
+
+        public static StrategyRef Reference(int version) => new("test.versioned", version);
+
+        public AllocationPlan Plan(AllocationContext context) => version == 1 ? AllocationPlan.FillInOrder(context, context.Targets) : AllocationPlan.Empty;
     }
 }

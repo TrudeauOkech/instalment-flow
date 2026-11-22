@@ -1,0 +1,58 @@
+- name: Concepts
+  href: concepts.md
+- name: Financial invariants
+  href: financial-invariants.md
+- name: Allocation strategies
+  href: allocation-strategies/README.md
+- name: Failure scenarios
+  href: failure-scenarios.md
+- name: Integrations
+  items:
+    - name: Inside an existing loan system
+      href: integrations/existing-loan-system.md
+    - name: M-Pesa
+      href: integrations/mpesa.md
+    - name: Airtel Money
+      href: integrations/airtel.md
+    - name: The simulated provider
+      href: integrations/simulator.md
+    - name: Writing a provider adapter
+      href: integrations/custom-provider.md
+    - name: General-ledger export
+      href: integrations/gl-export.md
+- name: Operations
+  items:
+    - name: Runbook
+      href: operations.md
+    - name: Observability
+      href: observability.md
+    - name: Performance
+      href: performance.md
+- name: Security and compliance
+  items:
+    - name: Threat model
+      href: security/threat-model.md
+    - name: Compliance notes
+      href: compliance.md
+- name: Decisions (ADRs)
+  href: decisions/README.md
+- name: Design documents
+  items:
+    - name: Overview
+      href: planning/00-overview.md
+    - name: Product requirements
+      href: planning/01-product-requirements.md
+    - name: Domain and financial model
+      href: planning/02-domain-and-financial-model.md
+    - name: Architecture
+      href: planning/03-architecture.md
+    - name: API and SDK design
+      href: planning/04-api-and-sdk-design.md
+    - name: Database design
+      href: planning/05-database-design.md
+    - name: Roadmap
+      href: planning/06-implementation-roadmap.md
+    - name: Risks and failure analysis
+      href: planning/07-risk-and-failure-analysis.md
+    - name: Open-source launch plan
+      href: planning/08-open-source-launch-plan.md

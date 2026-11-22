@@ -40,7 +40,7 @@ asks an operator to resolve it.
 ## Allocation
 
 **Allocation** applies held funds to instalment components. A versioned, pure **strategy** chooses the order, for
-example oldest due first or proportional across loans (ADR-006; see [allocation strategies](allocation-strategies/)).
+example oldest due first or proportional across loans (ADR-006; see [allocation strategies](allocation-strategies/README.md)).
 The engine validates every plan a strategy returns, so even a faulty custom strategy cannot over-settle anything or
 pay an obligation it should not. Funds directed to a loan never spill onto another one. What is left after
 everything due is paid stays as credit, or buys future instalments if the tenant chooses (pay-as-you-go).
@@ -85,4 +85,4 @@ var run = await Scenario.InMemory()
 await run.ShouldSatisfyAllInvariantsAsync();
 ```
 
-See the [samples](../samples/) for runnable programs.
+See the [samples](https://github.com/TrudeauOkech/instalment-flow/tree/main/samples) for runnable programs.

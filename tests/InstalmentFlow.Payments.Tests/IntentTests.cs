@@ -89,6 +89,23 @@ public sealed class IntentTests
     }
 
     [Fact]
+    public async Task Scenario4_a_lost_push_reply_then_a_manual_paybill_payment_records_both_and_keeps_the_extra_as_credit()
+    {
+        var h = await Harness.CreateAsync();
+        h.Simulator.NextPush(new SimulatedPush { Faults = SimulatedFaults.TimeoutThenSuccess });
+        var intent = await h.InitiateAsync("push-1", amount: 400m);   // "checking…": the customer approves the push
+        h.PayBill(400m);   // and, unsure, also pays by paybill
+
+        await h.DeliverAndProcessAsync();
+
+        Assert.Equal(PaymentIntentStatus.Confirmed, (await h.TenantPayments.Intents.GetAsync(intent.IntentId, Ct)).Status);
+        Assert.Equal(2, (await h.PaymentsAsync()).Count);
+        Assert.Equal(Money.Kes(500m), await h.LoanPaidAsync());   // the due instalment
+        Assert.Equal(Money.Kes(300m), (await h.Flow.Queries.GetAccountAsync(AccountRef.ById(h.Customer), cancellationToken: Ct)).Unapplied.Single());
+        await h.AssertLedgerVerifiesAsync();
+    }
+
+    [Fact]
     public async Task A_declined_push_fails_and_records_nothing()
     {
         var h = await Harness.CreateAsync();

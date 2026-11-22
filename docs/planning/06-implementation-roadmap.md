@@ -447,7 +447,15 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
 > - The others are accepted or documented.
 > - No vulnerable packages; no injectable SQL.
 >
-> **Next:** documentation site and operations docs; API freeze review and k6 script. The external pilot is the host's.
+> **Phase 3 (documentation), done 2026-11-23:**
+> - **Site:** a DocFX site with the guides and the API reference, published to GitHub Pages by `docs.yml`.
+> - **Operations:** runbook ([docs/operations.md](../operations.md)).
+> - **Failure scenarios:** all 29 of doc 07 §6, each linked to its tests ([docs/failure-scenarios.md](../failure-scenarios.md)). Three new scenario tests: 4, 6 and 21. Two scenarios differ from the design and are documented: 16 (reassignment not built) and 17 (quotes are snapshots).
+> - **Integration guides:** existing loan system, custom provider adapter and general-ledger export.
+> - **Compliance notes.**
+> - **Sample 07:** inside an existing loan system, with `Enlist`; CI runs it on PostgreSQL.
+>
+> **Next:** API freeze review and k6 script. The external pilot is the host's.
 
 - **Features:**
   - OpenTelemetry conventions finalised;

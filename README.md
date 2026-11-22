@@ -12,6 +12,8 @@ Customers in markets such as Kenya often pay small, irregular amounts through mo
 
 > **Status: 0.2 preview.** The core engine works end to end: identification, allocation, reversals, charges, waivers, refunds, cancellation, as-of history and verification, in memory or on PostgreSQL with row-level security, append-only enforcement and a transactional outbox. The payments package (inbox, intents, routing, reconciliation and a simulated provider), the M-Pesa adapter and the ASP.NET Core integration are built and ship with 0.3, once the adapter is verified against the Daraja sandbox; the Airtel Money adapter is built for 0.4, pending the same check against Airtel's sandbox; the API may still change before 1.0. See the [roadmap](docs/planning/06-implementation-roadmap.md).
 
+**Documentation:** [trudeauokech.github.io/instalment-flow](https://trudeauokech.github.io/instalment-flow): guides, the operations runbook, the threat model and the API reference.
+
 ## Quickstart
 
 ```csharp

@@ -66,6 +66,18 @@ jobs:
           IF_STORE: postgres
           DOTNET_ROLL_FORWARD: ${{ matrix.runtime == '11.0' && 'LatestMajor' || 'Minor' }}
 
+      - name: Sample 07 against PostgreSQL
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          docker run -d --name sample-pg -e POSTGRES_PASSWORD=sample -p 5433:5432 postgres:17-alpine
+          for i in $(seq 1 30); do docker exec sample-pg pg_isready -U postgres && break; sleep 1; done
+          sleep 2
+          dotnet run --project samples/07-ExistingLoanSystem --no-build -c Release
+        env:
+          INSTALMENTFLOW_SAMPLE_PG: Host=localhost;Port=5433;Username=postgres;Password=sample
+          DOTNET_ROLL_FORWARD: ${{ matrix.runtime == '11.0' && 'LatestMajor' || 'Minor' }}
+
       - name: Run samples
         shell: bash
         run: |

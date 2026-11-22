@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="36" height="36">
+  <title>InstalmentFlow</title>
+  <!-- A repayment schedule as a ring of six instalments: three paid, one part-paid. -->
+  <rect width="36" height="36" rx="56" fill="#0F3D3E"/>
+  <g fill="none" stroke-width="26" transform="rotate(-90 128 128)">
+    <circle cx="128" cy="128" r="72" stroke="#1E5A5B" stroke-dasharray="66 9.4"/>
+    <circle cx="128" cy="128" r="72" stroke="#2DD4BF" stroke-dasharray="66 9.4 66 9.4 66 9.4 33 300"/>
+  </g>
+  <circle cx="128" cy="128" r="34" fill="#FBBF24"/>
+  <path d="M116 128 l9 9 l17 -19" fill="none" stroke="#0F3D3E" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -18,6 +18,7 @@
     <Project Path="samples/04-MpesaSandbox/04-MpesaSandbox.csproj" />
     <Project Path="samples/05-WebHost/05-WebHost.csproj" />
     <Project Path="samples/06-AirtelSandbox/06-AirtelSandbox.csproj" />
+    <Project Path="samples/07-ExistingLoanSystem/07-ExistingLoanSystem.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/InstalmentFlow.ArchitectureTests/InstalmentFlow.ArchitectureTests.csproj" />

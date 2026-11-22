@@ -1,6 +1,6 @@
 # Threat model and security review
 
-M12's security review for 1.0 (NFR-8), as of 2026-11-23. Report vulnerabilities privately as [SECURITY.md](../../SECURITY.md)
+M12's security review for 1.0 (NFR-8), as of 2026-11-23. Report vulnerabilities privately as [SECURITY.md](https://github.com/TrudeauOkech/instalment-flow/blob/main/SECURITY.md)
 describes.
 
 ## What is protected
