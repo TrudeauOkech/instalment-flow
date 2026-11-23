@@ -15,6 +15,12 @@ using InstalmentFlow.EntityFrameworkCore;
 using InstalmentFlow.Payments;
 using InstalmentFlow.Payments.Simulation;
 using InstalmentFlow.TestSupport;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 var accounts = Option("--accounts", 64);
 var inboxWorkers = Option("--inbox-workers", 8);

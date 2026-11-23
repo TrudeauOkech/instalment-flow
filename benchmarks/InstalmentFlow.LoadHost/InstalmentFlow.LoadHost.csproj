@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <!-- The reference host for the k6 load test (benchmarks/k6): ASP.NET Core with the payments package on PostgreSQL,
        seeded with the NFR-4 workload. Not a sample to copy: it starts a throwaway database and exposes /load/ endpoints. -->
@@ -10,6 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Testcontainers.PostgreSql" />
   </ItemGroup>
 
