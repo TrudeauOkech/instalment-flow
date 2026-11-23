@@ -10,7 +10,7 @@
 
 Customers in markets such as Kenya often pay small, irregular amounts through mobile money: KES 100 on Monday, 150 on Tuesday, 700 on Friday. InstalmentFlow records every confirmed payment exactly once and identifies which loan it belongs to. It allocates the money according to the lender's rules and keeps an immutable, double-entry history that can explain every shilling, including after reversals.
 
-> **Status: 0.2 preview.** The core engine works end to end: identification, allocation, reversals, charges, waivers, refunds, cancellation, as-of history and verification, in memory or on PostgreSQL with row-level security, append-only enforcement and a transactional outbox. The payments package (inbox, intents, routing, reconciliation and a simulated provider), the M-Pesa adapter and the ASP.NET Core integration are built and ship with 0.3, once the adapter is verified against the Daraja sandbox; the Airtel Money adapter is built for 0.4, pending the same check against Airtel's sandbox; the API may still change before 1.0. See the [roadmap](docs/planning/06-implementation-roadmap.md).
+> **Status: 1.0 release candidate.** The core engine works end to end: identification, allocation, reversals, charges, waivers, refunds, cancellation, as-of history and verification, in memory or on PostgreSQL with row-level security, append-only enforcement and a transactional outbox. The payments package (inbox, intents, routing, reconciliation and a simulated provider) and the ASP.NET Core integration ship with it. Their public API is frozen ([versioning](docs/versioning.md)). The M-Pesa and Airtel Money adapters are built but not yet published: each ships once it has passed a run against its provider's sandbox. See the [roadmap](docs/planning/06-implementation-roadmap.md).
 
 **Documentation:** [trudeauokech.github.io/instalment-flow](https://trudeauokech.github.io/instalment-flow): guides, the operations runbook, the threat model and the API reference.
 
@@ -55,13 +55,13 @@ It is not a complete loan management system, a payment gateway, an accounting pl
 
 | Package | Purpose |
 |---|---|
-| `InstalmentFlow` | Core engine and in-memory store. Zero third-party dependencies. (0.1 preview) |
-| `InstalmentFlow.EntityFrameworkCore` | PostgreSQL persistence, row-level security, transactional outbox (0.2 preview) |
+| `InstalmentFlow` | Core engine and in-memory store. Zero third-party dependencies. |
+| `InstalmentFlow.EntityFrameworkCore` | PostgreSQL persistence, row-level security, transactional outbox |
 | `InstalmentFlow.Payments` | Provider SPI, inbox, payment intents, reconciliation, simulator |
-| `InstalmentFlow.Payments.Mpesa` | Safaricom M-Pesa (Daraja) adapter |
-| `InstalmentFlow.Payments.AirtelMoney` | Airtel Money adapter |
+| `InstalmentFlow.Payments.Mpesa` | Safaricom M-Pesa (Daraja) adapter (not yet published: pending a sandbox run) |
+| `InstalmentFlow.Payments.AirtelMoney` | Airtel Money adapter (not yet published: pending a sandbox run) |
 | `InstalmentFlow.AspNetCore` | Callback endpoints, tenant context, health checks |
-| `InstalmentFlow.Testing` | Scenario DSL and test helpers for your own test suite (0.1 preview) |
+| `InstalmentFlow.Testing` | Scenario DSL and test helpers for your own test suite |
 
 ## Building
 

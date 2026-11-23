@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- Not published until it has passed a run against the Daraja sandbox (docs/versioning.md). -->
+    <IsPackable>false</IsPackable>
     <Description>Safaricom M-Pesa (Daraja) adapter for InstalmentFlow: C2B, STK push, transaction status and reconciliation.</Description>
   </PropertyGroup>
 

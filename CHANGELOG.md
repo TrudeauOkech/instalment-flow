@@ -5,6 +5,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0-rc.1] - 2026-11-23
+
+The first release candidate for 1.0. It publishes five packages: `InstalmentFlow`, `InstalmentFlow.EntityFrameworkCore`, `InstalmentFlow.Payments`, `InstalmentFlow.AspNetCore` and `InstalmentFlow.Testing`. Their public API is frozen; see [docs/versioning.md](docs/versioning.md). The M-Pesa and Airtel Money adapters below are built but not published in this release: each ships once it has passed a run against its provider's sandbox. Planned 0.3 and 0.4 previews are folded into this release.
+
 ### Added
 - M8 payments core, `InstalmentFlow.Payments` (ADR-018):
   - Adapter interfaces with capability flags: `IPaymentProviderAdapter`, `ICollectionInitiator`, `ITransactionStatusQuery`, `IStatementSource`, plus `IPayloadProtector`. A provider must implement exactly the capabilities it declares; this is checked at start-up.

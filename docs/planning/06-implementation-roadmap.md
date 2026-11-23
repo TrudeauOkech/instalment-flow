@@ -462,7 +462,9 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
 >   - lost races evicted the winner's cache entry (engine throughput with colliding writers rose from 704 to 979/s once fixed);
 >   - a correctness bug: reads inside a rolled-back host transaction could leave uncommitted state in the cache, wrong for another instance's later commit. Fixed, with a test.
 >
-> **Next:** the external pilot (the host's), then 1.0.0-rc.1.
+> **1.0.0-rc.1, released 2026-11-23:** the core, EF, payments, ASP.NET Core and testing packages. The 0.3 and 0.4 previews are folded in. The M-Pesa and Airtel Money packages are held back until their sandbox runs pass.
+>
+> **Next:** the external pilot (the host's) on the release candidate; the adapters' sandbox runs; then 1.0.0.
 
 - **Features:**
   - OpenTelemetry conventions finalised;

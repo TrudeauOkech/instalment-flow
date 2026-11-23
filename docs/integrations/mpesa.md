@@ -16,7 +16,7 @@ The roadmap's pre-work was to check every API against the official Daraja portal
 `developer.safaricom.co.ke` renders its API pages in the browser and needs an account, so its specifications could not
 be read. The adapter is therefore built from what several independent sources agree on, and it accepts every variant
 they disagree about. **Nothing below is confirmed against a Daraja sandbox yet.** Recording real sandbox payloads is
-required before the 0.3.0 release (see "Before release").
+required before the package is published (see "Before release"). It is not part of 1.0.0-rc.1.
 
 Confidence:
 - **Consistent**: several independent sources (client libraries, integration guides) agree, and doc 03 §7.2 had

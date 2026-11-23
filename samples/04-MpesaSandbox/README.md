@@ -14,5 +14,5 @@ dotnet run --project samples/04-MpesaSandbox
 ```
 
 The sample saves Daraja's responses in `MPESA_RECORD_DIR`, with access tokens redacted. Callbacks go to
-`MPESA_CALLBACK_BASE`, so capture them there. Together they are the sandbox fixtures needed before 0.3.0 (see
+`MPESA_CALLBACK_BASE`, so capture them there. Together they are the sandbox fixtures needed before the adapter is published (see
 [docs/integrations/mpesa.md](../../docs/integrations/mpesa.md)).

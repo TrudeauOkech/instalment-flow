@@ -13,7 +13,7 @@ It never starts refunds or disbursements (ADR-010).
 Airtel's developer portal could not be read from here, so, as for M-Pesa, the adapter follows what independent
 sources agree on and is defensive wherever they disagree. The sources are listed below. They disagree more than the
 M-Pesa sources did. **Nothing below is confirmed against Airtel's sandbox (UAT).** That check is required before the
-0.4.0 release.
+package is published. It is not part of 1.0.0-rc.1.
 
 | Item | What the adapter assumes | Confidence |
 |---|---|---|

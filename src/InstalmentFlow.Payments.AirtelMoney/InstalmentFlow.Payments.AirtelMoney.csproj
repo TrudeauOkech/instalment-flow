@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- Not published until it has passed a run against the Airtel sandbox (docs/versioning.md). -->
+    <IsPackable>false</IsPackable>
     <Description>Airtel Money adapter for InstalmentFlow: USSD push collection, callbacks and transaction enquiry.</Description>
   </PropertyGroup>
 
