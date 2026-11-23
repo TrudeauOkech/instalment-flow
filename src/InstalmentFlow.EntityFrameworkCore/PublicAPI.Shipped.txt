@@ -14,6 +14,7 @@ InstalmentFlow.EntityFrameworkCore.MigrationOptions.MigrationOptions() -> void
 InstalmentFlow.EntityFrameworkCore.OutboxDispatcher
 InstalmentFlow.EntityFrameworkCore.OutboxDispatcher.DispatchAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<int>!
 InstalmentFlow.EntityFrameworkCore.OutboxDispatcher.DisposeAsync() -> System.Threading.Tasks.ValueTask
+InstalmentFlow.EntityFrameworkCore.OutboxDispatcher.GetLagAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.TimeSpan?>!
 InstalmentFlow.EntityFrameworkCore.OutboxDispatcher.OutboxDispatcher(string! connectionString, InstalmentFlow.IIntegrationEventPublisher! publisher, InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions? options = null, System.TimeProvider? timeProvider = null) -> void
 InstalmentFlow.EntityFrameworkCore.OutboxDispatcher.RunAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions
@@ -30,6 +31,8 @@ InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.PollInterval.get -> S
 InstalmentFlow.EntityFrameworkCore.OutboxDispatcherOptions.PollInterval.init -> void
 InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions
 InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.<Clone>$() -> InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions!
+InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.AccountCacheSize.get -> int
+InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.AccountCacheSize.init -> void
 InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.ConcurrencyMode.get -> InstalmentFlow.EntityFrameworkCore.ConcurrencyMode
 InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.ConcurrencyMode.init -> void
 InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.ConnectionString.get -> string!
@@ -46,6 +49,7 @@ override InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.Equals(object? 
 override InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.GetHashCode() -> int
 override InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.ToString() -> string!
 static InstalmentFlow.EntityFrameworkCore.InstalmentFlowPostgres.CreateFactoryAsync(InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions! options, System.Action<InstalmentFlow.InstalmentFlowBuilder!>? configure = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.InstalmentFlowFactory!>!
+static InstalmentFlow.EntityFrameworkCore.InstalmentFlowPostgres.CreatePaymentsAsync(InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions! options, InstalmentFlow.InstalmentFlowFactory! flows, System.Action<InstalmentFlow.Payments.PaymentsBuilder!>! configure, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.Payments.InstalmentFlowPayments!>!
 static InstalmentFlow.EntityFrameworkCore.InstalmentFlowPostgres.Enlist(System.Data.Common.DbTransaction! transaction) -> System.IDisposable!
 static InstalmentFlow.EntityFrameworkCore.InstalmentFlowPostgres.GenerateMigrationScript() -> string!
 static InstalmentFlow.EntityFrameworkCore.InstalmentFlowPostgres.MigrateAsync(string! ownerConnectionString, InstalmentFlow.EntityFrameworkCore.MigrationOptions? options = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!

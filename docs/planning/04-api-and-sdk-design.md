@@ -333,3 +333,17 @@ await sim.StkPush(500).TimeOutThenSucceed(after: TimeSpan.FromMinutes(3));
 - Strategy behaviour is versioned (`OldestDueFirst.V1`, `.V2`…). Tenants pin a version, so they never change behaviour silently.
 - Persisted enums use explicit string codes.
 - Interfaces that are designed but not shipped (see §5) do not appear in the 1.0 public API.
+
+> **At the 1.0 freeze review (2026-11-23):** the code examples in this document are design sketches. The
+> [API reference](https://trudeauokech.github.io/instalment-flow/api/) and [versioning](../versioning.md) are
+> authoritative. Differences from this design:
+> - **Strategy versions:** carried by `StrategyRef` (name and version), not by `.V1` members. There is no
+>   `[AllocationStrategy]` attribute or plan builder; a strategy orders `context.Targets` and returns
+>   `AllocationPlan.FillInOrder(context, order)`.
+> - **Persisted enums:** stored as names in JSON and as values in columns, rather than as separate string codes.
+>   Both are frozen: the public API files pin every member's name and value.
+> - **Storage ports:** the §5 store interfaces became internal ports (`ILedgerStore`, `ITenantStore`; ADR-017). Only
+>   the first-party in-memory and PostgreSQL stores exist in 1.0.
+> - **Not frozen:** the M-Pesa and Airtel Money packages, until their sandbox runs.
+> - **Testing helpers:** the scenario DSL (`Given`, `When`, `Then`) differs in detail from §6. Simulator faults are
+>   configured on the payments package's `SimulatedProvider`, not chained on scenario steps.

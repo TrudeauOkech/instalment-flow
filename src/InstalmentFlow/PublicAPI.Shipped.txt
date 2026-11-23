@@ -409,6 +409,7 @@ InstalmentFlow.IInstalmentQueries.GetObligationAsync(InstalmentFlow.ObligationRe
 InstalmentFlow.IInstalmentQueries.GetPaymentAsync(InstalmentFlow.PaymentRef! payment, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.PaymentView!>!
 InstalmentFlow.IInstalmentQueries.GetScheduleAsync(InstalmentFlow.ObligationRef! obligation, InstalmentFlow.AsOf? asOf = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.ScheduleView!>!
 InstalmentFlow.IInstalmentQueries.GetStatementAsync(InstalmentFlow.AccountRef! account, System.DateOnly fromDate, System.DateOnly toDate, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<InstalmentFlow.StatementLine!>!
+InstalmentFlow.IInstalmentQueries.ListPaymentsAsync(InstalmentFlow.PaymentQuery! query, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<InstalmentFlow.PaymentView!>!
 InstalmentFlow.IInstalmentQueries.ReadJournalAsync(InstalmentFlow.JournalCursor from, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Collections.Generic.IAsyncEnumerable<InstalmentFlow.JournalTransactionView!>!
 InstalmentFlow.IInstalmentQueries.TracePaymentAsync(InstalmentFlow.PaymentRef! payment, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.PaymentTrace!>!
 InstalmentFlow.IInstalmentQueries.VerifyAsync(InstalmentFlow.VerifyScope! scope, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.VerificationReport!>!
@@ -482,6 +483,7 @@ InstalmentFlow.InstalmentFlowRequest.IdempotencyKey.get -> string!
 InstalmentFlow.InstalmentFlowRequest.IdempotencyKey.init -> void
 InstalmentFlow.InstalmentFlowRequest.InstalmentFlowRequest() -> void
 InstalmentFlow.InstalmentFlowRequest.InstalmentFlowRequest(InstalmentFlow.InstalmentFlowRequest! original) -> void
+InstalmentFlow.InstalmentFlowTelemetry
 InstalmentFlow.InstalmentPaymentState
 InstalmentFlow.InstalmentPaymentState.Paid = 3 -> InstalmentFlow.InstalmentPaymentState
 InstalmentFlow.InstalmentPaymentState.PartiallyPaid = 2 -> InstalmentFlow.InstalmentPaymentState
@@ -798,6 +800,16 @@ InstalmentFlow.PaymentId.PaymentId() -> void
 InstalmentFlow.PaymentId.PaymentId(System.Guid Value) -> void
 InstalmentFlow.PaymentId.Value.get -> System.Guid
 InstalmentFlow.PaymentId.Value.init -> void
+InstalmentFlow.PaymentQuery
+InstalmentFlow.PaymentQuery.<Clone>$() -> InstalmentFlow.PaymentQuery!
+InstalmentFlow.PaymentQuery.Equals(InstalmentFlow.PaymentQuery? other) -> bool
+InstalmentFlow.PaymentQuery.From.get -> System.DateTimeOffset?
+InstalmentFlow.PaymentQuery.From.init -> void
+InstalmentFlow.PaymentQuery.PaymentQuery() -> void
+InstalmentFlow.PaymentQuery.Source.get -> string!
+InstalmentFlow.PaymentQuery.Source.init -> void
+InstalmentFlow.PaymentQuery.To.get -> System.DateTimeOffset?
+InstalmentFlow.PaymentQuery.To.init -> void
 InstalmentFlow.PaymentRef
 InstalmentFlow.PaymentRef.<Clone>$() -> InstalmentFlow.PaymentRef!
 InstalmentFlow.PaymentRef.Equals(InstalmentFlow.PaymentRef? other) -> bool
@@ -1479,6 +1491,8 @@ const InstalmentFlow.ExternalReference.MaxValueLength = 128 -> int
 const InstalmentFlow.Frequency.MaxInterval = 366 -> int
 const InstalmentFlow.GracePeriod.MaxDays = 366 -> int
 const InstalmentFlow.IdempotencyKey.MaxLength = 128 -> int
+const InstalmentFlow.InstalmentFlowTelemetry.MeterName = "InstalmentFlow" -> string!
+const InstalmentFlow.InstalmentFlowTelemetry.SourceName = "InstalmentFlow" -> string!
 const InstalmentFlow.PaymentTarget.MaxRawReferenceLength = 256 -> int
 const InstalmentFlow.TenantId.MaxLength = 64 -> int
 override InstalmentFlow.AccountId.GetHashCode() -> int
@@ -1648,6 +1662,9 @@ override InstalmentFlow.PaymentExceptionView.GetHashCode() -> int
 override InstalmentFlow.PaymentExceptionView.ToString() -> string!
 override InstalmentFlow.PaymentId.GetHashCode() -> int
 override InstalmentFlow.PaymentId.ToString() -> string!
+override InstalmentFlow.PaymentQuery.Equals(object? obj) -> bool
+override InstalmentFlow.PaymentQuery.GetHashCode() -> int
+override InstalmentFlow.PaymentQuery.ToString() -> string!
 override InstalmentFlow.PaymentRef.Equals(object? obj) -> bool
 override InstalmentFlow.PaymentRef.GetHashCode() -> int
 override InstalmentFlow.PaymentRef.ToString() -> string!
@@ -1992,6 +2009,8 @@ static InstalmentFlow.PaymentExceptionView.operator !=(InstalmentFlow.PaymentExc
 static InstalmentFlow.PaymentExceptionView.operator ==(InstalmentFlow.PaymentExceptionView? left, InstalmentFlow.PaymentExceptionView? right) -> bool
 static InstalmentFlow.PaymentId.operator !=(InstalmentFlow.PaymentId left, InstalmentFlow.PaymentId right) -> bool
 static InstalmentFlow.PaymentId.operator ==(InstalmentFlow.PaymentId left, InstalmentFlow.PaymentId right) -> bool
+static InstalmentFlow.PaymentQuery.operator !=(InstalmentFlow.PaymentQuery? left, InstalmentFlow.PaymentQuery? right) -> bool
+static InstalmentFlow.PaymentQuery.operator ==(InstalmentFlow.PaymentQuery? left, InstalmentFlow.PaymentQuery? right) -> bool
 static InstalmentFlow.PaymentRef.ById(InstalmentFlow.PaymentId id) -> InstalmentFlow.PaymentRef!
 static InstalmentFlow.PaymentRef.BySource(InstalmentFlow.ExternalReference! source) -> InstalmentFlow.PaymentRef!
 static InstalmentFlow.PaymentRef.FromPaymentId(InstalmentFlow.PaymentId id) -> InstalmentFlow.PaymentRef!

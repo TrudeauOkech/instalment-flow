@@ -88,7 +88,7 @@ select count(*) from instalment_flow.payments;                                  
 | Symptom | First steps |
 |---|---|
 | `Verify` fails | Stop automated corrections. Read each violation (it names the invariant and the difference). Check for manual SQL. Open a [financial discrepancy issue](https://github.com/TrudeauOkech/instalment-flow/issues/new/choose) with a redacted trace if the library is at fault |
-| Inbox backlog grows | Check the workers are running and the database is reachable. Entries retry with back-off; nothing is lost |
+| Inbox backlog grows | Check the workers are running and the database is reachable. Entries retry with back-off; nothing is lost. If the inbox is healthy but slower than callbacks arrive, raise `WorkerOptions.InboxWorkers` (default 8; on the benchmark machine one worker records about 190 payments/s and eight about 500–590) or add instances ([performance](performance.md)) |
 | Callbacks stop | Check provider status and the endpoint (TLS, path secret, allowlist). Reconciliation will ingest what was missed within the Pull window; run it manually with a wider window if needed |
 | `command.retries` spikes | A hot account (often a shared unidentified-funds pool). Consider `ConcurrencyMode.PessimisticAccountLock` |
 | Outbox lag grows | Check the publisher (message broker). Events wait in order; nothing is lost |

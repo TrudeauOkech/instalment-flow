@@ -26,7 +26,10 @@ internal sealed partial class InstalmentFlowWorkers(InstalmentFlowRuntime runtim
         if (runtime.HasPayments)
         {
             var payments = runtime.Payments;
-            loops.Add(LoopAsync("inbox", settings.InboxInterval, ct => payments.Inbox.ProcessPendingAsync(ct), stoppingToken));
+            for (var i = 0; i < settings.InboxWorkers; i++)
+            {
+                loops.Add(LoopAsync(settings.InboxWorkers == 1 ? "inbox" : $"inbox {i + 1}", settings.InboxInterval, ct => payments.Inbox.ProcessPendingAsync(ct), stoppingToken));
+            }
             loops.Add(LoopAsync("intents", settings.IntentInterval, ct => payments.IntentResolver.ResolveDueAsync(ct), stoppingToken));
             foreach (var (provider, account) in settings.ReconcileAccounts)
             {

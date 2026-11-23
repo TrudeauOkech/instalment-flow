@@ -82,6 +82,22 @@ public sealed class WorkerOptions
     /// <summary>How often the inbox is processed. Default 2 seconds.</summary>
     public TimeSpan InboxInterval { get; set; } = TimeSpan.FromSeconds(2);
 
+    /// <summary>
+    /// How many inbox workers run in this process. Default 8. Each records one payment at a time and is bound by
+    /// database round trips, so one worker records about 190 payments per second; eight sustain NFR-4's 500 per second
+    /// (see docs/performance.md). Workers claim entries under a lease, so they never record one twice, and events
+    /// for one account may be processed out of order, as they may across several instances.
+    /// </summary>
+    public int InboxWorkers
+    {
+        get;
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(value, 1);
+            field = value;
+        }
+    } = 8;
+
     /// <summary>How often due intents are checked. Default 15 seconds.</summary>
     public TimeSpan IntentInterval { get; set; } = TimeSpan.FromSeconds(15);
 

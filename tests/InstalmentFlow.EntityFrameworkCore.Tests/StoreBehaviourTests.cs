@@ -269,6 +269,39 @@ public sealed class StoreBehaviourTests
     }
 
     [Fact]
+    public async Task A_read_inside_a_rolled_back_host_transaction_leaves_no_uncommitted_state_in_the_cache()
+    {
+        var (db, factory) = await Seeded.CreateAsync();
+        var flow = factory.ForTenant(Seeded.Tenant);
+        // A second instance of the application: its own store and cache, the same database.
+        var otherInstance = (await InstalmentFlowPostgres.CreateFactoryAsync(new PostgresStoreOptions { ConnectionString = db.Application }, b => b
+            .AddTenant(Seeded.Tenant, Currency.KES, "Africa/Nairobi")
+            .AddTenant(Seeded.Other, Currency.UGX, "Africa/Kampala"), Ct)).ForTenant(Seeded.Tenant);
+
+        await using (var connection = new NpgsqlConnection(db.Application))
+        {
+            await connection.OpenAsync(Ct);
+            await using var transaction = await connection.BeginTransactionAsync(Ct);
+            using (InstalmentFlowPostgres.Enlist(transaction))
+            {
+                await flow.Payments.RecordAsync(Seeded.Payment("HOST-TX", 50m, "LN-1"), Ct);
+                // Reading back inside the transaction loads the account at its uncommitted version.
+                await flow.Queries.GetStatementAsync(AccountRef.ByExternalId("C-1"), new DateOnly(2025, 1, 1), new DateOnly(2030, 1, 1), Ct).ToListAsync(Ct);
+            }
+
+            await transaction.RollbackAsync(Ct);
+        }
+
+        // The other instance commits the same version number with different contents…
+        await otherInstance.Payments.RecordAsync(Seeded.Payment("OTHER", 80m, "LN-1"), Ct);
+        // …so a cached copy from inside the rolled-back transaction would pass the version check here.
+        await flow.Payments.RecordAsync(Seeded.Payment("NEXT", 10m, "LN-1"), Ct);
+
+        Assert.Equal(Money.Kes(690m), (await flow.Queries.GetObligationAsync(ObligationRef.ByReference("LN-1"), cancellationToken: Ct)).Components.Single().Paid);
+        Assert.True((await flow.Queries.VerifyAsync(VerifyScope.Tenant, Ct)).Passed);
+    }
+
+    [Fact]
     public async Task Pessimistic_mode_serialises_concurrent_commands_on_one_account()
     {
         var (_, factory) = await Seeded.CreateAsync(ConcurrencyMode.PessimisticAccountLock);

@@ -10,6 +10,7 @@
   </Folder>
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/InstalmentFlow.Benchmarks/InstalmentFlow.Benchmarks.csproj" />
+    <Project Path="benchmarks/InstalmentFlow.LoadHost/InstalmentFlow.LoadHost.csproj" />
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/01-ConsoleQuickstart/01-ConsoleQuickstart.csproj" />

@@ -1,5 +1,1 @@
 #nullable enable
-InstalmentFlow.EntityFrameworkCore.OutboxDispatcher.GetLagAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.TimeSpan?>!
-InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.AccountCacheSize.get -> int
-InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions.AccountCacheSize.init -> void
-static InstalmentFlow.EntityFrameworkCore.InstalmentFlowPostgres.CreatePaymentsAsync(InstalmentFlow.EntityFrameworkCore.PostgresStoreOptions! options, InstalmentFlow.InstalmentFlowFactory! flows, System.Action<InstalmentFlow.Payments.PaymentsBuilder!>! configure, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<InstalmentFlow.Payments.InstalmentFlowPayments!>!

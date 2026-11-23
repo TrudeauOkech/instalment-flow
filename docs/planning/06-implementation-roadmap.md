@@ -432,7 +432,7 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
 - **Features:** OAuth; USSD push; callback parsing and verification; enquiry (`TS`, `TF`, `TA`, `TIP` mapping, with `TA` treated as ambiguous). **No refund or disbursement initiation** (ADR-010).
 - **Acceptance:** sandbox end-to-end; contract tests.
 
-### M12 — Hardening → **1.0.0-rc** (L) — in progress
+### M12 — Hardening → **1.0.0-rc** (L) — in progress (pilot pending)
 
 > **Phase 1 (observability and performance), done 2026-11-22:**
 > - **Telemetry:** OpenTelemetry conventions are final, with spans and metrics under `InstalmentFlow` across all packages and no personal data in attributes ([docs/observability.md](../observability.md)).
@@ -455,7 +455,14 @@ Size estimates assume one senior engineer working part-time. **S** ≈ 1 week, *
 > - **Compliance notes.**
 > - **Sample 07:** inside an existing loan system, with `Enlist`; CI runs it on PostgreSQL.
 >
-> **Next:** API freeze review and k6 script. The external pilot is the host's.
+> **Phase 4 (API freeze and load test), done 2026-11-23:**
+> - **API freeze:** the core, EF, payments, ASP.NET Core and testing packages are frozen in `PublicAPI.Shipped.txt`. The M-Pesa and Airtel Money packages wait for their sandbox runs. The review found no unsealed classes, no settable state outside options, and no unversioned enums; doc 04's sketches that differ from the shipped API are listed in its §7. The compatibility promise is in [docs/versioning.md](../versioning.md).
+> - **k6 load test** of the callback path against a reference host: NFR-4 is met end to end, at 500 payments/s with callbacks acknowledged at p95 3.1 ms, and every acknowledged callback recorded exactly once ([docs/performance.md](../performance.md)). It found:
+>   - one inbox worker recorded only 186/s, so hosts now run eight (`WorkerOptions.InboxWorkers`);
+>   - lost races evicted the winner's cache entry (engine throughput with colliding writers rose from 704 to 979/s once fixed);
+>   - a correctness bug: reads inside a rolled-back host transaction could leave uncommitted state in the cache, wrong for another instance's later commit. Fixed, with a test.
+>
+> **Next:** the external pilot (the host's), then 1.0.0-rc.1.
 
 - **Features:**
   - OpenTelemetry conventions finalised;

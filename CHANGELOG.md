@@ -52,6 +52,9 @@ All notable changes to this project are documented here. The format follows
   - A warning is logged at start-up when a provider without authenticated callbacks has no allowed networks, outside Development.
 
 - M12 documentation: a DocFX site with guides and the API reference, published to GitHub Pages. New pages: operations runbook, failure scenarios (each linked to its tests), integration guides (existing loan system, custom provider adapter, general-ledger export) and compliance notes. Sample 07 runs inside an existing loan system's `DbContext` with `Enlist`.
+- M12 API freeze: every public symbol of the core, EF, payments, ASP.NET Core and testing packages is in `PublicAPI.Shipped.txt` (`eng/ship-public-api.sh`). The M-Pesa and Airtel Money packages stay unfrozen until their sandbox runs. The compatibility promise is in [docs/versioning.md](docs/versioning.md).
+- M12 load test: `benchmarks/k6/callbacks.js` posts signed callbacks to a reference host (`benchmarks/InstalmentFlow.LoadHost`) and checks that each acknowledged callback is recorded exactly once. NFR-4 is met end to end: 500 payments/s sustained, with callbacks acknowledged at p95 3.1 ms ([docs/performance.md](docs/performance.md)).
+- `WorkerOptions.InboxWorkers`: inbox workers per process, default 8.
 
 ### Changed
 - The public API of 0.2.0-preview.1 is recorded in `PublicAPI.Shipped.txt`.
@@ -60,6 +63,12 @@ All notable changes to this project are documented here. The format follows
 - Ledger partitioning is deferred (ADR-019).
 - Instants are kept to the microsecond, the precision PostgreSQL stores: the engine's clock and payments' `ValueAt` are truncated, so every store holds identical values.
 - The unreleased `PaymentsSchema` migration now also records each open intent's state and age in `intent_checks`, for health checks.
+- ASP.NET Core hosts run eight inbox workers instead of one. One worker recorded at most about 190 payments/s. Events for one account may now be processed out of order, as they already could across instances; the engine handles that (for example, a reversal that arrives before its payment is parked).
+- The engine benchmark's writers now pick accounts at random, so they collide. Before, each writer had its own accounts.
+
+### Fixed
+- PostgreSQL store: an account read inside a host transaction (`Enlist`) was cached at its uncommitted version. After a rollback, another instance committing the same version number could make this instance use the wrong state. Loads inside a host transaction are no longer cached.
+- PostgreSQL store: a command that lost a race on an account evicted the winner's cached copy, and an older copy could replace a newer one. Each conflict then cost a full reload. Engine throughput with colliding writers rose from 704 to 979 payments/s.
 
 ## [0.2.0-preview.1] - 2026-11-21
 

@@ -7,6 +7,8 @@ namespace InstalmentFlow.EntityFrameworkCore.Persistence;
 /// Customer accounts as last committed or loaded, keyed by tenant and account. Every change to an account bumps its
 /// version (doc 05 §5), so a cached copy is used only after a one-row check that its version is still current: a hit
 /// avoids reloading thousands of schedule rows. Bounded: when full, a tenth of the entries are dropped.
+/// Only committed state is ever cached (never anything read or written inside a host transaction), so an entry is
+/// correct for its version, and a newer entry is never replaced by an older one.
 /// </summary>
 internal sealed class AccountCache(int capacity)
 {
@@ -25,10 +27,22 @@ internal sealed class AccountCache(int capacity)
             }
         }
 
-        _accounts[(account.TenantId.Value, account.Id.Value)] = account;
+        // A slow load of an older version must not replace what a later commit cached.
+        _accounts.AddOrUpdate((account.TenantId.Value, account.Id.Value), account, (_, existing) => existing.Version > account.Version ? existing : account);
     }
 
-    public void Remove(TenantId tenant, AccountId account) => _accounts.TryRemove((tenant.Value, account.Value), out _);
+    /// <summary>
+    /// Drops the entry if it is no newer than <paramref name="version"/>. A command that lost a race keeps the
+    /// winner's newer entry, so the retry (and every later command on the account) does not reload it.
+    /// </summary>
+    public void RemoveUpTo(TenantId tenant, AccountId account, long version)
+    {
+        var key = (tenant.Value, account.Value);
+        if (_accounts.TryGetValue(key, out var existing) && existing.Version <= version)
+        {
+            _accounts.TryRemove(KeyValuePair.Create(key, existing));
+        }
+    }
 
     /// <summary>
     /// Whether a reload of the committed account would list its lots in the same order: lots are reloaded in insertion

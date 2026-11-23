@@ -147,6 +147,40 @@ public sealed class HostingTests
     }
 
     [Fact]
+    public async Task Several_inbox_workers_record_each_payment_once_even_when_callbacks_are_repeated()
+    {
+        await using var host = await Host.StartAsync(o =>
+        {
+            o.Workers.Enabled = true;
+            o.Workers.InboxWorkers = 4;
+            o.Workers.InboxInterval = TimeSpan.FromMilliseconds(20);
+        });
+
+        var callbacks = Enumerable.Range(0, 40).SelectMany(i => new[] { $"SIMP{i}", $"SIMP{i}" })   // each delivered twice
+            .Select(id => host.Client.SendAsync(host.SimulatorCallback(id, amount: 10m), Ct));
+        await Task.WhenAll(callbacks);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(15);
+        while (await host.LoanPaidAsync() != Money.Kes(400m) && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(50, Ct);
+        }
+
+        await Task.Delay(300, Ct);   // any double recording would land by now
+        Assert.Equal(Money.Kes(400m), await host.LoanPaidAsync());
+        Assert.True((await host.Flows.ForTenant(Host.Tenant).Queries.VerifyAsync(VerifyScope.Tenant, Ct)).Passed);
+    }
+
+    [Fact]
+    public void Inbox_workers_default_to_eight_and_must_be_at_least_one()
+    {
+        var options = new WorkerOptions();
+
+        Assert.Equal(8, options.InboxWorkers);
+        Assert.Throws<ArgumentOutOfRangeException>(() => options.InboxWorkers = 0);
+    }
+
+    [Fact]
     public async Task A_custom_worker_runs_on_its_interval_and_survives_its_failures()
     {
         var runs = 0;

@@ -155,7 +155,10 @@ internal sealed partial class PostgresStore(NpgsqlDataSource dataSource, Concurr
                 await RequireUntornAsync(db.Accounts.Where(a => a.TenantId == tenantId.Value && a.AccountId == accountId.Value).Select(a => a.Version),
                     account.Version, accountId, cancellationToken).ConfigureAwait(false);
                 session.LoadedAccounts[account.Id] = account;
-                _cache?.Set(account);
+                if (HostTransaction.Current is null)   // inside a host transaction the load may see uncommitted state
+                {
+                    _cache?.Set(account);
+                }
             }
 
             return account;

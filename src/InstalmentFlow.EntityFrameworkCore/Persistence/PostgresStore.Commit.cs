@@ -61,18 +61,22 @@ internal sealed partial class PostgresStore
         }
 
         // Committed and durable: the next command on these accounts needs no reload (each commit bumped the version by one).
-        Forget(commit);
+        Forget(commit, committed: true);
         foreach (var account in cacheable ?? [])
         {
             _cache!.Set(account with { Version = account.Version + 1 });
         }
     }
 
-    private void Forget(Commit commit)
+    /// <summary>
+    /// Drops what this commit makes stale: the version it was based on and, once committed, the version it wrote. A
+    /// newer entry, cached by the command that won a race against this one, stays.
+    /// </summary>
+    private void Forget(Commit commit, bool committed = false)
     {
         foreach (var account in commit.Accounts)
         {
-            _cache?.Remove(commit.Tenant, account.Id);
+            _cache?.RemoveUpTo(commit.Tenant, account.Id, committed ? account.Version + 1 : account.Version);
         }
     }
 

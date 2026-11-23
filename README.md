@@ -36,7 +36,7 @@ var paid = await flow.Payments.RecordAsync(new RecordPaymentRequest
 // On or after 1 December: PartiallyAllocated, KES 1,000 to the instalment due and KES 200 held as unapplied funds.
 ```
 
-Read the [concepts](docs/concepts.md), the [allocation strategies](docs/allocation-strategies/README.md) and the [financial invariants](docs/financial-invariants.md), and run the [samples](samples/README.md). The design is in the [planning documents](docs/planning/00-overview.md) and the [architecture decisions](docs/decisions/README.md).
+Read the [concepts](docs/concepts.md), the [allocation strategies](docs/allocation-strategies/README.md) the [financial invariants](docs/financial-invariants.md) and the [compatibility promise](docs/versioning.md), and run the [samples](samples/README.md). The design is in the [planning documents](docs/planning/00-overview.md) and the [architecture decisions](docs/decisions/README.md).
 
 ## What it does
 

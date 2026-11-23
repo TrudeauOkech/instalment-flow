@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- The reference host for the k6 load test (benchmarks/k6): ASP.NET Core with the payments package on PostgreSQL,
+       seeded with the NFR-4 workload. Not a sample to copy: it starts a throwaway database and exposes /load/ endpoints. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CS1591;CA1515;CA2007</NoWarn>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.PostgreSql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\InstalmentFlow\InstalmentFlow.csproj" />
+    <ProjectReference Include="..\..\src\InstalmentFlow.Payments\InstalmentFlow.Payments.csproj" />
+    <ProjectReference Include="..\..\src\InstalmentFlow.EntityFrameworkCore\InstalmentFlow.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\src\InstalmentFlow.AspNetCore\InstalmentFlow.AspNetCore.csproj" />
+    <Compile Include="..\..\tests\InstalmentFlow.EntityFrameworkCore.Tests\Support\PostgresServer.cs" Link="PostgresServer.cs" />
+    <Compile Include="..\InstalmentFlow.Benchmarks\Workload.cs" Link="Workload.cs" />
+  </ItemGroup>
+
+</Project>

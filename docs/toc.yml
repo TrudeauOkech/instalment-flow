@@ -34,6 +34,8 @@
       href: security/threat-model.md
     - name: Compliance notes
       href: compliance.md
+- name: Versioning and compatibility
+  href: versioning.md
 - name: Decisions (ADRs)
   href: decisions/README.md
 - name: Design documents

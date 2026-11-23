@@ -85,7 +85,7 @@ public static class PostgresLoad
         {
             for (var i = 0; stop.Elapsed < duration; i++)
             {
-                var customer = $"T{(w + (i * writers)) % accounts}";
+                var customer = $"T{Random.Shared.Next(accounts)}";   // writers collide on accounts, as real traffic does
                 try
                 {
                     await flow.Payments.RecordAsync(Workload.Payment(customer, (w * 1_000_000) + i));
