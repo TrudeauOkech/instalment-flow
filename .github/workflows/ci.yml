@@ -119,7 +119,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7   # for CHANGELOG.md
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: packages
           path: artifacts
